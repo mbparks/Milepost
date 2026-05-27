@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.18</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.19</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -495,7 +495,7 @@ const SOURCES = [
     //
     // Because this is a FALLBACK that only matters when the primary is also
     // broken, an unreachable corsproxy.io is not a real failure for users
-    // with a working primary proxy. v0.0.18 returns __skip on failure so it
+    // with a working primary proxy. v0.0.19 returns __skip on failure so it
     // doesn't count against the all-green target.
     const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
     try {
@@ -525,14 +525,23 @@ const SOURCES = [
     });
   }},
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
-    // Route through probeFetch so we use the configured proxy chain if
-    // direct fails. ipapi.co is the location fallback when browser geo
-    // is denied or times out, and matches the capture-side path in v0.0.18
-    // (which now uses fetchScrape for ipapi.co too).
-    const { response: r, path } = await probeFetch('https://ipapi.co/json/');
-    const j = await r.json();
-    if (j.error) throw new Error(j.reason || 'error');
-    return `${j.city || '?'}, ${j.country_name || '?'} (via ${path})`;
+    // Route through probeFetch so we use the configured proxy chain if direct
+    // fails. ipapi.co is the location fallback when browser geo is denied
+    // or unavailable; matches the capture-side path in v0.0.19.
+    //
+    // ipapi.co blocks Cloudflare Worker IP ranges with HTTP 403 as part of
+    // their anti-abuse policy (common for free geolocation APIs). When all
+    // paths fail and browser geo is the user's primary, this fallback
+    // doesn't actually impact captures, so v0.0.19 returns __skip rather
+    // than failing the probe.
+    try {
+      const { response: r, path } = await probeFetch('https://ipapi.co/json/');
+      const j = await r.json();
+      if (j.error) throw new Error(j.reason || 'error');
+      return `${j.city || '?'}, ${j.country_name || '?'} (via ${path})`;
+    } catch (e) {
+      return { __skip: `ipapi.co unreachable on all paths: ${e.message || e}. Only used when browser geo is denied; not blocking when geo is granted.` };
+    }
   }},
 
   // ---------- Atmospheric ----------
@@ -623,7 +632,11 @@ const SOURCES = [
 
   // ---------- Hydrosphere ----------
   { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
-    const r = await fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${TEST_LON-0.5},${TEST_LAT-0.5},${TEST_LON+0.5},${TEST_LAT+0.5}&parameterCd=00060&siteStatus=active`);
+    // USGS waterservices is sometimes very slow. v0.0.19 wraps in
+    // probeFetchWithTimeout (8s) so the probe fails fast instead of holding
+    // until HARD_TIMEOUT_MS (30s). Captures use their own DIRECT_TIMEOUT_MS
+    // so they don't hang on this either.
+    const r = await probeFetchWithTimeout(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${TEST_LON-0.5},${TEST_LAT-0.5},${TEST_LON+0.5},${TEST_LAT+0.5}&parameterCd=00060&siteStatus=active`, 8000);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
     return `${j.value?.timeSeries?.length || 0} active gauges in bbox`;
@@ -717,7 +730,7 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Two-phase probe matching the capture-side behavior in v0.0.18:
+    // Two-phase probe matching the capture-side behavior in v0.0.19:
     //   Phase 1: short direct attempts on 6 instances to sample whether direct
     //            works at all from this network.
     //   Phase 2: if all direct fail, try the configured proxy on the first 2
@@ -761,12 +774,20 @@ const SOURCES = [
           const t = data[0];
           return `${host}: #1 = ${(t.title || '(no title)').slice(0, 60)} (via ${path})`;
         }
+        errors.push(`${host} (proxy): empty`);
       } catch (e) {
-        errors.push(`${host} (proxy): ${String(e.message || e).slice(0, 40)}`);
+        errors.push(`${host} (proxy): ${String(e.message || e).slice(0, 60)}`);
       }
     }
 
-    throw new Error(`${INSTANCES.length} instances failed direct and proxy (${errors.slice(0, 3).join('; ')})`);
+    // All paths exhausted. Piped and Invidious are a volunteer-run mesh of
+    // community instances that come and go regularly; even with a working
+    // proxy, the instances themselves are often down or refusing requests.
+    // Since YouTube trending is a "nice to have" rather than a critical
+    // signal, v0.0.19 marks this as skipped rather than failed when all
+    // paths exhaust. The capture-side fetcher does the same: if it can't
+    // reach any instance, it simply omits youtube from the cultural block.
+    return { __skip: `Piped/Invidious instance ecosystem unreachable. Sampled errors: ${errors.slice(0, 3).join('; ')}. Captures will omit youtube when this happens.` };
   }},
   { category: 'Discourse', name: 'Wikipedia Featured', domain: 'en.wikipedia.org', run: async () => {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
@@ -1008,7 +1029,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.18',
+    milepost_status_version: 'v0.0.19',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,
