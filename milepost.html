@@ -1010,6 +1010,8 @@ body {
 }
 .config-status.ok { color: var(--good); }
 .config-status.warn { color: var(--warn); }
+.config-status.err { color: var(--flag-deep); }
+.config-note-inline { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-faint); font-style: italic; }
 @media (max-width: 640px) {
   .key-row { grid-template-columns: 1fr; gap: 4px; }
   .key-row a { justify-self: start; }
@@ -1082,8 +1084,19 @@ body {
           <input type="text" id="cors-proxy" autocomplete="off" spellcheck="false" placeholder="leave empty to disable" />
           <a href="https://github.com/gnuns/allorigins" target="_blank" rel="noopener">About AllOrigins</a>
         </div>
+        <p class="config-note">
+          The milepost number auto-increments on each capture and persists across reloads. If browser data is cleared, the counter resets to 1; if you have existing JSON captures and want to continue the series, set the next number here.
+        </p>
+        <div class="key-row">
+          <label for="nextSerial">Next Milepost #</label>
+          <input type="number" id="nextSerial" autocomplete="off" min="1" step="1" placeholder="1" />
+          <span class="config-note-inline">applied on Save</span>
+        </div>
         <div class="config-actions">
           <button class="btn" id="saveKeys">Save Settings</button>
+          <button class="btn ghost" id="exportSettings" title="Download all keys and proxy config as a JSON file">Export</button>
+          <button class="btn ghost" id="importSettings" title="Restore keys and proxy config from a previously exported JSON file">Import</button>
+          <input type="file" id="settingsFilePicker" accept=".json,application/json" hidden />
           <span id="keysStatus" class="config-status"></span>
         </div>
       </div>
@@ -1231,7 +1244,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.21</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.23</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1304,11 +1317,17 @@ function initSettings() {
   const nasa  = Settings.get('nasa');
   const sound = Settings.get('sound');
   const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
+  // Restore serial counter from Settings. The counter persists across page
+  // reloads (previously it always restarted at 1, which silently caused
+  // duplicate milepost numbers across sessions); user can override here too.
+  const storedSerial = parseInt(Settings.get('next_serial', '1'), 10);
+  STATE.serial = (Number.isFinite(storedSerial) && storedSerial >= 1) ? storedSerial : 1;
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
   if (nasa)  $('key-nasa').value = nasa;
   if (sound === 'on') $('soundToggle').checked = true;
   $('cors-proxy').value = proxy;
+  $('nextSerial').value = STATE.serial;
   updateKeysStatus();
 
   $('saveKeys').addEventListener('click', () => {
@@ -1322,10 +1341,100 @@ function initSettings() {
     Settings.set('nasa', n);
     Settings.set('sound', s);
     Settings.set('cors_proxy', p);
+    // Apply serial override if user changed it. Only accept positive integers;
+    // anything invalid leaves the current counter alone (don't silently reset
+    // someone's series to 1 because they typed a typo).
+    const newSerial = parseInt($('nextSerial').value.trim(), 10);
+    if (Number.isFinite(newSerial) && newSerial >= 1) {
+      STATE.serial = newSerial;
+      Settings.set('next_serial', String(newSerial));
+    } else {
+      // Restore the field to current actual value so user sees their input was rejected
+      $('nextSerial').value = STATE.serial;
+    }
     const status = $('keysStatus');
     status.textContent = 'Saved';
     status.className = 'config-status ok';
     setTimeout(updateKeysStatus, 1500);
+  });
+
+  // Export current Settings as a JSON file. Includes API keys; the file is
+  // marked as sensitive in a "note" field. Read by the import handler below.
+  $('exportSettings').addEventListener('click', () => {
+    const payload = {
+      format: 'milepost-settings',
+      version: '0.0.23',
+      exported_at: new Date().toISOString(),
+      note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
+      settings: {
+        firms: Settings.get('firms') || '',
+        ebird: Settings.get('ebird') || '',
+        nasa: Settings.get('nasa') || '',
+        cors_proxy: Settings.get('cors_proxy') || '',
+        sound: Settings.get('sound') === 'on' ? 'on' : 'off',
+        next_serial: STATE.serial,
+      },
+    };
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    downloadFile(`milepost-settings_${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    const status = $('keysStatus');
+    status.textContent = 'Settings exported';
+    status.className = 'config-status ok';
+    setTimeout(updateKeysStatus, 1500);
+  });
+
+  // Import Settings from a previously-exported JSON file. Fields present in
+  // the file overwrite current values (including empty strings, which clears
+  // a key); fields missing from the file leave the current value alone.
+  // Validation accepts only payloads with format === 'milepost-settings' to
+  // avoid accidentally loading some unrelated JSON.
+  $('importSettings').addEventListener('click', () => {
+    $('settingsFilePicker').click();
+  });
+  $('settingsFilePicker').addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = ''; // reset so re-selecting same file re-fires change
+    if (!file) return;
+    const status = $('keysStatus');
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (json.format !== 'milepost-settings') {
+        throw new Error(`unexpected format "${json.format || '(missing)'}" (expected milepost-settings)`);
+      }
+      if (!json.settings || typeof json.settings !== 'object') {
+        throw new Error('missing settings block');
+      }
+      const s = json.settings;
+      const applied = [];
+      if ('firms' in s) { Settings.set('firms', String(s.firms || '').trim()); applied.push('FIRMS'); }
+      if ('ebird' in s) { Settings.set('ebird', String(s.ebird || '').trim()); applied.push('eBird'); }
+      if ('nasa' in s)  { Settings.set('nasa',  String(s.nasa  || '').trim()); applied.push('NASA'); }
+      if ('cors_proxy' in s) { Settings.set('cors_proxy', String(s.cors_proxy || '').trim()); applied.push('Proxy'); }
+      if ('sound' in s) { Settings.set('sound', s.sound === 'on' ? 'on' : 'off'); applied.push('Sound'); }
+      if ('next_serial' in s) {
+        const ns = parseInt(s.next_serial, 10);
+        if (Number.isFinite(ns) && ns >= 1) {
+          STATE.serial = ns;
+          Settings.set('next_serial', String(ns));
+          applied.push(`Serial→${ns}`);
+        }
+      }
+      // Refresh visible input fields so the user sees what was imported
+      $('key-firms').value = Settings.get('firms') || '';
+      $('key-ebird').value = Settings.get('ebird') || '';
+      $('key-nasa').value  = Settings.get('nasa')  || '';
+      $('cors-proxy').value = Settings.get('cors_proxy') || '';
+      $('soundToggle').checked = Settings.get('sound') === 'on';
+      $('nextSerial').value = STATE.serial;
+      status.textContent = `Imported: ${applied.join(', ') || 'no fields'}`;
+      status.className = 'config-status ok';
+      setTimeout(updateKeysStatus, 2500);
+    } catch (e) {
+      status.textContent = `Import failed: ${e.message}`;
+      status.className = 'config-status err';
+      setTimeout(updateKeysStatus, 4000);
+    }
   });
 }
 
@@ -1342,6 +1451,7 @@ function updateKeysStatus() {
   parts.push(`NASA ${n ? '✓' : '–'}`);
   parts.push(`Sound ${s ? '✓' : '–'}`);
   parts.push(`Proxy ${p ? '✓' : '–'}`);
+  parts.push(`Next №${pad(STATE.serial, 3)}`);
   status.textContent = parts.join('  /  ');
   status.className = 'config-status ' + ((f && e) ? 'ok' : 'warn');
 }
@@ -3223,6 +3333,11 @@ async function captureAll() {
 
   // build entry record
   const id = STATE.serial++;
+  // Persist counter so it survives reload. The visible Settings field also
+  // updates so the user can see the current value at any time without
+  // re-opening Settings.
+  Settings.set('next_serial', String(STATE.serial));
+  if ($('nextSerial')) $('nextSerial').value = STATE.serial;
   data.palette = computePalette(data);
   STATE.current = {
     id,
@@ -4283,10 +4398,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.21 this was only set on the 'input' event, which requires a value
+   v0.0.23 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.21 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.23 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -4606,7 +4721,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.21',
+    version: '0.0.23',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
