@@ -1033,8 +1033,8 @@ body {
       <strong>GSG / MMXXVI</strong>
       Green Shoe Garage<br />
       Mountain Maryland
-      <div class="cross-link"><a href="milepost-reader.html">Open Reader &rarr;</a></div>
-      <div class="cross-link"><a href="milepost-status.html">Run Diagnostic &rarr;</a></div>
+      <div class="cross-link"><a href="./reader">Open Reader &rarr;</a></div>
+      <div class="cross-link"><a href="./status">Run Diagnostic &rarr;</a></div>
     </div>
   </header>
 
@@ -1231,7 +1231,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.14</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.15</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1427,35 +1427,70 @@ const WMO = {
    the proxy if direct fails for any reason. Each fetcher records its source via
    the returned URL (proxied or direct) so we can see in console which was used. */
 const DEFAULT_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const FALLBACK_CORS_PROXY = 'https://corsproxy.io/?url=';
+const DIRECT_TIMEOUT_MS = 5000;   // Give CORS-friendly direct fetches a chance, but fail-fast on hangs.
+const PROXY_TIMEOUT_MS = 10000;   // Per-proxy budget; if exceeded, fall through to the next proxy.
 
-function proxiedUrl(url) {
-  const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
-  if (!proxy) return null;
-  return `${proxy}${encodeURIComponent(url)}`;
+/* ---------- fetchScrape: direct → primary proxy → fallback proxy ----------
+   The capture instrument's universal fetcher for sources that block direct
+   browser access. Tries paths in this order, each with its own time budget so
+   one slow link can't hang the whole capture:
+     1) Direct fetch (CORS-friendly sources land here; CORS-blocked ones fail fast)
+     2) User's configured CORS proxy (default AllOrigins) with 10s timeout
+     3) corsproxy.io as universal hardcoded fallback with 10s timeout
+   AllOrigins has periods of slowness/degradation; without a second proxy a
+   single bad day on AllOrigins kills every CORS-blocked source. corsproxy.io
+   uses different infrastructure so the two rarely degrade simultaneously.
+   Total worst case per call: 5 + 10 + 10 = 25 seconds, vs unbounded before. */
+function proxiedUrl(url, base) {
+  if (!base) return null;
+  return `${base}${encodeURIComponent(url)}`;
+}
+
+async function fetchWithTimeout(url, opts, timeoutMs) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    // If the caller already passed a signal, we still install our own. The
+    // shorter timeout wins, which is what we want.
+    const r = await fetch(url, { ...opts, signal: ctrl.signal });
+    return r;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 async function fetchScrape(url, opts = {}) {
-  // Try direct fetch first (faster, no third party). On any failure (network,
-  // CORS, HTTP error), fall back to the configured proxy if any.
-  let directErr = null;
+  const errors = [];
+  // Direct attempt with its own timeout.
   try {
-    const r = await fetch(url, opts);
+    const r = await fetchWithTimeout(url, opts, DIRECT_TIMEOUT_MS);
     if (r.ok) return r;
-    directErr = new Error(`HTTP ${r.status}`);
+    errors.push(`direct: HTTP ${r.status}`);
   } catch (e) {
-    directErr = e;
+    errors.push(`direct: ${e.name === 'AbortError' ? `timeout ${DIRECT_TIMEOUT_MS}ms` : e.message}`);
   }
-  const px = proxiedUrl(url);
-  if (!px) {
-    throw new Error(`direct failed (${directErr.message}); proxy disabled in Settings`);
+  // Build the proxy chain: user's primary first, then the hardcoded fallback.
+  const primary = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
+  const proxies = [];
+  if (primary) proxies.push(primary);
+  if (primary !== FALLBACK_CORS_PROXY) proxies.push(FALLBACK_CORS_PROXY);
+  if (proxies.length === 0) {
+    throw new Error(`${errors.join('; ')}; proxy disabled in Settings`);
   }
-  try {
-    const r = await fetch(px, opts);
-    if (!r.ok) throw new Error(`proxy HTTP ${r.status}`);
-    return r;
-  } catch (proxyErr) {
-    throw new Error(`direct: ${directErr.message}; proxy: ${proxyErr.message}`);
+  for (const base of proxies) {
+    let host = 'proxy';
+    try { host = new URL(base).host; } catch (_) {}
+    const px = proxiedUrl(url, base);
+    try {
+      const r = await fetchWithTimeout(px, opts, PROXY_TIMEOUT_MS);
+      if (r.ok) return r;
+      errors.push(`${host}: HTTP ${r.status}`);
+    } catch (e) {
+      errors.push(`${host}: ${e.name === 'AbortError' ? `timeout ${PROXY_TIMEOUT_MS}ms` : e.message}`);
+    }
   }
+  throw new Error(errors.join('; '));
 }
 
 /* ---------- zodiac (tropical) ---------- */
@@ -4506,7 +4541,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.14',
+    version: '0.0.15',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

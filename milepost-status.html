@@ -352,8 +352,8 @@ h1 {
       <strong>GSG / MMXXVI</strong>
       Green Shoe Garage<br />
       Mountain Maryland
-      <div class="cross-link"><a href="milepost.html">New Entry &rarr;</a></div>
-      <div class="cross-link"><a href="milepost-reader.html">Open Reader &rarr;</a></div>
+      <div class="cross-link"><a href="../milepost">New Entry &rarr;</a></div>
+      <div class="cross-link"><a href="../reader">Open Reader &rarr;</a></div>
     </div>
   </header>
 
@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.14</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.15</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -387,7 +387,10 @@ const $ = (id) => document.getElementById(id);
    ============================================================ */
 
 const SLOW_THRESHOLD_MS = 3000;
-const HARD_TIMEOUT_MS = 12000;
+const HARD_TIMEOUT_MS = 30000;
+const PROBE_DIRECT_TIMEOUT_MS = 5000;
+const PROBE_PROXY_TIMEOUT_MS = 10000;
+const FALLBACK_CORS_PROXY = 'https://corsproxy.io/?url=';
 
 function timeoutPromise(ms) {
   return new Promise((_, rej) => setTimeout(() => rej(new Error(`timeout after ${ms}ms`)), ms));
@@ -408,33 +411,52 @@ async function timed(fn, hardMs = HARD_TIMEOUT_MS) {
 const TEST_LAT = 39.6;
 const TEST_LON = -78.8;
 
-/* ---------- probeFetch: mirrors fetchScrape semantics from the capture instrument
-   Tries direct fetch first; on CORS error or non-OK response, falls back to the
-   configured CORS proxy (defaults to AllOrigins). Returns {response, path} where
-   path is 'direct' or 'proxy'. The status page surfaces this in each probe's
-   result text so users see which transport worked. Without this, probes show
-   "Failed to fetch" for sources that actually work in real captures via the proxy
-   fallback, which is misleading: the probe is testing direct connectivity but the
-   capture instrument is using fetchScrape. Aligning these gives accurate diagnostics. */
-async function probeFetch(url) {
-  let directErr = null;
+/* ---------- probeFetch: mirrors fetchScrape in the capture instrument ----------
+   Tries direct → user's primary proxy → corsproxy.io fallback, each with its
+   own AbortController timeout so a single hung fetch can't pin the probe to
+   the HARD_TIMEOUT_MS cap. Reports which path succeeded via {response, path}.
+   path is 'direct', or 'proxy:<hostname>'. */
+async function probeFetchWithTimeout(url, timeoutMs) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const r = await fetch(url);
-    if (r.ok) return { response: r, path: 'direct' };
-    directErr = new Error(`HTTP ${r.status}`);
-  } catch (e) {
-    directErr = e;
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(tid);
   }
-  let proxyBase = 'https://api.allorigins.win/raw?url=';
+}
+
+async function probeFetch(url) {
+  const errors = [];
+  try {
+    const r = await probeFetchWithTimeout(url, PROBE_DIRECT_TIMEOUT_MS);
+    if (r.ok) return { response: r, path: 'direct' };
+    errors.push(`direct: HTTP ${r.status}`);
+  } catch (e) {
+    errors.push(`direct: ${e.name === 'AbortError' ? `timeout ${PROBE_DIRECT_TIMEOUT_MS}ms` : e.message}`);
+  }
+  let primary = 'https://api.allorigins.win/raw?url=';
   try {
     const stored = localStorage.getItem('milepost_cors_proxy');
-    if (stored !== null) proxyBase = stored;
+    if (stored !== null) primary = stored;
   } catch (_) {}
-  if (!proxyBase) throw new Error(`direct failed: ${directErr.message}; proxy disabled in Settings`);
-  const proxiedUrl = proxyBase + encodeURIComponent(url);
-  const r = await fetch(proxiedUrl);
-  if (!r.ok) throw new Error(`direct: ${directErr.message}; proxy: HTTP ${r.status}`);
-  return { response: r, path: 'proxy' };
+  const proxies = [];
+  if (primary) proxies.push(primary);
+  if (primary !== FALLBACK_CORS_PROXY) proxies.push(FALLBACK_CORS_PROXY);
+  if (proxies.length === 0) throw new Error(`${errors.join('; ')}; proxy disabled`);
+  for (const base of proxies) {
+    let host = 'proxy';
+    try { host = new URL(base).host; } catch (_) {}
+    const px = base + encodeURIComponent(url);
+    try {
+      const r = await probeFetchWithTimeout(px, PROBE_PROXY_TIMEOUT_MS);
+      if (r.ok) return { response: r, path: `proxy:${host}` };
+      errors.push(`${host}: HTTP ${r.status}`);
+    } catch (e) {
+      errors.push(`${host}: ${e.name === 'AbortError' ? `timeout ${PROBE_PROXY_TIMEOUT_MS}ms` : e.message}`);
+    }
+  }
+  throw new Error(errors.join('; '));
 }
 
 const SOURCES = [
@@ -921,7 +943,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.14',
+    milepost_status_version: 'v0.0.15',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,
