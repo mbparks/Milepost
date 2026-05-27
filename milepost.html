@@ -1218,7 +1218,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8.1</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1837,29 +1837,103 @@ const STOCK_INDICES = {
   vix:    { symbol: '^VIX',  name: 'VIX' },
 };
 
-async function getStockIndex(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+/* Yahoo Finance disabled CORS for browser-origin requests as part of their Feb 2025
+   redesign, which broke yfinance and similar libraries; equivalent direct-fetch code
+   from a browser now intermittently fails. We try Yahoo first (richer schema with
+   true previous close and market state) and fall back to Stooq (free CSV endpoint,
+   CORS-enabled, lower fidelity since it gives OHLCV without a separate previous
+   close). Symbols are mapped from Yahoo conventions to Stooq's lowercase
+   indices and dot-f futures notation. */
+const STOOQ_SYMBOLS = {
+  '^DJI':  '^dji',
+  '^GSPC': '^spx',
+  '^IXIC': '^ndq',
+  '^VIX':  '^vix',
+  '^FVX':  '^fvx',
+  '^TNX':  '^tnx',
+  '^TYX':  '^tyx',
+  'GC=F':  'gc.f',
+  'SI=F':  'si.f',
+  'CL=F':  'cl.f',
+};
+
+async function getStooqIndex(yahooSymbol) {
+  const stooqSym = STOOQ_SYMBOLS[yahooSymbol];
+  if (!stooqSym) throw new Error(`no stooq mapping for ${yahooSymbol}`);
+  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(stooqSym)}&f=sd2t2ohlcv&h&e=csv`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const j = await r.json();
-  if (j.chart?.error) throw new Error(j.chart.error.description || 'API error');
-  const meta = j.chart?.result?.[0]?.meta;
-  if (!meta) return null;
-  const prev = meta.chartPreviousClose ?? meta.previousClose;
-  const price = meta.regularMarketPrice;
+  const text = (await r.text()).trim();
+  if (/exceeded the daily hits limit/i.test(text)) throw new Error('rate limit');
+  const lines = text.split(/\r?\n/);
+  if (lines.length < 2) throw new Error('empty response');
+  const cells = lines[1].split(',');
+  if (cells.length < 7) throw new Error('malformed CSV');
+  const [sym, , , open, high, low, close] = cells;
+  const o = parseFloat(open);
+  const h = parseFloat(high);
+  const l = parseFloat(low);
+  const c = parseFloat(close);
+  if (!isFinite(c) || c === 0) throw new Error('no price (market closed or N/D)');
+  // Lite endpoint gives OHLC for current/most-recent trading day. No previous close
+  // available, so we approximate the day's change as (close - open). This is the
+  // intraday change rather than vs-previous-close that Yahoo provides; for a daily
+  // journal this is close enough and still gives the directional signal.
+  const change = isFinite(o) ? c - o : null;
+  const changePercent = isFinite(o) && o !== 0 ? ((c - o) / o) * 100 : null;
   return {
-    symbol: meta.symbol,
-    price,
-    prevClose: prev,
-    change: price != null && prev != null ? price - prev : null,
-    changePercent: price != null && prev != null && prev !== 0 ? ((price - prev) / prev) * 100 : null,
-    dayHigh: meta.regularMarketDayHigh ?? null,
-    dayLow: meta.regularMarketDayLow ?? null,
-    timestamp: meta.regularMarketTime ?? null,
-    currency: meta.currency || 'USD',
-    exchangeName: meta.exchangeName ?? null,
-    marketState: meta.marketState ?? null,
+    symbol: sym || yahooSymbol,
+    price: c,
+    prevClose: isFinite(o) ? o : null,
+    change,
+    changePercent,
+    dayHigh: isFinite(h) ? h : null,
+    dayLow: isFinite(l) ? l : null,
+    timestamp: null,
+    currency: 'USD',
+    exchangeName: null,
+    marketState: null,
+    source: 'stooq',
   };
+}
+
+async function getStockIndex(symbol) {
+  // Try Yahoo Finance first (richer schema, true day-over-day change)
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.chart?.error) throw new Error(j.chart.error.description || 'yahoo API error');
+    const meta = j.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('no meta');
+    const prev = meta.chartPreviousClose ?? meta.previousClose;
+    const price = meta.regularMarketPrice;
+    if (price == null) throw new Error('no price');
+    return {
+      symbol: meta.symbol,
+      price,
+      prevClose: prev,
+      change: prev != null ? price - prev : null,
+      changePercent: prev != null && prev !== 0 ? ((price - prev) / prev) * 100 : null,
+      dayHigh: meta.regularMarketDayHigh ?? null,
+      dayLow: meta.regularMarketDayLow ?? null,
+      timestamp: meta.regularMarketTime ?? null,
+      currency: meta.currency || 'USD',
+      exchangeName: meta.exchangeName ?? null,
+      marketState: meta.marketState ?? null,
+      source: 'yahoo',
+    };
+  } catch (yahooErr) {
+    console.warn(`[Milepost] markets/yahoo ${symbol}: ${yahooErr.message}; trying Stooq`);
+    // Fall back to Stooq
+    try {
+      return await getStooqIndex(symbol);
+    } catch (stooqErr) {
+      console.warn(`[Milepost] markets/stooq ${symbol}: ${stooqErr.message}`);
+      throw new Error(`yahoo: ${yahooErr.message}; stooq: ${stooqErr.message}`);
+    }
+  }
 }
 
 async function getStocks() {
@@ -1900,9 +1974,12 @@ const APPLE_FEEDS = {
 /* ---------- top movie via Wikipedia (Apple deprecated their movies feed in 2024) ---------- */
 /* Wikipedia maintains "List of YYYY box office number-one films in the United States",
    updated weekly by editors. We fetch the article wikitext via the MediaWiki Action API
-   (CORS-enabled with origin=*), find the last italic-wrapped wiki-link in the weekly
-   table (the canonical wikitext format for film titles), and pull the most recent
-   dollar amount as the gross. */
+   (CORS-enabled with origin=*) and parse the weekly table row by row to find the last
+   entry. We avoid grabbing italicized film references from "Notes" columns by walking
+   cells in order: the first italic-wrapped link in a row is the FILM cell, and the
+   first comma-grouped dollar amount after it is the GROSS cell. The gross regex
+   requires comma groups ($X,XXX,XXX), which filters out shorthand mentions like
+   "$75.4 million" or "$60 million" that appear in note text. */
 async function getTopMovieForYear(year) {
   const title = `List_of_${year}_box_office_number-one_films_in_the_United_States`;
   const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*&redirects=1`;
@@ -1917,28 +1994,53 @@ async function getTopMovieForYear(year) {
   const cutoffIdx = wikitext.search(/==\s*Highest[- ]grossing/i);
   const tableText = cutoffIdx > 0 ? wikitext.slice(0, cutoffIdx) : wikitext;
 
-  // Match italic-wrapped wiki-links: ''[[Article]]'' or ''[[Article|Display]]''
-  // Films in these tables are always formatted this way
-  const filmRe = /''\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]''/g;
-  let lastMatch = null;
-  let m;
-  while ((m = filmRe.exec(tableText)) !== null) lastMatch = m;
-  if (!lastMatch) return null;
+  // Italic-wrapped wiki-link (FILM cell format): ''[[Article]]'' or ''[[Article|Display]]''
+  const filmRe = /''\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]''/;
+  // GROSS cell format: $X,XXX,XXX (must have at least one comma group).
+  // Negative lookahead avoids matching inside longer numbers or decimals.
+  const grossRe = /\$(\d{1,3}(?:,\d{3})+)(?!\d|\.\d)/;
 
-  // Display name is the pipe alias if present, else the article name
-  const name = (lastMatch[2] || lastMatch[1]).trim();
+  // Split the table into rows. Wiki tables delimit rows with "|-" on its own line.
+  const rows = tableText.split(/\n\|-+\s*\n?/);
+  let latest = null;
+  for (const row of rows) {
+    // Cells are separated by "||" (inline) or newline + "|" (multi-line). Split on both.
+    const cells = row.split(/\s*\|\|\s*|\n\s*\|\s+/);
+    let film = null, gross = null;
+    for (let i = 0; i < cells.length; i++) {
+      if (!film) {
+        const m = cells[i].match(filmRe);
+        if (m) film = (m[2] || m[1]).trim();
+      } else if (!gross) {
+        const m = cells[i].match(grossRe);
+        if (m) { gross = `$${m[1]}`; break; }
+      }
+    }
+    if (film && gross) latest = { film, gross };
+  }
 
-  // Most recent gross is the last $NN,NNN,NNN... pattern in the table
-  const grossMatches = [...tableText.matchAll(/\$([0-9](?:[0-9,]*[0-9])?)/g)];
-  const gross = grossMatches.length ? `$${grossMatches[grossMatches.length - 1][1]}` : null;
+  if (!latest) {
+    // Fallback to a looser scan if row parsing finds nothing (article structure changed?)
+    const filmReG = /''\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]''/g;
+    let lastFilm = null, m;
+    while ((m = filmReG.exec(tableText)) !== null) lastFilm = m;
+    const grossMatches = [...tableText.matchAll(/\$(\d{1,3}(?:,\d{3})+)(?!\d|\.\d)/g)];
+    if (lastFilm && grossMatches.length) {
+      latest = {
+        film: (lastFilm[2] || lastFilm[1]).trim(),
+        gross: `$${grossMatches[grossMatches.length - 1][1]}`,
+      };
+    }
+  }
+  if (!latest) return null;
 
   return {
-    name,
+    name: latest.film,
     artistName: null,
     releaseDate: null,
     kind: 'movie',
     url: `https://en.wikipedia.org/wiki/${title}`,
-    gross,
+    gross: latest.gross,
     sourceLabel: 'Wikipedia',
     genres: [],
   };
@@ -3930,7 +4032,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.8',
+    version: '0.0.8.1',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
