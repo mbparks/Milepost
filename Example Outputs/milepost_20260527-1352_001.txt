@@ -3,69 +3,77 @@ Environmental Capture / Green Shoe Garage
 ================================================================
 
 MILEPOST     №001
-TIMESTAMP    Wed May 27 2026  13:52:06 EDT
-ISO 8601     2026-05-27T17:52:06.994Z
+TIMESTAMP    Wed May 27 2026  16:12:04 EDT
+ISO 8601     2026-05-27T20:12:04.882Z
 TIMEZONE     America/New_York
-LOCATION     Cumberland, Maryland, US
-             39.6529°N, 78.7625°W
-SOURCE       ip
+LOCATION     unknown
+             39.6684°N, 78.7699°W
+SOURCE       gps
 
 ================================================================
 ATMOSPHERIC
 ----------------------------------------------------------------
-Conditions        Mainly clear
-Temperature       24.2 C  /  75.6 F
-Feels Like        31.4 C
-Humidity          85 %
-Pressure          1,013.1 hPa
-Wind              0.8 km/h ESE
+Conditions        Clear sky
+Temperature       25.7 C  /  78.3 F
+Feels Like        29.8 C
+Humidity          70 %
+Dewpoint          19.8 C  /  67.6 F
+Pressure          1,012.1 hPa
+Wind              6.2 km/h W
 Gusts             16.2 km/h
-Cloud Cover       24 %
+Cloud Cover       8 %
 Precipitation     0.0 mm
-Visibility        17.1 km
-UV Index (peak)   4.9 (moderate)
+Visibility        24.6 km
+UV Index (now)    2.2 (low)
 AQI (US)          28 (good)
+CO2 (Mauna Loa)   432.25 ppm (+1.90 yr/yr)
 
 ================================================================
 CELESTIAL
 ----------------------------------------------------------------
 Sun Sign          Gemini
-Sun Altitude      69.9 deg
-Sun Azimuth       207.9 deg SSW
+Sun Altitude      47.7 deg
+Sun Azimuth       258.0 deg WSW
 Moon Phase        Waxing Gibbous
-Illumination      84.9 %
-Moon Age          11.0 days
-Sunrise           05:51
-Sunset            20:32
-Julian Day        2,461,188.2445
+Illumination      85.6 %
+Moon Age          11.1 days
+Sunrise           09:50
+Sunset            00:34
+Civil Twilight    09:20 / 01:04
+Astro Twilight    07:55 / 02:28
+Day Length        14h 45m
+Meteor Showers    Eta Aquariids
+Next Eclipse      total solar, 76 days (Greenland, Iceland, Spain)
+Julian Day        2,461,188.3418
 Next Solar Event  June Solstice in 25 days
 
 ================================================================
 SPACE WEATHER / ORBITAL
 ----------------------------------------------------------------
 Kp Index          -- (extreme storm)
-Solar Wind        400 km/s
-Plasma Density    5.62 p/cm3
-ISS Position      2.13, -110.39 at 419.9 km
-ISS Velocity      27,576 km/h
+Solar Wind        383 km/s
+Plasma Density    4.39 p/cm3
+Aurora at Loc     0 % (unlikely)
+ISS Position      -4.52, 35.92 at 419.0 km
+ISS Velocity      27,580 km/h
 
 ================================================================
 TELLURIC
 ----------------------------------------------------------------
-Nearest Quake     M1.8, 5 km W of Gladstone, New Jersey, 8d 0h ago, depth 5.0 km
+Nearest Quake     M1.8, 5 km W of Gladstone, New Jersey, 8d 2h ago, depth 5.0 km
 Nearby Count      3 events in 500km
 Largest (24h)     M6.0, western Indian-Antarctic Ridge
-Wildfire (500km)  42 thermal anomalies
-Nearest Fire      367.5 km, FRP 2.0 MW, conf n
+Wildfire (500km)  61 thermal anomalies
+Nearest Fire      89.8 km, FRP 6.1 MW, conf n
 
 ================================================================
 HYDROSPHERE
 ----------------------------------------------------------------
-Nearest Gauge     WILLS CREEK NEAR CUMBERLAND, MD (2.9 km)
-Discharge         2,350.0 ft3/s
-Gauge Height      5.57 ft
-Tide Station      Washington (173.1 km)
-Water Level       1.01 ft MLLW
+Nearest Gauge     WILLS CREEK NEAR CUMBERLAND, MD (1.6 km)
+Discharge         2,450.0 ft3/s
+Gauge Height      5.65 ft
+Tide Station      Washington (174.5 km)
+Water Level       2.56 ft MLLW
 
 ================================================================
 BIOSPHERE
@@ -80,9 +88,16 @@ Latest Obs        Mourning Dove at Atlas Point Count: 17SQE03: 40.04750, -78.644
 ================================================================
 MARKETS
 ----------------------------------------------------------------
-BTC / USD         $74,806
-ETH / USD         $2,054
-XMR / USD         $393
+BTC / USD         $75,137
+ETH / USD         $2,058
+XMR / USD         $394
+Fear & Greed      25 (Extreme Fear)
+
+================================================================
+CULTURAL PULSE
+----------------------------------------------------------------
+Top Song          Janice STFU / Drake
+Top Movie         The Mandalorian and Grogu  ($81,670,433)
 
 ================================================================
 DISCOURSE
@@ -91,9 +106,9 @@ Wiki Top Article  Obsession (2025 film)
   views           230,622
   desc            2025 American horror film by Curry Barker
 In the News       
-  American jazz saxophonist Sonny Rollins (pictured) dies at the age of 95.
-Hacker News       I'm Tired of Talking to AI (1686 pts, 808 comments)
-Reddit Top        UPDATE: body cam footage from cop who pulled over woman for holding a phone in her other hand (r/whoathatsinteresting, 23,512 pts)
+  The Democratic Rally, led by Annita Demetriou, wins a plurality of seats in the Cypriot legislative election.
+Hacker News       I think Anthropic and OpenAI have found product-market fit (347 pts, 425 comments)
+Reddit Top        UPDATE: body cam footage from cop who pulled over woman for holding a phone in her other hand (r/whoathatsinteresting, 33,630 pts)
 
 ================================================================
 CURIO
@@ -108,19 +123,55 @@ GSFC,
 UMBC CSST, 
 CRESST II)
   What is a pair of headphones doing in the sky? Today’s image features the Headphone Nebula, also known as PK 164 +31.1 or Jones-Emberson 1. This planetary nebula, the remnant of a dying Sun-like star, faintly occupies an angular region of the Lynx constellation about 1/5th the diameter of the full m...
+GitHub            Tong89/smartNode (★ 1,471) [Python]
 
 ================================================================
 ON THIS DAY
 ----------------------------------------------------------------
-1915  HMS Princess Irene explodes and sinks off Sheerness, Kent, with the loss of 352 lives.
-1933  New Deal: The U.S. Federal Securities Act is signed into law requiring the registration of securities with the Federal Trade Commission.
-2014  The football club Kerala Blasters FC and its first supporters' group Manjappada are formed.
+1703  Tsar Peter the Great founds the city of Saint Petersburg.
+1905  Russo-Japanese War: The Battle of Tsushima begins.
+1919  The NC-4 aircraft arrives in Lisbon after completing the first transatlantic flight.
+
+================================================================
+INTERNAL STATE
+----------------------------------------------------------------
+Mood              10 / 10
+Energy            10 / 10
+Focus             10 / 10
+
+================================================================
+BODY / HEALTH
+----------------------------------------------------------------
+Heart Rate        30 bpm
+Blood Pressure    120 / 80 mmHg
+Body Temperature  98.6 F  /  37.0 C
+Weight            239.0 lb  /  108.4 kg
+Sleep             4.00 hr
+Steps             19,981
+
+================================================================
+PALETTE OF THE DAY
+----------------------------------------------------------------
+Sky               #86c0ea
+Horizon           #fce49c
+Cloud             #f5f5f5
+Accent            #df8f20
+  derived         phase=day, cloud=8%, sun_alt=47.7 deg
+
+================================================================
+META
+----------------------------------------------------------------
+Captured on       desktop
+Viewport          1912x931
+Language          en-US
 
 ================================================================
 OBSERVATION
 ----------------------------------------------------------------
 
-hello, world.
+very creative.
+
+Tags  /  #happy
 
 ================================================================
 Milepost / Field Instrument 003 / Green Shoe Garage

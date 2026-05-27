@@ -1,36 +1,45 @@
 {
   "instrument": "MILEPOST",
   "series": "Field Instrument 003",
-  "version": "0.1",
+  "version": "0.0.9",
   "entry": {
     "id": 1,
     "serial": "№001",
-    "capturedAt": "2026-05-27T17:52:06.994Z",
-    "observation": "hello, world.",
+    "capturedAt": "2026-05-27T20:12:04.882Z",
+    "observation": "very creative.",
     "snapshot": {
-      "timestamp": "2026-05-27T17:52:06.994Z",
-      "timestampLocal": "Wed May 27 2026 13:52:06 GMT-0400 (Eastern Daylight Time)",
+      "timestamp": "2026-05-27T20:12:04.882Z",
+      "timestampLocal": "Wed May 27 2026 16:12:04 GMT-0400 (Eastern Daylight Time)",
       "timezone": "America/New_York",
+      "meta": {
+        "client": {
+          "platform": "desktop",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+          "viewport": "1912x931",
+          "language": "en-US"
+        }
+      },
       "location": {
-        "latitude": 39.65287,
-        "longitude": -78.76252,
-        "place": "Cumberland, Maryland, US",
-        "timezone": "America/New_York",
-        "source": "ip"
+        "latitude": 39.66837813223596,
+        "longitude": -78.76992322492129,
+        "place": null,
+        "source": "gps",
+        "elevation": 0
       },
       "weather": {
-        "latitude": 39.65235,
-        "longitude": -78.77524,
-        "generationtime_ms": 0.2523660659790039,
+        "latitude": 39.678757,
+        "longitude": -78.76816,
+        "generationtime_ms": 0.8951425552368164,
         "utc_offset_seconds": -14400,
         "timezone": "America/New_York",
         "timezone_abbreviation": "GMT-4",
-        "elevation": 192,
+        "elevation": 272,
         "current_units": {
           "time": "iso8601",
           "interval": "seconds",
           "temperature_2m": "°C",
           "relative_humidity_2m": "%",
+          "dew_point_2m": "°C",
           "apparent_temperature": "°C",
           "is_day": "",
           "precipitation": "mm",
@@ -41,24 +50,27 @@
           "wind_speed_10m": "km/h",
           "wind_direction_10m": "°",
           "wind_gusts_10m": "km/h",
-          "visibility": "m"
+          "visibility": "m",
+          "uv_index": ""
         },
         "current": {
-          "time": "2026-05-27T13:45",
+          "time": "2026-05-27T16:00",
           "interval": 900,
-          "temperature_2m": 24.2,
-          "relative_humidity_2m": 85,
-          "apparent_temperature": 31.4,
+          "temperature_2m": 25.7,
+          "relative_humidity_2m": 70,
+          "dew_point_2m": 19.8,
+          "apparent_temperature": 29.8,
           "is_day": 1,
           "precipitation": 0,
-          "weather_code": 1,
-          "cloud_cover": 24,
-          "pressure_msl": 1013.1,
-          "surface_pressure": 991,
-          "wind_speed_10m": 0.8,
-          "wind_direction_10m": 117,
+          "weather_code": 0,
+          "cloud_cover": 8,
+          "pressure_msl": 1012.1,
+          "surface_pressure": 981.2,
+          "wind_speed_10m": 6.2,
+          "wind_direction_10m": 280,
           "wind_gusts_10m": 16.2,
-          "visibility": 17100
+          "visibility": 24600,
+          "uv_index": 2.15
         },
         "daily_units": {
           "time": "iso8601",
@@ -83,24 +95,24 @@
             4.85
           ],
           "temperature_2m_max": [
-            26.8
+            25.8
           ],
           "temperature_2m_min": [
-            18.8
+            18.5
           ],
           "precipitation_sum": [
-            36.3
+            40
           ]
         }
       },
       "airQuality": {
         "latitude": 39.699997,
         "longitude": -78.799995,
-        "generationtime_ms": 0.28955936431884766,
+        "generationtime_ms": 0.4202127456665039,
         "utc_offset_seconds": -14400,
         "timezone": "America/New_York",
         "timezone_abbreviation": "GMT-4",
-        "elevation": 192,
+        "elevation": 272,
         "current_units": {
           "time": "iso8601",
           "interval": "seconds",
@@ -118,14 +130,14 @@
           "ragweed_pollen": "grains/m³"
         },
         "current": {
-          "time": "2026-05-27T13:00",
+          "time": "2026-05-27T16:00",
           "interval": 3600,
           "us_aqi": 28,
-          "pm10": 2.4,
-          "pm2_5": 2.4,
-          "carbon_monoxide": 126,
-          "nitrogen_dioxide": 2,
-          "ozone": 68,
+          "pm10": 3.9,
+          "pm2_5": 3.6,
+          "carbon_monoxide": 127,
+          "nitrogen_dioxide": 1.6,
+          "ozone": 76,
           "alder_pollen": null,
           "birch_pollen": null,
           "grass_pollen": null,
@@ -134,23 +146,71 @@
           "ragweed_pollen": null
         }
       },
+      "climate": {
+        "co2": {
+          "ppm": 432.25,
+          "yearAgo": 430.35,
+          "tenYearAgo": 407.78,
+          "increaseSince1800": 148.92,
+          "weekStart": "2026-05-17",
+          "station": "Mauna Loa, Hawaii",
+          "source": "NOAA GML"
+        }
+      },
       "celestial": {
         "moon": {
           "name": "Waxing Gibbous",
-          "illumination": 0.8489250617961677,
-          "age": 11.01284025301732,
-          "fraction": 0.37292992387784807
+          "illumination": 0.8562590592383574,
+          "age": 11.110077498389087,
+          "fraction": 0.37622268738675757
         },
         "sun": {
-          "altitude": 69.85066015734266,
-          "azimuth": 207.89103462372665
+          "altitude": 47.73636763125403,
+          "azimuth": 258.0174184273513
         },
         "sunSign": "Gemini",
-        "julianDay": 2461188.2445285534,
+        "julianDay": 2461188.3417657986,
         "nextSolar": {
           "name": "June Solstice",
           "date": "2026-06-21T08:23:55.605Z",
           "days": 25
+        },
+        "sunTimes": {
+          "sunrise": "2026-05-27T09:50:00+00:00",
+          "sunset": "2026-05-28T00:34:34+00:00",
+          "solarNoon": "2026-05-27T17:12:17+00:00",
+          "dayLengthSeconds": 53074,
+          "civilTwilightBegin": "2026-05-27T09:20:01+00:00",
+          "civilTwilightEnd": "2026-05-28T01:04:33+00:00",
+          "nauticalTwilightBegin": "2026-05-27T08:40:33+00:00",
+          "nauticalTwilightEnd": "2026-05-28T01:44:01+00:00",
+          "astronomicalTwilightBegin": "2026-05-27T07:55:54+00:00",
+          "astronomicalTwilightEnd": "2026-05-28T02:28:40+00:00",
+          "source": "sunrise-sunset.org"
+        },
+        "solarDisk": {
+          "latestUrl": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIF.jpg",
+          "archiveDirectoryUrl": "https://sdo.gsfc.nasa.gov/assets/img/browse/2026/05/27/",
+          "wavelength": "HMI Intensitygram (visible-light continuum)",
+          "capturedAt": "2026-05-27T20:12:08.692Z",
+          "source": "NASA SDO"
+        },
+        "events": {
+          "activeMeteorShowers": [
+            {
+              "name": "Eta Aquariids",
+              "peak": "05-06",
+              "zhr": 60,
+              "atPeak": false
+            }
+          ],
+          "nextEclipse": {
+            "date": "2026-08-12",
+            "type": "total solar",
+            "region": "Greenland, Iceland, Spain",
+            "daysAway": 76
+          },
+          "source": "computed (NASA/IMO references)"
         }
       },
       "spaceWeather": {
@@ -158,25 +218,31 @@
           "kp": null
         },
         "solarWind": {
-          "timeTag": "2026-05-27 17:50:00.000",
-          "density": 5.62,
-          "speed": 400.3,
-          "temperature": 62834
+          "timeTag": "2026-05-27 20:09:00.000",
+          "density": 4.39,
+          "speed": 382.8,
+          "temperature": 54225
+        },
+        "aurora": {
+          "probability": 0,
+          "forecastTime": "2026-05-27T21:13:00Z",
+          "observationTime": "2026-05-27T20:01:00Z",
+          "source": "NOAA SWPC OVATION"
         }
       },
       "iss": {
         "name": "iss",
         "id": 25544,
-        "latitude": 2.1346969744293,
-        "longitude": -110.38896977151,
-        "altitude": 419.93376065277,
-        "velocity": 27576.443373872,
-        "visibility": "daylight",
-        "footprint": 4507.1264491333,
-        "timestamp": 1779904337,
-        "daynum": 2461188.2446412,
-        "solar_lat": 21.386351304081,
-        "solar_lon": 271.22933798793,
+        "latitude": -4.5156858347983,
+        "longitude": 35.916733910488,
+        "altitude": 419.01337288014,
+        "velocity": 27580.385703997,
+        "visibility": "eclipsed",
+        "footprint": 4502.440534769,
+        "timestamp": 1779912737,
+        "daynum": 2461188.3418634,
+        "solar_lat": 21.402244653535,
+        "solar_lon": 236.23227681993,
         "units": "kilometers"
       },
       "earthquakes": {
@@ -215,21 +281,21 @@
         "largest": {
           "mag": 6,
           "place": "western Indian-Antarctic Ridge",
-          "time": 1779893464419
+          "time": 1779894071567
         }
       },
       "wildfires": {
-        "count": 42,
+        "count": 61,
         "closest": {
-          "lat": 42.80071,
-          "lon": -80.10147,
-          "distance": 367.4845155480824,
-          "brightness": 303.57,
+          "lat": 40.18634,
+          "lon": -79.57779,
+          "distance": 89.7914320433858,
+          "brightness": 338.84,
           "confidence": "n",
-          "frp": 1.99,
+          "frp": 6.13,
           "date": "2026-05-27",
-          "time": "839",
-          "daynight": "N"
+          "time": "1823",
+          "daynight": "D"
         },
         "highIntensity": []
       },
@@ -239,18 +305,20 @@
           "name": "WILLS CREEK NEAR CUMBERLAND, MD",
           "lat": 39.66961111,
           "lon": -78.78802778,
-          "distance": 2.8693127203638364,
-          "discharge": 2350,
-          "gageHeight": 5.57,
-          "dateTime": "2026-05-27T13:00:00.000-04:00"
+          "distance": 1.5556537417021663,
+          "discharge": 2450,
+          "gageHeight": 5.65,
+          "dateTime": "2026-05-27T15:00:00.000-04:00"
         },
         "tide": {
           "inland": false,
           "station": "Washington",
           "stationId": "8594900",
-          "distance": 173.13004124882113,
-          "level": 1.006,
-          "time": "2026-05-27 13:42",
+          "lat": 38.873333,
+          "lon": -77.02167,
+          "distance": 174.534558117325,
+          "level": 2.564,
+          "time": "2026-05-27 16:00",
           "units": "ft (MLLW)"
         }
       },
@@ -261,21 +329,27 @@
             "sciName": "Calidris fuscicollis",
             "locName": "Mexico Farms (Restricted Access)",
             "howMany": 2,
-            "obsDt": "2026-05-27 08:16"
+            "obsDt": "2026-05-27 08:16",
+            "lat": 39.6016723,
+            "lng": -78.7608707
           },
           {
             "comName": "White-rumped Sandpiper",
             "sciName": "Calidris fuscicollis",
             "locName": "Mexico Farms (Restricted Access)",
             "howMany": 2,
-            "obsDt": "2026-05-27 08:16"
+            "obsDt": "2026-05-27 08:16",
+            "lat": 39.6016723,
+            "lng": -78.7608707
           },
           {
             "comName": "Lesser Scaup",
             "sciName": "Aythya affinis",
             "locName": "C&O Canal--North Branch",
             "howMany": 1,
-            "obsDt": "2026-05-27 07:52"
+            "obsDt": "2026-05-27 07:52",
+            "lat": 39.5849208,
+            "lng": -78.7463093
           }
         ],
         "recent": [
@@ -283,31 +357,41 @@
             "comName": "Mourning Dove",
             "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
             "howMany": 1,
-            "obsDt": "2026-05-27 06:24"
+            "obsDt": "2026-05-27 06:24",
+            "lat": 40.0475044,
+            "lng": -78.6445618
           },
           {
             "comName": "Chimney Swift",
             "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
             "howMany": 2,
-            "obsDt": "2026-05-27 06:24"
+            "obsDt": "2026-05-27 06:24",
+            "lat": 40.0475044,
+            "lng": -78.6445618
           },
           {
             "comName": "Fish Crow",
             "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
             "howMany": 1,
-            "obsDt": "2026-05-27 06:24"
+            "obsDt": "2026-05-27 06:24",
+            "lat": 40.0475044,
+            "lng": -78.6445618
           },
           {
             "comName": "White-breasted Nuthatch",
             "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
             "howMany": 1,
-            "obsDt": "2026-05-27 06:24"
+            "obsDt": "2026-05-27 06:24",
+            "lat": 40.0475044,
+            "lng": -78.6445618
           },
           {
             "comName": "Carolina Wren",
             "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
             "howMany": 1,
-            "obsDt": "2026-05-27 06:24"
+            "obsDt": "2026-05-27 06:24",
+            "lat": 40.0475044,
+            "lng": -78.6445618
           }
         ],
         "speciesCount": 20,
@@ -316,21 +400,50 @@
       "markets": {
         "crypto": {
           "bitcoin": {
-            "usd": 74806,
-            "usd_24h_change": -1.5287934153790732
+            "usd": 75137,
+            "usd_24h_change": -1.1328322066812204
           },
           "ethereum": {
-            "usd": 2053.85,
-            "usd_24h_change": -0.7619514806438141
+            "usd": 2058.21,
+            "usd_24h_change": -0.7131717432823146
           },
           "monero": {
-            "usd": 392.95,
-            "usd_24h_change": 3.1906713509789957
+            "usd": 394.44,
+            "usd_24h_change": 4.390414262208488
           }
         },
-        "fx": null
+        "fx": null,
+        "stocks": null,
+        "commodities": null,
+        "treasuries": null,
+        "sentiment": {
+          "value": 25,
+          "classification": "Extreme Fear",
+          "timestamp": "1779840000",
+          "source": "alternative.me"
+        }
       },
-      "cultural": {},
+      "cultural": {
+        "movie": {
+          "name": "The Mandalorian and Grogu",
+          "artistName": null,
+          "releaseDate": null,
+          "kind": "movie",
+          "url": "https://en.wikipedia.org/wiki/List_of_2026_box_office_number-one_films_in_the_United_States",
+          "gross": "$81,670,433",
+          "sourceLabel": "Wikipedia",
+          "genres": []
+        },
+        "song": {
+          "name": "Janice STFU",
+          "artistName": "Drake",
+          "releaseDate": null,
+          "kind": "song",
+          "url": "https://en.wikipedia.org/wiki/List_of_Billboard_Hot_100_number_ones_of_2026",
+          "sourceLabel": "Wikipedia (Billboard)",
+          "genres": []
+        }
+      },
       "discourse": {
         "wiki": {
           "mostread": {
@@ -339,7 +452,7 @@
             "views": 230622
           },
           "news": {
-            "text": "American jazz saxophonist Sonny Rollins (pictured) dies at the age of 95."
+            "text": "The Democratic Rally, led by Annita Demetriou, wins a plurality of seats in the Cypriot legislative election."
           },
           "image": {
             "title": "Павильон Турецкая Баня 9 6. Екатерининский парк, Пушкин",
@@ -347,20 +460,21 @@
           }
         },
         "hackerNews": {
-          "title": "I'm Tired of Talking to AI",
-          "url": "https://orchidfiles.com/im-tired-of-ai-generated-answers/",
-          "score": 1686,
-          "by": "theorchid",
-          "descendants": 808
+          "title": "I think Anthropic and OpenAI have found product-market fit",
+          "url": "https://simonwillison.net/2026/May/27/product-market-fit/",
+          "score": 347,
+          "by": "simonw",
+          "descendants": 425
         },
         "reddit": {
           "title": "UPDATE: body cam footage from cop who pulled over woman for holding a phone in her other hand",
           "subreddit": "whoathatsinteresting",
-          "score": 23512,
-          "comments": 3235,
+          "score": 33630,
+          "comments": 4078,
           "author": "australiughhh",
           "permalink": "https://reddit.com/r/whoathatsinteresting/comments/1tp3u42/update_body_cam_footage_from_cop_who_pulled_over/"
-        }
+        },
+        "currentEvents": null
       },
       "curio": {
         "apod": {
@@ -372,21 +486,63 @@
           "copyright": "Bernard Miller\n\nText:\nKeighley Rockcliffe  \n(NASA\nGSFC, \nUMBC CSST, \nCRESST II)",
           "date": "2026-05-27"
         },
-        "xkcd": null
+        "xkcd": null,
+        "arxiv": null,
+        "github": {
+          "name": "Tong89/smartNode",
+          "description": null,
+          "stars": 1471,
+          "language": "Python",
+          "link": "https://github.com/Tong89/smartNode",
+          "created": "2026-05-21T07:31:35Z",
+          "source": "GitHub Search API"
+        }
       },
       "onThisDay": [
         {
-          "year": 1915,
-          "text": "HMS Princess Irene explodes and sinks off Sheerness, Kent, with the loss of 352 lives."
+          "year": 1703,
+          "text": "Tsar Peter the Great founds the city of Saint Petersburg."
         },
         {
-          "year": 1933,
-          "text": "New Deal: The U.S. Federal Securities Act is signed into law requiring the registration of securities with the Federal Trade Commission."
+          "year": 1905,
+          "text": "Russo-Japanese War: The Battle of Tsushima begins."
         },
         {
-          "year": 2014,
-          "text": "The football club Kerala Blasters FC and its first supporters' group Manjappada are formed."
+          "year": 1919,
+          "text": "The NC-4 aircraft arrives in Lisbon after completing the first transatlantic flight."
         }
+      ],
+      "palette": {
+        "sky": "#86c0ea",
+        "horizon": "#fce49c",
+        "cloud": "#f5f5f5",
+        "accent": "#df8f20",
+        "derivedFrom": {
+          "phase": "day",
+          "sunAltitude": 47.73636763125403,
+          "cloudCover": 8,
+          "precipitation": 0
+        }
+      },
+      "internal": {
+        "mood": 10,
+        "energy": 10,
+        "focus": 10,
+        "scale": "1-10"
+      },
+      "body": {
+        "heartRate": 30,
+        "bodyTemperatureF": 98.6,
+        "weightLb": 239,
+        "sleepHours": 4,
+        "steps": 19981,
+        "bloodPressure": {
+          "systolic": 120,
+          "diastolic": 80
+        }
+      },
+      "tags": [
+        "happy"
       ]
     }
   }
