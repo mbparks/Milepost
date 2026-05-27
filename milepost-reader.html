@@ -1285,7 +1285,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.11</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.13</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1307,7 +1307,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.11
+   MILEPOST READER  /  v0.0.13
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -2189,14 +2189,14 @@ function renderSectionBiosphere(s) {
 
 function renderSectionMarkets(s) {
   const m = s.markets;
-  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment && !m.djiaMilestone)) {
+  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment && !m.djiaClose)) {
     return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   }
   const rows = [];
   const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
-  if (m.djiaMilestone) {
-    const dm = m.djiaMilestone;
-    rows.push(kvRow('DJIA Milestone Close', fmtNum(dm.closeValue, 2), `on ${dm.closeDate}`));
+  if (m.djiaClose) {
+    const dc = m.djiaClose;
+    rows.push(kvRow('DJIA Close', fmtNum(dc.closeValue, 2), `on ${dc.closeDate}`));
   }
   if (m.stocks) {
     if (m.stocks.dji)    rows.push(kvRow('Dow Jones',  fmtNum(m.stocks.dji.price, 0),    fmtPct(m.stocks.dji.changePercent)));
@@ -2233,7 +2233,7 @@ function renderSectionMarkets(s) {
     if (m.fx.rates.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
   }
   const sources = [
-    m.djiaMilestone && 'Wikipedia milestones',
+    m.djiaClose && 'FRED',
     (m.stocks || m.commodities || m.treasuries) && 'Yahoo/Stooq',
     m.crypto && 'CoinGecko',
     m.sentiment && 'alternative.me',
@@ -2246,6 +2246,7 @@ function renderSectionCultural(s) {
   const c = s.cultural;
   if (!c || !Object.keys(c).length) return sec('Cultural Pulse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const line = (it) => it ? (it.artistName ? `${it.name}  /  ${it.artistName}` : it.name) : '';
+  const ytAux = c.youtube?.viewCount ? `${fmtNum(c.youtube.viewCount, 0)} views` : '';
   // Render only fields actually present; movie shows box-office gross as a secondary value
   const candidates = [
     ['Top Song',    c.song,    null],
@@ -2254,6 +2255,7 @@ function renderSectionCultural(s) {
     ['Top App',     c.app,     null],
     ['Top Podcast', c.podcast, null],
     ['Top Book',    c.book,    null],
+    ['Top YouTube', c.youtube, ytAux || null],
   ];
   const rows = candidates
     .filter(([, v]) => v != null)
@@ -2262,7 +2264,7 @@ function renderSectionCultural(s) {
   // Dynamic source attribution
   const appleKeys = ['song', 'album', 'app', 'podcast', 'book'];
   const hasApple = appleKeys.some((k) => c[k]);
-  const sources = [hasApple && 'Apple Charts', c.movie && 'Wikipedia'].filter(Boolean).join(', ');
+  const sources = [hasApple && 'Apple Charts', c.movie && 'Wikipedia', c.youtube && 'Piped/Invidious'].filter(Boolean).join(', ');
   return sec('Cultural Pulse', sources, rows, { single: true });
 }
 

@@ -1226,7 +1226,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.11</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.13</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -2225,6 +2225,75 @@ async function getTopAlbum() {
   return null;
 }
 
+/* ---------- Top YouTube trending video ----------
+   YouTube's official Data API requires a free key (10K daily quota), but we want
+   to stay keyless. Community projects Piped and Invidious run public mirrors of
+   YouTube with their own JSON APIs. Both publish curated lists of instances; we
+   walk a small set in order and take the first one that returns trending data.
+   Each instance is independently operated so any one going down doesn't kill the
+   row. The two project's response shapes differ slightly so we normalize per type.
+   Piped row:      { title, uploaderName, views, url: '/watch?v=XXX', ... }
+   Invidious row:  { title, author, viewCount, videoId, ... }
+   Returned in the same shape as Apple cultural items so the renderer can treat
+   them uniformly: { name, artistName, viewCount, url, videoId, sourceLabel }. */
+const YOUTUBE_TRENDING_INSTANCES = [
+  { type: 'piped',     url: 'https://pipedapi.kavin.rocks/trending?region=US' },
+  { type: 'piped',     url: 'https://api.piped.video/trending?region=US' },
+  { type: 'piped',     url: 'https://pipedapi.r4fo.com/trending?region=US' },
+  { type: 'invidious', url: 'https://invidious.fdn.fr/api/v1/trending?region=US' },
+  { type: 'invidious', url: 'https://yewtu.be/api/v1/trending?region=US' },
+];
+
+async function getTopYouTube() {
+  let lastErr = null;
+  for (const inst of YOUTUBE_TRENDING_INSTANCES) {
+    let host = inst.url;
+    try { host = new URL(inst.url).host; } catch (_) {}
+    try {
+      const r = await fetchScrape(inst.url);
+      const data = await r.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        lastErr = new Error('empty response');
+        console.warn(`[Milepost] cultural/youtube ${host}: empty response`);
+        continue;
+      }
+      const top = data[0];
+      let title, channel, views, videoId, videoUrl;
+      if (inst.type === 'piped') {
+        title = top.title;
+        channel = top.uploaderName;
+        views = top.views;
+        const m = top.url?.match(/v=([^&]+)/);
+        videoId = m ? m[1] : null;
+        videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+      } else { // invidious
+        title = top.title;
+        channel = top.author;
+        views = top.viewCount;
+        videoId = top.videoId;
+        videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+      }
+      if (!title) {
+        lastErr = new Error('missing title');
+        continue;
+      }
+      return {
+        name: title,
+        artistName: channel || null,
+        viewCount: typeof views === 'number' ? views : null,
+        url: videoUrl,
+        videoId,
+        sourceLabel: `${inst.type === 'piped' ? 'Piped' : 'Invidious'} (${host})`,
+      };
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[Milepost] cultural/youtube ${host}: ${e.message}`);
+    }
+  }
+  if (lastErr) throw lastErr;
+  return null;
+}
+
 async function getCultural() {
   const out = {};
   const tasks = [
@@ -2259,6 +2328,15 @@ async function getCultural() {
         if (movie) out.movie = movie;
       } catch (e) {
         console.warn(`[Milepost] cultural/movie: ${e.message}`);
+      }
+    })(),
+    // YouTube trending via Piped/Invidious public instances (no API key)
+    (async () => {
+      try {
+        const yt = await getTopYouTube();
+        if (yt) out.youtube = yt;
+      } catch (e) {
+        console.warn(`[Milepost] cultural/youtube (all instances failed): ${e.message}`);
       }
     })(),
   ];
@@ -2737,71 +2815,60 @@ async function getTreasuries() {
   return Object.keys(out).length ? out : null;
 }
 
-/* ---------- DJIA most-recent milestone close (Wikipedia "Closing milestones") ----------
-   Wikipedia maintains an editor-curated article tracking every time the DJIA crosses
-   a major round-number threshold (every 500 or 1000 points at present levels). The
-   article's main table has rows like:
-     | 50,000 || February 6, 2026 || 50,115.67 || ...
-   We scrape this for the most recent milestone close: a definite date and a
-   definite close value, editorially confirmed. This is NOT a daily close (it lags
-   by however long it's been since the last major threshold), but it's the most
-   definitive scrapeable record of "Dow Jones closed at X on date Y" that Wikipedia
-   maintains, and it's a meaningful newspaper-style data point on its own.
-   Returns null on parse failure so the rest of markets still captures. */
-async function getDjiaMilestone() {
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const title = 'Closing_milestones_of_the_Dow_Jones_Industrial_Average';
-  const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${title}&prop=wikitext&format=json&origin=*&redirects=1`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.info || 'parse error');
-  const wt = j.parse?.wikitext?.['*'];
-  if (!wt) throw new Error('no wikitext');
-
-  // Split into rows and look for cells with a date + a comma-grouped close value
-  const rows = wt.split(/\n\|-+\s*\n?/);
-  const milestones = [];
-  for (const row of rows) {
-    const cells = row.split(/\s*\|\|\s*|\n\s*\|\s+/);
-    let dateObj = null, dateStr = null, value = null;
-    for (const cell of cells) {
-      if (!dateObj) {
-        const dm = cell.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/);
-        if (dm) {
-          const monthIdx = MONTHS.indexOf(dm[1]);
-          const dayN = parseInt(dm[2], 10);
-          const yearN = parseInt(dm[3], 10);
-          if (monthIdx >= 0 && dayN >= 1 && dayN <= 31 && yearN >= 1885) {
-            dateObj = new Date(Date.UTC(yearN, monthIdx, dayN));
-            dateStr = `${dm[1]} ${dm[2]}, ${dm[3]}`;
-          }
-        }
-      } else if (!value) {
-        // Comma-grouped number, optionally with decimals. Sanity-bound to DJIA range.
-        const vm = cell.match(/\b(\d{1,3}(?:,\d{3})+(?:\.\d+)?)\b/);
-        if (vm) {
-          const v = parseFloat(vm[1].replace(/,/g, ''));
-          if (v >= 50 && v < 250000) value = v;
-        }
+/* ---------- DJIA most recent close (FRED, Federal Reserve Economic Data) ----------
+   FRED publishes the official daily DJIA close at market close (~4pm ET, ~7pm CST
+   when their daily release fires). The series is editorially authoritative (sourced
+   from S&P Dow Jones Indices directly) and exposed via a public CSV download URL
+   that needs no API key. CSV format:
+     DATE,DJIA
+     2026-05-23,48721.43
+     2026-05-24,.            <- FRED uses "." for missing values (weekends/holidays)
+     2026-05-26,48810.55
+   We query the last 30 days to keep payload small (~600 bytes vs ~60KB for the full
+   series since 2016), walk from the end of the file, and take the most recent row
+   with a real value. Returned as data.markets.djiaClose with the date so the reader
+   can show "DJIA Close: 48,810.55 on May 26, 2026" rather than guessing whether the
+   number is current intraday or some stale milestone. */
+async function getDjiaCurrent() {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const cosd = thirtyDaysAgo.toISOString().slice(0, 10);
+  const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DJIA&cosd=${cosd}`;
+  const r = await fetchScrape(url);
+  const text = await r.text();
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('empty CSV');
+  // Walk rows from end, take first row with a real (non-".") value.
+  for (let i = lines.length - 1; i >= 1; i--) {
+    const cols = lines[i].split(',');
+    if (cols.length < 2) continue;
+    const dateStr = cols[0].trim();
+    const valueStr = cols[1].trim();
+    if (!valueStr || valueStr === '.' || valueStr.toLowerCase() === 'nan') continue;
+    const value = parseFloat(valueStr);
+    if (!isFinite(value) || value <= 0) continue;
+    // Format date for human display: 2026-05-23 -> May 23, 2026
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    let displayDate = dateStr;
+    const dm = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dm) {
+      const monthIdx = parseInt(dm[2], 10) - 1;
+      const dayN = parseInt(dm[3], 10);
+      if (monthIdx >= 0 && monthIdx <= 11) {
+        displayDate = `${MONTHS[monthIdx]} ${dayN}, ${dm[1]}`;
       }
     }
-    if (dateObj && value != null) milestones.push({ date: dateObj, dateStr, value });
+    return {
+      symbol: '^DJI',
+      name: 'Dow Jones Industrial Average',
+      closeValue: value,
+      closeDate: displayDate,
+      closeDateISO: dateStr,
+      source: 'FRED',
+      sourceUrl: 'https://fred.stlouisfed.org/series/DJIA',
+    };
   }
-  if (!milestones.length) throw new Error('no milestone rows found');
-
-  // Most recent by date
-  milestones.sort((a, b) => b.date - a.date);
-  const latest = milestones[0];
-  return {
-    symbol: '^DJI',
-    name: 'Dow Jones Industrial Average',
-    closeValue: latest.value,
-    closeDate: latest.dateStr,
-    closeDateISO: latest.date.toISOString().slice(0, 10),
-    source: 'wikipedia-milestones',
-    sourceUrl: `https://en.wikipedia.org/wiki/${title}`,
-  };
+  throw new Error('no valid close in last 30 days');
 }
 
 /* ---------- arXiv recent paper ---------- */
@@ -3005,16 +3072,16 @@ async function captureAll() {
       if (data.biosphere?.needsKey) throw new Error('needsKey');
     }],
     ['mkt', async () => {
-      const [c, f, st, com, tr, fg, djm] = await Promise.all([
+      const [c, f, st, com, tr, fg, djc] = await Promise.all([
         getCrypto().catch(() => null),
         getFx().catch(() => null),
         getStocks().catch(() => null),
         getCommodities().catch(() => null),
         getTreasuries().catch(() => null),
         getCryptoFearGreed().catch((e) => { console.warn(`[Milepost] mkt/fng: ${e.message}`); return null; }),
-        getDjiaMilestone().catch((e) => { console.warn(`[Milepost] mkt/djiaMilestone: ${e.message}`); return null; }),
+        getDjiaCurrent().catch((e) => { console.warn(`[Milepost] mkt/djiaClose: ${e.message}`); return null; }),
       ]);
-      data.markets = { crypto: c, fx: f, stocks: st, commodities: com, treasuries: tr, sentiment: fg, djiaMilestone: djm };
+      data.markets = { crypto: c, fx: f, stocks: st, commodities: com, treasuries: tr, sentiment: fg, djiaClose: djc };
     }],
     ['cult', async () => {
       data.cultural = await getCultural();
@@ -3726,10 +3793,10 @@ function buildTextExport(entry) {
   if (m) {
     out += `${RULE}\nMARKETS\n${RULE2}\n`;
     const fmtPct = (p) => p == null ? '' : ` (${p >= 0 ? '+' : ''}${p.toFixed(2)}%)`;
-    if (m.djiaMilestone) {
-      const dm = m.djiaMilestone;
-      out += line('DJIA Milestone Close', `${fmtNum(dm.closeValue, 2)} on ${dm.closeDate}`);
-      out += line('  source', 'Wikipedia (Closing milestones of the DJIA)');
+    if (m.djiaClose) {
+      const dc = m.djiaClose;
+      out += line('DJIA Close', `${fmtNum(dc.closeValue, 2)} on ${dc.closeDate}`);
+      out += line('  source', 'FRED (St. Louis Fed)');
     }
     if (m.stocks?.dji)    out += line('Dow Jones',  `${fmtNum(m.stocks.dji.price, 0)}${fmtPct(m.stocks.dji.changePercent)}`);
     if (m.stocks?.sp500)  out += line('S&P 500',    `${fmtNum(m.stocks.sp500.price, 1)}${fmtPct(m.stocks.sp500.changePercent)}`);
@@ -3765,6 +3832,11 @@ function buildTextExport(entry) {
     if (cult.app) out += line('Top App', c1(cult.app));
     if (cult.podcast) out += line('Top Podcast', c1(cult.podcast));
     if (cult.book) out += line('Top Book', c1(cult.book));
+    if (cult.youtube) {
+      const yt = cult.youtube;
+      const viewsStr = yt.viewCount ? ` (${fmtNum(yt.viewCount, 0)} views)` : '';
+      out += line('Top YouTube', `${c1(yt)}${viewsStr}`);
+    }
     out += '\n';
   }
 
@@ -4407,7 +4479,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.11',
+    version: '0.0.13',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

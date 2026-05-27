@@ -363,6 +363,7 @@ h1 {
 
   <div class="controls">
     <button class="btn" id="runAll">Run All</button>
+    <button class="btn ghost" id="exportDiag">Export Diagnostic</button>
     <button class="btn ghost" id="clearStatus">Clear</button>
     <span style="margin-left:auto;font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);text-transform:uppercase">Started: <span id="startedAt">--</span></span>
   </div>
@@ -372,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.11</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.13</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -570,14 +571,22 @@ const SOURCES = [
     if (!isFinite(close) || close === 0) throw new Error('no price');
     return `S&P at ${close.toFixed(2)}`;
   }},
-  { category: 'Markets', name: 'DJIA Milestone (Wikipedia)', domain: 'en.wikipedia.org', run: async () => {
-    const r = await fetch('https://en.wikipedia.org/w/api.php?action=parse&page=Closing_milestones_of_the_Dow_Jones_Industrial_Average&prop=wikitext&format=json&origin=*&redirects=1');
+  { category: 'Markets', name: 'DJIA Close (FRED)', domain: 'fred.stlouisfed.org', run: async () => {
+    const cosd = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const r = await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=DJIA&cosd=${cosd}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = await r.json();
-    if (j.error) throw new Error(j.error.info);
-    const wt = j.parse?.wikitext?.['*'];
-    if (!wt) throw new Error('no wikitext');
-    return `${(wt.length / 1024).toFixed(1)}KB of wikitext (milestone table parseable)`;
+    const text = (await r.text()).trim();
+    const lines = text.split(/\r?\n/);
+    if (lines.length < 2) throw new Error('empty CSV');
+    // Walk from end for most recent non-"." value
+    for (let i = lines.length - 1; i >= 1; i--) {
+      const cols = lines[i].split(',');
+      if (cols.length >= 2 && cols[1].trim() !== '.' && cols[1].trim() !== '') {
+        const v = parseFloat(cols[1]);
+        if (isFinite(v)) return `DJIA ${v.toFixed(2)} on ${cols[0]}`;
+      }
+    }
+    throw new Error('no valid close in last 30 days');
   }},
   { category: 'Markets', name: 'Crypto (CoinGecko)', domain: 'api.coingecko.com', run: async () => {
     const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
@@ -616,6 +625,31 @@ const SOURCES = [
     const j = await r.json();
     if (j.error) throw new Error(j.error.info);
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
+  }},
+  { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'pipedapi.kavin.rocks', run: async () => {
+    const INSTANCES = [
+      'https://pipedapi.kavin.rocks/trending?region=US',
+      'https://api.piped.video/trending?region=US',
+      'https://invidious.fdn.fr/api/v1/trending?region=US',
+      'https://yewtu.be/api/v1/trending?region=US',
+    ];
+    const errors = [];
+    for (const url of INSTANCES) {
+      let host = url; try { host = new URL(url).host; } catch (_) {}
+      try {
+        const r = await fetch(url);
+        if (!r.ok) { errors.push(`${host}: HTTP ${r.status}`); continue; }
+        const data = await r.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const t = data[0];
+          return `${host}: #1 = ${t.title || '(no title)'}`;
+        }
+        errors.push(`${host}: empty`);
+      } catch (e) {
+        errors.push(`${host}: ${e.message}`);
+      }
+    }
+    throw new Error(`all instances failed (${errors.slice(0, 2).join('; ')})`);
   }},
   { category: 'Discourse', name: 'Wikipedia Featured', domain: 'en.wikipedia.org', run: async () => {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
@@ -810,6 +844,86 @@ $('clearStatus').addEventListener('click', () => {
   RESULTS.clear();
   $('startedAt').textContent = '--';
   renderAll();
+});
+
+/* ---------- Diagnostic export ----------
+   Bundles current probe state into a JSON file the user can attach to a bug
+   report or chat thread. Includes everything needed to diagnose source failures
+   without exposing secrets: tool version, browser/UA, page-time, settings
+   presence flags (NOT key values), and full per-probe results with category /
+   name / domain / state / elapsed / detail. Bad and warn probes are pulled to a
+   priority list at the top of the JSON so the recipient sees what's broken first;
+   the complete results array follows for full context. */
+function buildDiagnostic() {
+  const probes = [];
+  for (const src of SOURCES) {
+    const result = RESULTS.get(src);
+    probes.push({
+      category: src.category,
+      name: src.name,
+      domain: src.domain,
+      state: result?.state || 'untested',
+      elapsed_ms: result?.elapsed != null ? Math.round(result.elapsed) : null,
+      detail: result?.detail != null ? String(result.detail).slice(0, 500) : null,
+    });
+  }
+  const failed = probes.filter((p) => p.state === 'bad');
+  const slow = probes.filter((p) => p.state === 'warn');
+  const skipped = probes.filter((p) => p.state === 'skipped');
+  const ok = probes.filter((p) => p.state === 'good');
+  // Read Settings flags without exposing key values
+  let settings = {};
+  try {
+    const get = (k) => {
+      try { return localStorage.getItem(k); } catch (_) { return null; }
+    };
+    settings = {
+      cors_proxy: get('milepost_cors_proxy') || '(default)',
+      has_firms_key: !!get('milepost_firms'),
+      has_ebird_key: !!get('milepost_ebird'),
+      sound_pref: get('milepost_sound') || '(default)',
+    };
+  } catch (_) {}
+  return {
+    milepost_status_version: 'v0.0.13',
+    generated_at: new Date().toISOString(),
+    page_url: location.href,
+    user_agent: navigator.userAgent,
+    language: navigator.language,
+    online: navigator.onLine,
+    settings,
+    summary: {
+      total: probes.length,
+      ok: ok.length,
+      failed: failed.length,
+      slow: slow.length,
+      skipped: skipped.length,
+      untested: probes.length - ok.length - failed.length - slow.length - skipped.length,
+    },
+    failed,
+    slow,
+    skipped,
+    all_probes: probes,
+  };
+}
+
+$('exportDiag').addEventListener('click', () => {
+  const diag = buildDiagnostic();
+  if (diag.summary.untested === diag.summary.total) {
+    // Nothing has run yet; hint the user
+    const proceed = confirm('No probes have been run yet. Export an empty diagnostic anyway?');
+    if (!proceed) return;
+  }
+  const blob = new Blob([JSON.stringify(diag, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url;
+  a.download = `milepost-diagnostic_${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
 // Initial render with pending state
