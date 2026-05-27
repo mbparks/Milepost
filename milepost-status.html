@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.13</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.14</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -407,6 +407,35 @@ async function timed(fn, hardMs = HARD_TIMEOUT_MS) {
 // A test location (Mountain Maryland-ish, matches Mike's region for realistic probes)
 const TEST_LAT = 39.6;
 const TEST_LON = -78.8;
+
+/* ---------- probeFetch: mirrors fetchScrape semantics from the capture instrument
+   Tries direct fetch first; on CORS error or non-OK response, falls back to the
+   configured CORS proxy (defaults to AllOrigins). Returns {response, path} where
+   path is 'direct' or 'proxy'. The status page surfaces this in each probe's
+   result text so users see which transport worked. Without this, probes show
+   "Failed to fetch" for sources that actually work in real captures via the proxy
+   fallback, which is misleading: the probe is testing direct connectivity but the
+   capture instrument is using fetchScrape. Aligning these gives accurate diagnostics. */
+async function probeFetch(url) {
+  let directErr = null;
+  try {
+    const r = await fetch(url);
+    if (r.ok) return { response: r, path: 'direct' };
+    directErr = new Error(`HTTP ${r.status}`);
+  } catch (e) {
+    directErr = e;
+  }
+  let proxyBase = 'https://api.allorigins.win/raw?url=';
+  try {
+    const stored = localStorage.getItem('milepost_cors_proxy');
+    if (stored !== null) proxyBase = stored;
+  } catch (_) {}
+  if (!proxyBase) throw new Error(`direct failed: ${directErr.message}; proxy disabled in Settings`);
+  const proxiedUrl = proxyBase + encodeURIComponent(url);
+  const r = await fetch(proxiedUrl);
+  if (!r.ok) throw new Error(`direct: ${directErr.message}; proxy: HTTP ${r.status}`);
+  return { response: r, path: 'proxy' };
+}
 
 const SOURCES = [
   // ---------- Transport ----------
@@ -551,16 +580,14 @@ const SOURCES = [
 
   // ---------- Markets ----------
   { category: 'Markets', name: 'Stocks/Treasuries/Commodities (Yahoo)', domain: 'query1.finance.yahoo.com', run: async () => {
-    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/^GSPC?interval=1d&range=2d');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch('https://query1.finance.yahoo.com/v8/finance/chart/^GSPC?interval=1d&range=2d');
     const j = await r.json();
     const meta = j.chart?.result?.[0]?.meta;
     if (!meta) throw new Error('no meta in response');
-    return `S&P at ${meta.regularMarketPrice?.toFixed(2)}`;
+    return `S&P at ${meta.regularMarketPrice?.toFixed(2)} (via ${path})`;
   }},
   { category: 'Markets', name: 'Stocks fallback (Stooq)', domain: 'stooq.com', run: async () => {
-    const r = await fetch('https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch('https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv');
     const text = (await r.text()).trim();
     if (/exceeded the daily hits limit/i.test(text)) throw new Error('rate limit');
     const lines = text.split(/\r?\n/);
@@ -569,21 +596,19 @@ const SOURCES = [
     if (cells.length < 7) throw new Error('malformed CSV');
     const close = parseFloat(cells[6]);
     if (!isFinite(close) || close === 0) throw new Error('no price');
-    return `S&P at ${close.toFixed(2)}`;
+    return `S&P at ${close.toFixed(2)} (via ${path})`;
   }},
   { category: 'Markets', name: 'DJIA Close (FRED)', domain: 'fred.stlouisfed.org', run: async () => {
     const cosd = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const r = await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=DJIA&cosd=${cosd}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=DJIA&cosd=${cosd}`);
     const text = (await r.text()).trim();
     const lines = text.split(/\r?\n/);
     if (lines.length < 2) throw new Error('empty CSV');
-    // Walk from end for most recent non-"." value
     for (let i = lines.length - 1; i >= 1; i--) {
       const cols = lines[i].split(',');
       if (cols.length >= 2 && cols[1].trim() !== '.' && cols[1].trim() !== '') {
         const v = parseFloat(cols[1]);
-        if (isFinite(v)) return `DJIA ${v.toFixed(2)} on ${cols[0]}`;
+        if (isFinite(v)) return `DJIA ${v.toFixed(2)} on ${cols[0]} (via ${path})`;
       }
     }
     throw new Error('no valid close in last 30 days');
@@ -603,20 +628,18 @@ const SOURCES = [
     return `${d.value} (${d.value_classification})`;
   }},
   { category: 'Markets', name: 'FX (Frankfurter)', domain: 'api.frankfurter.app', run: async () => {
-    const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY');
     const j = await r.json();
-    return `EUR ${j.rates?.EUR?.toFixed(4) || '?'}`;
+    return `EUR ${j.rates?.EUR?.toFixed(4) || '?'} (via ${path})`;
   }},
 
   // ---------- Cultural / Discourse / Curio ----------
   { category: 'Cultural', name: 'Apple Charts (RSS)', domain: 'rss.marketingtools.apple.com', run: async () => {
-    const r = await fetch('https://rss.marketingtools.apple.com/api/v2/us/music/most-played/1/songs.json');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch('https://rss.marketingtools.apple.com/api/v2/us/music/most-played/1/songs.json');
     const j = await r.json();
     const t = j.feed?.results?.[0];
     if (!t) throw new Error('empty feed');
-    return `#1 song: ${t.name}`;
+    return `#1 song: ${t.name} (via ${path})`;
   }},
   { category: 'Cultural', name: 'Box Office (Wikipedia)', domain: 'en.wikipedia.org', run: async () => {
     const year = new Date().getFullYear();
@@ -626,10 +649,18 @@ const SOURCES = [
     if (j.error) throw new Error(j.error.info);
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
-  { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'pipedapi.kavin.rocks', run: async () => {
+  { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
+    // Extended chain. Public Piped/Invidious instances are individually flaky;
+    // trying many maximizes the chance of hitting one that's currently up.
+    // Each is attempted via probeFetch so direct or proxy-routed paths can both succeed.
     const INSTANCES = [
       'https://pipedapi.kavin.rocks/trending?region=US',
-      'https://api.piped.video/trending?region=US',
+      'https://pipedapi-libre.kavin.rocks/trending?region=US',
+      'https://pipedapi.leptons.xyz/trending?region=US',
+      'https://piped-api.privacy.com.de/trending?region=US',
+      'https://api.piped.yt/trending?region=US',
+      'https://pipedapi.adminforge.de/trending?region=US',
+      'https://pipedapi.drgns.space/trending?region=US',
       'https://invidious.fdn.fr/api/v1/trending?region=US',
       'https://yewtu.be/api/v1/trending?region=US',
     ];
@@ -637,19 +668,18 @@ const SOURCES = [
     for (const url of INSTANCES) {
       let host = url; try { host = new URL(url).host; } catch (_) {}
       try {
-        const r = await fetch(url);
-        if (!r.ok) { errors.push(`${host}: HTTP ${r.status}`); continue; }
+        const { response: r, path } = await probeFetch(url);
         const data = await r.json();
         if (Array.isArray(data) && data.length > 0) {
           const t = data[0];
-          return `${host}: #1 = ${t.title || '(no title)'}`;
+          return `${host}: #1 = ${(t.title || '(no title)').slice(0, 60)} (via ${path})`;
         }
         errors.push(`${host}: empty`);
       } catch (e) {
-        errors.push(`${host}: ${e.message}`);
+        errors.push(`${host}: ${String(e.message || e).slice(0, 40)}`);
       }
     }
-    throw new Error(`all instances failed (${errors.slice(0, 2).join('; ')})`);
+    throw new Error(`${INSTANCES.length} instances failed (${errors.slice(0, 3).join('; ')})`);
   }},
   { category: 'Discourse', name: 'Wikipedia Featured', domain: 'en.wikipedia.org', run: async () => {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
@@ -686,10 +716,17 @@ const SOURCES = [
     return `top: ${top.title.slice(0, 60)}...`;
   }},
   { category: 'Curio', name: 'NASA APOD', domain: 'api.nasa.gov', run: async () => {
-    const r = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    // Use stored NASA key if available; DEMO_KEY otherwise (DEMO_KEY rate-limits
+    // hard at ~30/hr/IP and is shared across all unauthenticated users).
+    let key = 'DEMO_KEY';
+    try { key = localStorage.getItem('milepost_nasa') || 'DEMO_KEY'; } catch (_) {}
+    const { response: r, path } = await probeFetch(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}`);
     const j = await r.json();
-    return j.title || 'no title';
+    const using = key === 'DEMO_KEY' ? 'DEMO_KEY' : 'personal key';
+    if (r.status === 429 || j.error?.code === 'OVER_RATE_LIMIT') {
+      throw new Error(`rate limited (${using}) - get a free key at api.nasa.gov`);
+    }
+    return `${j.title || 'no title'} (via ${path}, ${using})`;
   }},
   { category: 'Curio', name: 'xkcd', domain: 'xkcd.com', run: async () => {
     // xkcd's API doesn't enable CORS for arbitrary origins; we probe via image load
@@ -702,11 +739,10 @@ const SOURCES = [
     });
   }},
   { category: 'Curio', name: 'arXiv', domain: 'export.arxiv.org', run: async () => {
-    const r = await fetch('https://export.arxiv.org/api/query?search_query=cat:cs.AI&max_results=1&sortBy=submittedDate&sortOrder=descending');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { response: r, path } = await probeFetch('https://export.arxiv.org/api/query?search_query=cat:cs.AI&max_results=1&sortBy=submittedDate&sortOrder=descending');
     const t = await r.text();
     if (!t.includes('<entry>')) throw new Error('no entries in response');
-    return 'feed has entries';
+    return `feed has entries (via ${path})`;
   }},
   { category: 'Curio', name: 'GitHub Trending', domain: 'api.github.com', run: async () => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
@@ -885,7 +921,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.13',
+    milepost_status_version: 'v0.0.14',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,

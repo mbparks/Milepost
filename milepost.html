@@ -1065,6 +1065,11 @@ body {
           <input type="text" id="key-ebird" autocomplete="off" spellcheck="false" placeholder="for nearby bird observations" />
           <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener">Generate token</a>
         </div>
+        <div class="key-row">
+          <label for="key-nasa">NASA API Key</label>
+          <input type="text" id="key-nasa" autocomplete="off" spellcheck="false" placeholder="optional, for APOD without rate limits" />
+          <a href="https://api.nasa.gov/" target="_blank" rel="noopener">Generate key</a>
+        </div>
         <div class="key-row sound-row">
           <label for="soundToggle">Capture Sound</label>
           <label class="toggle-inline"><input type="checkbox" id="soundToggle" /> play locomotive whistle on capture completion</label>
@@ -1226,7 +1231,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.13</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.14</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1296,12 +1301,12 @@ const Settings = {
 function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
+  const nasa  = Settings.get('nasa');
   const sound = Settings.get('sound');
-  // First-time users get AllOrigins as the default proxy; once they save Settings,
-  // their explicit value (which may be empty to disable) takes precedence.
   const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
+  if (nasa)  $('key-nasa').value = nasa;
   if (sound === 'on') $('soundToggle').checked = true;
   $('cors-proxy').value = proxy;
   updateKeysStatus();
@@ -1309,10 +1314,12 @@ function initSettings() {
   $('saveKeys').addEventListener('click', () => {
     const f = $('key-firms').value.trim();
     const e = $('key-ebird').value.trim();
+    const n = $('key-nasa').value.trim();
     const s = $('soundToggle').checked ? 'on' : 'off';
     const p = $('cors-proxy').value.trim();
     Settings.set('firms', f);
     Settings.set('ebird', e);
+    Settings.set('nasa', n);
     Settings.set('sound', s);
     Settings.set('cors_proxy', p);
     const status = $('keysStatus');
@@ -1325,12 +1332,14 @@ function initSettings() {
 function updateKeysStatus() {
   const f = Settings.get('firms');
   const e = Settings.get('ebird');
+  const n = Settings.get('nasa');
   const s = Settings.get('sound') === 'on';
   const p = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   const status = $('keysStatus');
   const parts = [];
   parts.push(`FIRMS ${f ? '✓' : '–'}`);
   parts.push(`eBird ${e ? '✓' : '–'}`);
+  parts.push(`NASA ${n ? '✓' : '–'}`);
   parts.push(`Sound ${s ? '✓' : '–'}`);
   parts.push(`Proxy ${p ? '✓' : '–'}`);
   status.textContent = parts.join('  /  ');
@@ -2237,9 +2246,15 @@ async function getTopAlbum() {
    Returned in the same shape as Apple cultural items so the renderer can treat
    them uniformly: { name, artistName, viewCount, url, videoId, sourceLabel }. */
 const YOUTUBE_TRENDING_INSTANCES = [
+  // Piped instances (the kavin.rocks official + several known-active community mirrors)
   { type: 'piped',     url: 'https://pipedapi.kavin.rocks/trending?region=US' },
-  { type: 'piped',     url: 'https://api.piped.video/trending?region=US' },
-  { type: 'piped',     url: 'https://pipedapi.r4fo.com/trending?region=US' },
+  { type: 'piped',     url: 'https://pipedapi-libre.kavin.rocks/trending?region=US' },
+  { type: 'piped',     url: 'https://pipedapi.leptons.xyz/trending?region=US' },
+  { type: 'piped',     url: 'https://piped-api.privacy.com.de/trending?region=US' },
+  { type: 'piped',     url: 'https://api.piped.yt/trending?region=US' },
+  { type: 'piped',     url: 'https://pipedapi.adminforge.de/trending?region=US' },
+  { type: 'piped',     url: 'https://pipedapi.drgns.space/trending?region=US' },
+  // Invidious instances (different API shape, similar concept)
   { type: 'invidious', url: 'https://invidious.fdn.fr/api/v1/trending?region=US' },
   { type: 'invidious', url: 'https://yewtu.be/api/v1/trending?region=US' },
 ];
@@ -2562,9 +2577,17 @@ async function getDiscourse() {
 /* ---------- curio ---------- */
 
 async function getApod() {
-  // NASA's DEMO_KEY is rate-limited but fine for personal use.
-  const r = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&thumbs=true');
+  // Use the user's NASA key from Settings if present; DEMO_KEY otherwise. The
+  // DEMO_KEY is shared globally across all unauthenticated requests and hits a
+  // ~30/hr/IP limit fast, so anyone capturing frequently will see HTTP 429s.
+  // A free personal key from api.nasa.gov gets ~1000/hr. We route through
+  // fetchScrape in case the user's network blocks api.nasa.gov directly.
+  const key = Settings.get('nasa') || 'DEMO_KEY';
+  const url = `https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}&thumbs=true`;
+  const r = await fetchScrape(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const j = await r.json();
+  if (j.error) throw new Error(j.error.message || j.error.code || 'API error');
   return {
     title: j.title,
     explanation: j.explanation,
@@ -2573,6 +2596,7 @@ async function getApod() {
     mediaType: j.media_type,
     copyright: j.copyright || null,
     date: j.date,
+    usingDemoKey: key === 'DEMO_KEY',
   };
 }
 
@@ -2873,10 +2897,13 @@ async function getDjiaCurrent() {
 
 /* ---------- arXiv recent paper ---------- */
 async function getArxivPaper() {
-  // Most recent submission across a broad mix of categories
+  // Most recent submission across a broad mix of categories. export.arxiv.org
+  // does NOT enable CORS for browser-origin requests, so this routes through
+  // fetchScrape (direct first, proxy fallback) like the other CORS-blocked
+  // sources. Without the proxy fallback this fetcher silently fails in most
+  // browser environments and the Curio block loses its papers entry.
   const url = 'https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.CL+OR+cat:astro-ph.SR+OR+cat:physics.hist-ph&sortBy=submittedDate&sortOrder=descending&max_results=1';
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const r = await fetchScrape(url);
   const text = await r.text();
   const doc = new DOMParser().parseFromString(text, 'text/xml');
   const entry = doc.querySelector('entry');
@@ -4479,7 +4506,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.13',
+    version: '0.0.14',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
