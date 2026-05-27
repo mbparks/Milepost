@@ -790,6 +790,36 @@ body { padding: 24px 16px 48px; }
   margin-right: 8px;
   font-size: 12px;
 }
+.ce-list {
+  margin-top: 8px;
+  padding-left: 4px;
+  border-left: 2px solid var(--rule);
+}
+.ce-item {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 4px 0 4px 10px;
+  font-size: 13px;
+  border-bottom: 1px dotted rgba(110,94,68,0.25);
+}
+.ce-item:last-child { border-bottom: none; }
+.ce-cat {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding-top: 1px;
+}
+.ce-text {
+  color: var(--ink);
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .ce-item { grid-template-columns: 1fr; gap: 2px; }
+}
 .kv {
   display: flex;
   justify-content: space-between;
@@ -1255,7 +1285,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.8.2</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.9</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1277,7 +1307,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.8.2
+   MILEPOST READER  /  v0.0.9
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -2233,14 +2263,19 @@ function renderSectionCultural(s) {
 
 function renderSectionDiscourse(s) {
   const x = s.discourse;
-  if (!x || (!x.wiki && !x.hackerNews && !x.reddit)) return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  if (!x || (!x.wiki && !x.hackerNews && !x.reddit && !x.currentEvents)) return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const items = [];
+  if (x.currentEvents?.items?.length) {
+    const ce = x.currentEvents;
+    const sub = ce.items.map((it) => `<div class="ce-item"><span class="ce-cat">${escapeHtml(it.category)}</span><span class="ce-text">${escapeHtml(it.headline)}</span></div>`).join('');
+    items.push(`<div class="item"><span class="yr">NEWS</span><b>Today's news</b>  <span style="color:var(--ink-faint);font-size:11px">(Wikipedia Current Events / ${escapeHtml(ce.date)})</span><div class="ce-list">${sub}</div></div>`);
+  }
   if (x.wiki?.mostread) {
     const v = x.wiki.mostread.views ? `${fmtNum(x.wiki.mostread.views, 0)} views` : '';
     items.push(`<div class="item"><span class="yr">WIKI</span><b>${escapeHtml(x.wiki.mostread.title)}</b>${v ? `  <span style="color:var(--ink-faint);font-size:11px">(${v})</span>` : ''}${x.wiki.mostread.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(x.wiki.mostread.description)}</div>` : ''}</div>`);
   }
   if (x.wiki?.news?.text) {
-    items.push(`<div class="item"><span class="yr">NEWS</span>${escapeHtml(x.wiki.news.text)}</div>`);
+    items.push(`<div class="item"><span class="yr">FEAT</span>${escapeHtml(x.wiki.news.text)}</div>`);
   }
   if (x.hackerNews) {
     const meta = `${x.hackerNews.score || 0} pts / ${x.hackerNews.descendants || 0} comments`;
@@ -2250,7 +2285,13 @@ function renderSectionDiscourse(s) {
     const meta = `r/${x.reddit.subreddit} / ${fmtNum(x.reddit.score, 0)} pts / ${fmtNum(x.reddit.comments, 0)} comments`;
     items.push(`<div class="item"><span class="yr">RDDT</span><b>${escapeHtml(x.reddit.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
   }
-  return sec('Discourse', 'Wikipedia, HN, Reddit', items.join(''), { prose: true });
+  const sources = [
+    x.currentEvents && 'Wikipedia CE',
+    (x.wiki?.mostread || x.wiki?.news) && 'Wikipedia',
+    x.hackerNews && 'HN',
+    x.reddit && 'Reddit',
+  ].filter(Boolean).join(', ');
+  return sec('Discourse', sources, items.join(''), { prose: true });
 }
 
 function renderSectionCurio(s) {

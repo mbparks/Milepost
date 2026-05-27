@@ -372,7 +372,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.8.2</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.9</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -603,6 +603,19 @@ const SOURCES = [
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
     return `mostread: ${j.mostread?.articles?.[0]?.normalizedtitle || 'n/a'}`;
+  }},
+  { category: 'Discourse', name: 'Wikipedia Current Events', domain: 'en.wikipedia.org', run: async () => {
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const d = new Date();
+    const title = `Portal:Current_events/${d.getUTCFullYear()}_${MONTHS[d.getUTCMonth()]}_${d.getUTCDate()}`;
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*&redirects=1`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.info || 'no page');
+    const wt = j.parse?.wikitext?.['*'];
+    if (!wt) throw new Error('no wikitext');
+    const sections = (wt.match(/^;[^\n]+/gm) || []).length;
+    return `${sections} section${sections === 1 ? '' : 's'} for today`;
   }},
   { category: 'Discourse', name: 'Hacker News', domain: 'hacker-news.firebaseio.com', run: async () => {
     const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');

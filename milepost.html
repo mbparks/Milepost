@@ -1218,7 +1218,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8.2</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.9</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -2286,12 +2286,127 @@ async function getTopReddit() {
   };
 }
 
+/* ---------- Wikipedia Current Events Portal ----------
+   This is literally "today's newspaper page" maintained by Wikipedia editors. Each
+   day has a sub-page at Portal:Current_events/YYYY_Month_DD with structured content:
+     ;Section header (Politics, Disasters, Sports, etc.)
+     *Top-level item with [[wiki-links]]
+     **Sub-item / detail
+   We scrape this as wikitext (CORS-friendly via origin=*), pull the section headers
+   and the first top-level item from each, and return as a list of headlines grouped
+   by category. Falls back to yesterday's page if today's has not been created yet
+   (editors typically seed it overnight). */
+async function getCurrentEvents() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const tryDate = async (d) => {
+    const year = d.getUTCFullYear();
+    const month = MONTHS[d.getUTCMonth()];
+    const day = d.getUTCDate();
+    const title = `Portal:Current_events/${year}_${month}_${day}`;
+    const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*&redirects=1`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.info || 'no page');
+    const wt = j.parse?.wikitext?.['*'];
+    if (!wt) throw new Error('no wikitext');
+    return { wt, title, date: d };
+  };
+
+  let page;
+  try { page = await tryDate(new Date()); }
+  catch (e1) {
+    // Try yesterday (the daily page is sometimes created late in UTC)
+    const yest = new Date(); yest.setUTCDate(yest.getUTCDate() - 1);
+    try { page = await tryDate(yest); }
+    catch (e2) {
+      console.warn(`[Milepost] discourse/currentEvents: today (${e1.message}); yesterday (${e2.message})`);
+      return null;
+    }
+  }
+
+  const { wt, title, date } = page;
+
+  // Strip wiki-link decorations: [[Target|Display]] -> Display, [[Target]] -> Target.
+  // Then strip remaining wiki templates {{...}} and external link markup [url text] -> text.
+  const stripWiki = (s) => s
+    .replace(/\[\[([^\]\|]+)\|([^\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    .replace(/\{\{[^}]*\}\}/g, '')
+    .replace(/\[https?:\/\/\S+\s+([^\]]+)\]/g, '$1')
+    .replace(/\[https?:\/\/\S+\]/g, '')
+    .replace(/'''([^']+)'''/g, '$1')
+    .replace(/''([^']+)''/g, '$1')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Walk the wikitext line by line. Section headers start with ';'. Within each
+  // section, Wikipedia uses two formats interchangeably:
+  //   Pattern A (topic + detail):
+  //     *'''[[Topic Name]]'''
+  //     **Actual news happens. (Source)
+  //   Pattern B (flat):
+  //     *Actual news happens. (Source)
+  // We prefer the FIRST '**' sub-item as the headline (it's the real news prose),
+  // and fall back to the first '*' top-level item if no sub-item exists.
+  const lines = wt.split(/\r?\n/);
+  const sections = []; // { category, candidates: [{ depth, text }] }
+  let current = null;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith(';')) {
+      const cat = stripWiki(line.slice(1).trim());
+      if (cat) {
+        current = { category: cat, candidates: [] };
+        sections.push(current);
+      } else {
+        current = null;
+      }
+      continue;
+    }
+    if (!current) continue;
+    if (line.startsWith('*')) {
+      // Count leading asterisks to determine depth (* = 1, ** = 2, *** = 3)
+      let depth = 0;
+      while (depth < line.length && line[depth] === '*') depth++;
+      const text = stripWiki(line.slice(depth).trim());
+      if (text && text.length > 3) current.candidates.push({ depth, text });
+    }
+  }
+
+  const items = [];
+  for (const sec of sections) {
+    // Prefer first ** sub-item (descriptive news); fall back to first * (topic line)
+    const sub = sec.candidates.find((c) => c.depth === 2);
+    const top = sec.candidates.find((c) => c.depth === 1);
+    let headline = null;
+    if (sub && top && top.text.length < 60) {
+      // Combine topic and detail: "Ongoing topic: specific news happens."
+      headline = `${top.text}: ${sub.text}`;
+    } else {
+      headline = (sub || top)?.text || null;
+    }
+    if (headline) items.push({ category: sec.category, headline });
+  }
+
+  if (!items.length) return null;
+  const isoDate = `${date.getUTCFullYear()}-${pad(date.getUTCMonth()+1)}-${pad(date.getUTCDate())}`;
+  return {
+    date: isoDate,
+    sourceUrl: `https://en.wikipedia.org/wiki/${title}`,
+    items,
+  };
+}
+
 async function getDiscourse() {
-  const out = { wiki: null, hackerNews: null, reddit: null };
+  const out = { wiki: null, hackerNews: null, reddit: null, currentEvents: null };
   const tasks = [
     (async () => { out.wiki = await getWikiFeatured(); })(),
     (async () => { out.hackerNews = await getTopHN(); })(),
     (async () => { out.reddit = await getTopReddit(); })(),
+    (async () => { out.currentEvents = await getCurrentEvents(); })(),
   ];
   // allow individual failures
   await Promise.allSettled(tasks);
@@ -3513,8 +3628,14 @@ function buildTextExport(entry) {
   }
 
   const disc = d.discourse;
-  if (disc && (disc.wiki || disc.hackerNews || disc.reddit)) {
+  if (disc && (disc.wiki || disc.hackerNews || disc.reddit || disc.currentEvents)) {
     out += `${RULE}\nDISCOURSE\n${RULE2}\n`;
+    if (disc.currentEvents?.items?.length) {
+      out += line('Today\'s News', `(Wikipedia Current Events / ${disc.currentEvents.date})`);
+      for (const it of disc.currentEvents.items) {
+        out += `  ${it.category}: ${it.headline}\n`;
+      }
+    }
     if (disc.wiki?.mostread) {
       out += line('Wiki Top Article', disc.wiki.mostread.title);
       if (disc.wiki.mostread.views) out += line('  views', fmtNum(disc.wiki.mostread.views, 0));
@@ -4145,7 +4266,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.8.2',
+    version: '0.0.9',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
