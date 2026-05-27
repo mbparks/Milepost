@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MILEPOST READER</title>
+<!--
+  MILEPOST READER
+  Field Instrument 003 / Archive Viewer
+  Green Shoe Garage / Michael B. Parks
+  License: GPL-3.0
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper: #ece3cf;
+  --paper-deep: #e1d6bb;
+  --paper-edge: #d4c8aa;
+  --ink: #1a1611;
+  --ink-soft: #3a2f22;
+  --ink-faint: #6e5e44;
+  --rule: #8a7a5c;
+  --flag: #c0431a;
+  --flag-deep: #962f10;
+  --stamp: #1f3a52;
+  --good: #4a6b3a;
+  --warn: #b88410;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  --serif: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #2a2520;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+body { padding: 24px 16px 48px; }
+
+/* paper sheet */
+.sheet {
+  max-width: 1180px;
+  margin: 0 auto;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(0,0,0,0.08), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(0,0,0,0.06), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(110,94,68,0.05) 23px, rgba(110,94,68,0.05) 24px),
+    repeating-linear-gradient(90deg, transparent 0, transparent 23px, rgba(110,94,68,0.05) 23px, rgba(110,94,68,0.05) 24px),
+    var(--paper);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.4) inset,
+    0 0 0 1px rgba(0,0,0,0.05),
+    0 4px 12px rgba(0,0,0,0.3),
+    0 24px 48px rgba(0,0,0,0.4);
+  position: relative;
+  padding: 36px 44px 56px;
+  overflow: hidden;
+}
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 0.08 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
+}
+
+/* fiducials */
+.fid {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+.fid::before, .fid::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.fid::before { left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; }
+.fid::after { top: 50%; left: 0; right: 0; height: 1px; margin-top: -0.5px; }
+.fid.tl { top: 14px; left: 14px; }
+.fid.tr { top: 14px; right: 14px; }
+.fid.bl { bottom: 14px; left: 14px; }
+.fid.br { bottom: 14px; right: 14px; }
+
+.stamp {
+  position: absolute;
+  top: 56px;
+  right: 56px;
+  transform: rotate(-8deg);
+  border: 2px solid var(--stamp);
+  color: var(--stamp);
+  padding: 6px 12px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  opacity: 0.82;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(236, 227, 207, 0.4);
+}
+.stamp::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--stamp);
+  opacity: 0.6;
+  margin: 1px;
+}
+
+/* header */
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--ink);
+  margin-bottom: 22px;
+}
+.head h1 {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.head .sub {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+.head .controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.head .control-row {
+  display: flex;
+  gap: 8px;
+}
+.head .badge {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  line-height: 1.4;
+  text-align: right;
+}
+.head .badge strong {
+  display: block;
+  font-size: 11px;
+  color: var(--ink);
+  letter-spacing: 0.16em;
+}
+
+/* buttons */
+.btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.btn:hover { background: var(--ink); color: var(--paper); }
+.btn.primary { background: var(--flag); color: var(--paper); border-color: var(--flag); }
+.btn.primary:hover { background: var(--flag-deep); border-color: var(--flag-deep); }
+.btn.ghost { background: transparent; border-color: var(--rule); color: var(--ink-faint); }
+.btn.ghost:hover { background: var(--paper-edge); color: var(--ink); }
+.btn.small { padding: 6px 11px; font-size: 10px; letter-spacing: 0.14em; }
+
+/* empty state */
+.empty {
+  text-align: center;
+  padding: 40px 0 60px;
+}
+.empty-zone {
+  margin: 28px auto;
+  max-width: 540px;
+  padding: 56px 32px;
+  border: 2px dashed var(--rule);
+  background: rgba(255,255,255,0.18);
+  transition: background 0.2s, border-color 0.2s;
+}
+.empty-zone.drag-over {
+  background: rgba(192, 67, 26, 0.08);
+  border-color: var(--flag);
+}
+.empty-zone .lead {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 18px;
+}
+.empty-zone .btns {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.empty-zone .hint {
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  font-style: italic;
+}
+.empty .intro {
+  margin: 24px auto 0;
+  max-width: 540px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.empty .sample-glyph {
+  margin: 20px auto;
+  width: 56px;
+  height: 80px;
+  opacity: 0.55;
+}
+
+/* stats strip */
+.stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 22px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+}
+.stat {
+  flex: 1;
+  min-width: 130px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--rule);
+}
+.stat:last-child { border-right: none; }
+.stat .label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.stat .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.stat .value.small { font-size: 13px; }
+.stat .sub { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.06em; margin-top: 2px; }
+
+/* archive layout */
+.archive-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+/* sidebar */
+.sidebar {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+  overflow: hidden;
+}
+.sidebar-head {
+  padding: 8px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.search-row {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.search-row input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  letter-spacing: 0.02em;
+}
+.search-row input:focus { border-color: var(--ink); }
+.search-row input::placeholder { color: var(--ink-faint); font-style: italic; }
+.entry-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.entry-list-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px dotted var(--rule);
+  cursor: pointer;
+  transition: background 0.1s;
+  align-items: center;
+}
+.entry-list-item:hover { background: rgba(0,0,0,0.04); }
+.entry-list-item.active { background: rgba(192, 67, 26, 0.10); border-left: 3px solid var(--flag); padding-left: 9px; }
+.entry-list-item .mini-mp {
+  width: 28px;
+  height: 40px;
+  flex-shrink: 0;
+}
+.entry-list-item .meta {
+  min-width: 0;
+}
+.entry-list-item .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.entry-list-item .ser {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+.entry-list-item .when {
+  font-size: 9px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.entry-list-item .loc {
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entry-list-item .preview {
+  font-family: var(--serif);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-faint);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.list-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* detail panel */
+.detail {
+  min-width: 0;
+}
+.detail-empty {
+  padding: 80px 32px;
+  text-align: center;
+  color: var(--ink-faint);
+  font-style: italic;
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+/* entry header */
+.entry-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--ink);
+}
+.entry-head .mp-marker { width: 48px; height: 70px; display: block; }
+.entry-head .ser-line {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.entry-head .ts {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.entry-head .loc {
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+}
+.entry-head .right {
+  text-align: right;
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+.entry-head .right strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+/* observation block - emphasized typography */
+.observation {
+  margin: 0 0 28px;
+  padding: 28px 32px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0, transparent 31px, rgba(31,58,82,0.10) 31px, rgba(31,58,82,0.10) 32px),
+    rgba(255,255,255,0.30);
+  border: 1px solid var(--ink);
+  border-left: 4px solid var(--flag);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 32px;
+  color: var(--ink);
+  white-space: pre-wrap;
+  position: relative;
+}
+.observation-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.observation-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+.observation.empty-obs {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* sections (reused from main app, adapted) */
+.sec {
+  margin-bottom: 18px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+}
+.sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.sec-head .sec-meta {
+  color: var(--paper-deep);
+  opacity: 0.7;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+.sec-body {
+  padding: 12px 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 26px;
+}
+.sec-body.single { grid-template-columns: 1fr; }
+.sec-body.prose {
+  display: block;
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.sec-body.prose .item {
+  padding: 5px 0;
+  border-bottom: 1px dotted rgba(110,94,68,0.4);
+}
+.sec-body.prose .item:last-child { border-bottom: none; }
+.sec-body.prose .yr {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 8px;
+  font-size: 12px;
+}
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dotted rgba(110,94,68,0.4);
+  font-size: 12px;
+}
+.kv:last-child { border-bottom: none; }
+.kv .k {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.kv .v {
+  color: var(--ink);
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.kv .v .qual {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.kv .v.muted { color: var(--ink-faint); font-style: italic; font-weight: 400; }
+
+/* detail actions */
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+}
+
+/* raw json viewer */
+.raw-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 15, 10, 0.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+.raw-modal.visible { display: flex; }
+.raw-modal-inner {
+  background: var(--paper);
+  max-width: 880px;
+  width: 100%;
+  max-height: 90vh;
+  border: 1.5px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+}
+.raw-modal-head {
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.raw-modal-close {
+  background: none;
+  border: none;
+  color: var(--paper);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.raw-modal-body {
+  padding: 16px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre;
+  color: var(--ink-soft);
+}
+
+/* foot */
+.foot {
+  margin-top: 30px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--rule);
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* mobile */
+@media (max-width: 880px) {
+  body { padding: 12px 6px 32px; }
+  .sheet { padding: 24px 18px 36px; }
+  .head { grid-template-columns: 1fr; }
+  .head .controls { align-items: flex-start; }
+  .stamp { top: auto; right: 16px; bottom: -10px; }
+  .archive-layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; max-height: 360px; }
+  .sec-body { grid-template-columns: 1fr; gap: 0; }
+  .entry-head { grid-template-columns: auto 1fr; align-items: start; }
+  .entry-head .right { grid-column: 1 / -1; text-align: left; padding-top: 4px; }
+  .entry-head .mp-marker { width: 40px; height: 58px; }
+  .observation { padding: 20px 22px; font-size: 16px; line-height: 30px; }
+  .head h1 { font-size: 18px; }
+}
+
+/* print */
+@media print {
+  body { background: white; padding: 0; }
+  .sheet { box-shadow: none; max-width: 100%; padding: 24px; }
+  .stamp, .fid, .sidebar, .stats-strip, .detail-actions, .head .controls, .foot { display: none; }
+  .archive-layout { grid-template-columns: 1fr; }
+  .observation { background: white; }
+  .sec, .observation { page-break-inside: avoid; }
+}
+
+.fade-in { animation: fade 0.3s ease-out; }
+@keyframes fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<main class="sheet">
+  <span class="fid tl"></span>
+  <span class="fid tr"></span>
+  <span class="fid bl"></span>
+  <span class="fid br"></span>
+  <span class="stamp">ARCHIVE / IN REVIEW</span>
+
+  <header class="head">
+    <div>
+      <h1>MILEPOST READER</h1>
+      <div class="sub">Field Instrument 003 &middot; Archive Viewer</div>
+    </div>
+    <div class="controls">
+      <div class="control-row">
+        <button class="btn" id="openFolderBtn">Open Folder</button>
+        <button class="btn" id="openFilesBtn">Open Files</button>
+        <button class="btn ghost" id="clearBtn" hidden>Clear</button>
+      </div>
+      <div class="badge">
+        <strong>GSG / MMXXVI</strong>
+        Green Shoe Garage
+      </div>
+    </div>
+  </header>
+
+  <!-- empty state -->
+  <section class="empty" id="emptyState">
+    <svg class="sample-glyph" viewBox="0 0 56 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M 9 8 Q 9 4 13 4 L 47 4 Q 51 4 51 8 L 51 75 L 9 75 Z" fill="rgba(20,15,10,0.22)"/>
+      <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+      <line x1="10" y1="29" x2="42" y2="29" stroke="var(--ink)" stroke-width="0.6" opacity="0.65"/>
+      <text x="26" y="24" text-anchor="middle" font-family="'Newsreader', Georgia, serif" font-weight="700" font-size="18" fill="var(--ink)">M</text>
+      <text x="26" y="58" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="14" fill="var(--ink)" letter-spacing="0.5">000</text>
+    </svg>
+    <div class="empty-zone" id="dropZone">
+      <div class="lead">Drop JSON files here</div>
+      <div class="btns">
+        <button class="btn primary" id="openFolderBtn2">Open Folder</button>
+        <button class="btn" id="openFilesBtn2">Open Files</button>
+      </div>
+      <div class="hint">
+        Drop or select the JSON files exported by MILEPOST.<br/>
+        "Open Folder" works in Chromium browsers. "Open Files" works everywhere.
+      </div>
+    </div>
+    <div class="intro">
+      The reader compiles your Milepost entries into a browsable archive. Files never leave your machine. The reader makes no network calls except to load typography.
+    </div>
+  </section>
+
+  <!-- loaded view -->
+  <section id="archiveView" hidden>
+    <div class="stats-strip" id="statsStrip"></div>
+    <div class="archive-layout">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <span>Entries</span>
+          <span id="entryCount">0</span>
+        </div>
+        <div class="search-row">
+          <input type="search" id="searchBox" placeholder="Search observations, locations, conditions..." />
+        </div>
+        <div class="entry-list" id="entryListEl"></div>
+      </aside>
+      <article class="detail" id="detailPanel">
+        <div class="detail-empty">Select a milepost to read its capture.</div>
+      </article>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.1</span>
+    <span>GPL-3.0 &middot; Green Shoe Garage</span>
+  </footer>
+</main>
+
+<!-- raw json modal -->
+<div class="raw-modal" id="rawModal">
+  <div class="raw-modal-inner">
+    <div class="raw-modal-head">
+      <span id="rawModalTitle">Raw JSON</span>
+      <button class="raw-modal-close" id="rawModalClose" aria-label="close">×</button>
+    </div>
+    <div class="raw-modal-body" id="rawModalBody"></div>
+  </div>
+</div>
+
+<!-- hidden file inputs -->
+<input type="file" id="filePicker" multiple accept=".json,application/json" hidden />
+<input type="file" id="folderPicker" webkitdirectory hidden />
+
+<script>
+/* ============================================================
+   MILEPOST READER  /  v0.0.1
+   ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+
+const STATE = {
+  entries: [],         // [{filename, data, parsed}]
+  filtered: [],
+  selectedId: null,
+  searchTerm: '',
+  errors: [],          // parsing errors
+};
+
+/* ---------- utility ---------- */
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const fmtNum = (n, d = 0) => (n == null || isNaN(n)) ? '--' : Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const safe = (v, fb = '--') => (v == null || v === '' || (typeof v === 'number' && isNaN(v))) ? fb : v;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function compass(deg) {
+  if (deg == null) return '--';
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(((deg % 360) / 22.5)) % 16];
+}
+function aqiCategory(aqi) {
+  if (aqi == null) return '--';
+  if (aqi <= 50) return 'good';
+  if (aqi <= 100) return 'moderate';
+  if (aqi <= 150) return 'unhealthy for sensitive';
+  if (aqi <= 200) return 'unhealthy';
+  if (aqi <= 300) return 'very unhealthy';
+  return 'hazardous';
+}
+function uvCategory(u) {
+  if (u == null) return '--';
+  if (u < 3) return 'low';
+  if (u < 6) return 'moderate';
+  if (u < 8) return 'high';
+  if (u < 11) return 'very high';
+  return 'extreme';
+}
+function kpCategory(k) {
+  if (k == null) return '--';
+  if (k < 4) return 'quiet';
+  if (k < 5) return 'unsettled';
+  if (k < 6) return 'minor storm';
+  if (k < 7) return 'moderate storm';
+  if (k < 8) return 'strong storm';
+  if (k < 9) return 'severe storm';
+  return 'extreme storm';
+}
+function pollenCategory(v) {
+  if (v == null) return '';
+  if (v < 1) return 'none';
+  if (v < 10) return 'low';
+  if (v < 50) return 'moderate';
+  if (v < 100) return 'high';
+  return 'very high';
+}
+function fmtLat(c) { return c == null ? '--' : `${Math.abs(c).toFixed(4)}°${c >= 0 ? 'N' : 'S'}`; }
+function fmtLon(c) { return c == null ? '--' : `${Math.abs(c).toFixed(4)}°${c >= 0 ? 'E' : 'W'}`; }
+function humanTime(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ${mins % 60}m`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ${hrs % 24}h`;
+}
+
+const WMO = {
+  0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+  45:'Fog',48:'Rime fog',
+  51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',
+  56:'Freezing drizzle',57:'Freezing drizzle (dense)',
+  61:'Light rain',63:'Rain',65:'Heavy rain',
+  66:'Freezing rain',67:'Heavy freezing rain',
+  71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',
+  80:'Rain showers',81:'Heavy showers',82:'Violent showers',
+  85:'Snow showers',86:'Heavy snow showers',
+  95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail'
+};
+
+function formatFullTimestamp(d) {
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  const tzAbbr = d.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+  return `${dow} ${mon} ${pad(d.getDate())} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${tzAbbr}`;
+}
+
+function formatListTime(iso) {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return `Today ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (days === 1) return `Yesterday ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (days < 7) return `${days} days ago`;
+  const yearShort = d.getFullYear() !== new Date().getFullYear();
+  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${pad(d.getDate())}${yearShort ? `, '${String(d.getFullYear()).slice(-2)}` : ''}`;
+}
+
+/* ---------- mile marker SVG (small variant for list, full for detail) ---------- */
+function mileMarkerSvg(id, opts = {}) {
+  const num = String(id).padStart(3, '0');
+  const small = opts.small;
+  const numFontSize = num.length <= 3 ? (small ? 13 : 17) : num.length === 4 ? (small ? 10 : 14) : (small ? 8 : 12);
+  const mFontSize = small ? 14 : 18;
+  const cls = small ? 'mini-mp' : 'mp-marker';
+  return `<svg viewBox="0 0 56 80" xmlns="http://www.w3.org/2000/svg" class="${cls}" role="img" aria-label="Milepost ${num}">
+    <defs>
+      <linearGradient id="mp-grad-${id}-${small ? 's' : 'b'}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="rgba(0,0,0,0.06)"/>
+        <stop offset="50%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.10)"/>
+      </linearGradient>
+    </defs>
+    <path d="M 9 8 Q 9 4 13 4 L 47 4 Q 51 4 51 8 L 51 75 L 9 75 Z" fill="rgba(20,15,10,0.22)"/>
+    <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z"
+          fill="var(--paper)" stroke="var(--ink)" stroke-width="${small ? 1.0 : 1.4}" stroke-linejoin="round"/>
+    <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z"
+          fill="url(#mp-grad-${id}-${small ? 's' : 'b'})" stroke="none"/>
+    <line x1="10" y1="29" x2="42" y2="29" stroke="var(--ink)" stroke-width="0.6" opacity="0.65"/>
+    ${small ? '' : '<path d="M 5 70 L 8 73 L 5 73 Z" fill="rgba(20,15,10,0.18)"/>'}
+    <text x="26" y="24" text-anchor="middle" font-family="'Newsreader', 'Iowan Old Style', Georgia, serif" font-weight="700" font-size="${mFontSize}" fill="var(--ink)">M</text>
+    <text x="26" y="58" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="700" font-size="${numFontSize}" fill="var(--ink)" letter-spacing="0.5">${num}</text>
+  </svg>`;
+}
+
+/* ---------- file loading ---------- */
+
+async function openFolder() {
+  if (!window.showDirectoryPicker) {
+    alert('Open Folder is not supported in this browser. Use Open Files instead, or drag the folder onto the page.');
+    return;
+  }
+  try {
+    const dirHandle = await window.showDirectoryPicker();
+    const files = [];
+    for await (const handle of dirHandle.values()) {
+      if (handle.kind === 'file' && /\.json$/i.test(handle.name)) {
+        const f = await handle.getFile();
+        files.push(f);
+      }
+    }
+    if (!files.length) {
+      alert('No JSON files found in that folder.');
+      return;
+    }
+    await loadFiles(files);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error(e);
+      alert('Could not read folder: ' + e.message);
+    }
+  }
+}
+
+function openFiles() {
+  $('filePicker').click();
+}
+
+async function loadFiles(files) {
+  const newEntries = [];
+  const newErrors = [];
+  for (const file of files) {
+    if (!/\.json$/i.test(file.name)) continue;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (!isMilepostEntry(json)) {
+        newErrors.push({ filename: file.name, reason: 'not a Milepost entry' });
+        continue;
+      }
+      newEntries.push({
+        filename: file.name,
+        data: json,
+        id: json.entry.id ?? newEntries.length + STATE.entries.length,
+        capturedAt: json.entry.capturedAt,
+      });
+    } catch (e) {
+      newErrors.push({ filename: file.name, reason: e.message });
+    }
+  }
+  // dedupe by capturedAt + id
+  const seen = new Set(STATE.entries.map(e => `${e.capturedAt}|${e.id}`));
+  for (const ne of newEntries) {
+    const key = `${ne.capturedAt}|${ne.id}`;
+    if (!seen.has(key)) {
+      STATE.entries.push(ne);
+      seen.add(key);
+    }
+  }
+  STATE.errors.push(...newErrors);
+  // sort newest first
+  STATE.entries.sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt));
+  // auto-select first if none selected
+  if (STATE.entries.length && !STATE.selectedId) {
+    STATE.selectedId = STATE.entries[0].id + '|' + STATE.entries[0].capturedAt;
+  }
+  if (newErrors.length) {
+    console.warn('Could not parse:', newErrors);
+  }
+  render();
+}
+
+function isMilepostEntry(json) {
+  return json && json.instrument === 'MILEPOST' && json.entry && json.entry.snapshot;
+}
+
+function clearAll() {
+  if (!confirm('Clear all loaded entries from the reader? Files on disk are not affected.')) return;
+  STATE.entries = [];
+  STATE.selectedId = null;
+  STATE.searchTerm = '';
+  STATE.errors = [];
+  $('searchBox').value = '';
+  render();
+}
+
+/* ---------- search / filter ---------- */
+
+function applyFilter() {
+  const q = STATE.searchTerm.toLowerCase().trim();
+  if (!q) {
+    STATE.filtered = STATE.entries.slice();
+    return;
+  }
+  STATE.filtered = STATE.entries.filter((e) => {
+    const d = e.data.entry;
+    const s = d.snapshot || {};
+    const hay = [
+      d.observation || '',
+      d.serial || '',
+      s.location?.place || '',
+      WMO[s.weather?.current?.weather_code] || '',
+      s.celestial?.sunSign || '',
+      s.celestial?.moon?.name || '',
+      s.cultural?.song?.name || '',
+      s.cultural?.movie?.name || '',
+      s.cultural?.book?.name || '',
+      s.discourse?.wiki?.mostread?.title || '',
+      s.discourse?.hackerNews?.title || '',
+      e.filename,
+    ].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+/* ---------- stats ---------- */
+
+function computeStats() {
+  const entries = STATE.entries;
+  if (!entries.length) return null;
+  const dates = entries.map(e => new Date(e.capturedAt)).sort((a, b) => a - b);
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const span = Math.max(1, Math.round((last - first) / 86400000));
+  const wordCount = entries.reduce((sum, e) => sum + ((e.data.entry.observation || '').split(/\s+/).filter(Boolean).length), 0);
+  const places = new Set();
+  let temps = [], pressures = [];
+  let totalSpecies = 0;
+  let fires = 0;
+  entries.forEach(e => {
+    const s = e.data.entry.snapshot || {};
+    if (s.location?.place) places.add(s.location.place);
+    const t = s.weather?.current?.temperature_2m;
+    if (t != null && !isNaN(t)) temps.push(t);
+    const p = s.weather?.current?.pressure_msl;
+    if (p != null && !isNaN(p)) pressures.push(p);
+    if (s.biosphere?.speciesCount) totalSpecies += s.biosphere.speciesCount;
+    if (s.wildfires?.count) fires += s.wildfires.count;
+  });
+  const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  return {
+    count: entries.length,
+    first, last, spanDays: span,
+    locationsCount: places.size,
+    wordCount,
+    avgTemp: avg(temps),
+    avgPressure: avg(pressures),
+    totalSpecies,
+    totalFires: fires,
+  };
+}
+
+function renderStats() {
+  const s = computeStats();
+  const strip = $('statsStrip');
+  if (!s) { strip.innerHTML = ''; return; }
+  const fmtMonthYr = (d) => `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getFullYear()}`;
+  const range = s.first.getTime() === s.last.getTime()
+    ? fmtMonthYr(s.first)
+    : `${fmtMonthYr(s.first)} – ${fmtMonthYr(s.last)}`.replace('–','to');
+  strip.innerHTML = `
+    <div class="stat"><div class="label">Entries</div><div class="value">${s.count}</div></div>
+    <div class="stat"><div class="label">Span</div><div class="value">${s.spanDays} ${s.spanDays === 1 ? 'day' : 'days'}</div><div class="sub">${escapeHtml(range)}</div></div>
+    <div class="stat"><div class="label">Locations</div><div class="value">${s.locationsCount}</div></div>
+    <div class="stat"><div class="label">Words Written</div><div class="value">${fmtNum(s.wordCount)}</div></div>
+    ${s.avgTemp != null ? `<div class="stat"><div class="label">Avg Temp</div><div class="value small">${fmtNum(s.avgTemp, 1)}°C / ${fmtNum(s.avgTemp * 9/5 + 32, 0)}°F</div></div>` : ''}
+    ${s.totalSpecies ? `<div class="stat"><div class="label">Species Seen</div><div class="value">${fmtNum(s.totalSpecies)}</div></div>` : ''}
+  `;
+}
+
+/* ---------- list rendering ---------- */
+
+function entryKey(e) { return `${e.id}|${e.capturedAt}`; }
+
+function renderList() {
+  applyFilter();
+  const el = $('entryListEl');
+  $('entryCount').textContent = STATE.entries.length === STATE.filtered.length
+    ? STATE.entries.length
+    : `${STATE.filtered.length} / ${STATE.entries.length}`;
+  if (!STATE.filtered.length) {
+    el.innerHTML = `<div class="list-empty">${STATE.searchTerm ? 'No matches.' : 'No entries loaded.'}</div>`;
+    return;
+  }
+  el.innerHTML = STATE.filtered.map((e) => {
+    const d = e.data.entry;
+    const s = d.snapshot || {};
+    const key = entryKey(e);
+    const place = s.location?.place ? s.location.place : 'Unknown location';
+    const obs = (d.observation || '').trim().split('\n')[0] || '<em style="opacity:0.5">no observation</em>';
+    return `<div class="entry-list-item ${STATE.selectedId === key ? 'active' : ''}" data-key="${escapeHtml(key)}">
+      ${mileMarkerSvg(e.id, { small: true })}
+      <div class="meta">
+        <div class="top">
+          <span class="ser">${escapeHtml(d.serial || `№${pad(e.id, 3)}`)}</span>
+          <span class="when">${formatListTime(e.capturedAt)}</span>
+        </div>
+        <div class="loc">${escapeHtml(place)}</div>
+        <div class="preview">${escapeHtml(obs)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  // wire clicks
+  el.querySelectorAll('.entry-list-item').forEach((it) => {
+    it.addEventListener('click', () => {
+      STATE.selectedId = it.dataset.key;
+      render();
+    });
+  });
+}
+
+/* ---------- detail rendering ---------- */
+
+function getSelectedEntry() {
+  return STATE.entries.find((e) => entryKey(e) === STATE.selectedId);
+}
+
+function renderDetail() {
+  const entry = getSelectedEntry();
+  const panel = $('detailPanel');
+  if (!entry) {
+    panel.innerHTML = `<div class="detail-empty">Select a milepost to read its capture.</div>`;
+    return;
+  }
+  const e = entry.data.entry;
+  const s = e.snapshot || {};
+  const ts = new Date(e.capturedAt);
+  const wcode = s.weather?.current?.weather_code;
+  const t = s.weather?.current?.temperature_2m;
+
+  let html = `<div class="entry-head fade-in">
+    ${mileMarkerSvg(entry.id)}
+    <div>
+      <div class="ser-line">${escapeHtml(e.serial ? `MILEPOST ${e.serial}` : `MILEPOST №${pad(entry.id, 3)}`)}</div>
+      <div class="ts">${escapeHtml(formatFullTimestamp(ts))}</div>
+      <div class="loc">${s.location?.latitude != null
+        ? `${escapeHtml(s.location.place || 'unknown')}  /  ${fmtLat(s.location.latitude)}, ${fmtLon(s.location.longitude)}`
+        : 'Location unavailable'}</div>
+    </div>
+    <div class="right">
+      <strong>${escapeHtml(WMO[wcode] || '--')}</strong>
+      <span>${t != null ? `${fmtNum(t, 1)}°C / ${fmtNum(t * 9/5 + 32, 0)}°F` : '--'}</span>
+    </div>
+  </div>`;
+
+  // observation block (prominent)
+  const obs = (e.observation || '').trim();
+  html += `<div class="observation${obs ? '' : ' empty-obs'} fade-in">
+    <div class="observation-label">Observation</div>
+    ${obs ? escapeHtml(obs) : 'No observation recorded with this entry.'}
+  </div>`;
+
+  // data sections
+  html += renderSectionAtmospheric(s);
+  html += renderSectionCelestial(s);
+  html += renderSectionSpaceWeather(s);
+  html += renderSectionTelluric(s);
+  html += renderSectionHydrosphere(s);
+  html += renderSectionBiosphere(s);
+  html += renderSectionMarkets(s);
+  html += renderSectionCultural(s);
+  html += renderSectionDiscourse(s);
+  html += renderSectionCurio(s);
+  html += renderSectionOnThisDay(s);
+
+  // actions
+  html += `<div class="detail-actions">
+    <button class="btn small" id="actViewRaw">View Raw JSON</button>
+    <button class="btn small ghost" id="actPrint">Print</button>
+    <span style="margin-left:auto;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-faint);align-self:center">
+      Source: ${escapeHtml(entry.filename)}
+    </span>
+  </div>`;
+
+  panel.innerHTML = html;
+
+  $('actViewRaw').addEventListener('click', () => showRawJson(entry));
+  $('actPrint').addEventListener('click', () => window.print());
+}
+
+/* ---------- individual section renderers (read-only adaptations) ---------- */
+
+function sec(title, meta, rows, opts = {}) {
+  return `<div class="sec fade-in">
+    <div class="sec-head"><span>${escapeHtml(title)}</span><span class="sec-meta">${escapeHtml(meta || '')}</span></div>
+    <div class="sec-body${opts.single ? ' single' : ''}${opts.prose ? ' prose' : ''}">${rows}</div>
+  </div>`;
+}
+function kvRow(k, v, qual) {
+  const muted = v === '--' || v == null || v === '';
+  const q = qual ? `<span class="qual">${escapeHtml(qual)}</span>` : '';
+  return `<div class="kv"><span class="k">${escapeHtml(k)}</span><span class="v${muted ? ' muted' : ''}">${escapeHtml(safe(v))}${q}</span></div>`;
+}
+
+function renderSectionAtmospheric(s) {
+  const w = s.weather?.current;
+  const daily = s.weather?.daily;
+  const aq = s.airQuality?.current;
+  if (!w) return sec('Atmospheric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [
+    kvRow('Conditions', WMO[w.weather_code] || '--'),
+    kvRow('Temperature', `${fmtNum(w.temperature_2m, 1)}°C / ${fmtNum(w.temperature_2m * 9/5 + 32, 1)}°F`),
+    kvRow('Feels Like', `${fmtNum(w.apparent_temperature, 1)}°C`),
+    kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
+    kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
+    kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
+    kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
+    kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
+    kvRow('Precipitation', `${fmtNum(w.precipitation, 1)} mm`),
+    kvRow('Visibility', w.visibility ? `${fmtNum(w.visibility/1000, 1)} km` : '--'),
+    kvRow('UV Index (peak)', daily ? `${fmtNum(daily.uv_index_max?.[0], 1)}` : '--', daily ? uvCategory(daily.uv_index_max?.[0]) : ''),
+    kvRow('AQI (US)', aq ? fmtNum(aq.us_aqi) : '--', aq ? aqiCategory(aq.us_aqi) : ''),
+  ];
+  if (aq) {
+    const pol = { 'Alder': aq.alder_pollen, 'Birch': aq.birch_pollen, 'Grass': aq.grass_pollen, 'Mugwort': aq.mugwort_pollen, 'Olive': aq.olive_pollen, 'Ragweed': aq.ragweed_pollen };
+    Object.entries(pol).forEach(([n, v]) => {
+      if (v != null && !isNaN(v)) rows.push(kvRow(`${n} Pollen`, `${fmtNum(v, 1)} g/m³`, pollenCategory(v)));
+    });
+  }
+  return sec('Atmospheric', 'Open-Meteo', rows.join(''));
+}
+
+function renderSectionCelestial(s) {
+  const c = s.celestial;
+  if (!c) return sec('Celestial', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const daily = s.weather?.daily;
+  const sr = daily?.sunrise?.[0]?.slice(11, 16);
+  const ss = daily?.sunset?.[0]?.slice(11, 16);
+  let dayLen = '--';
+  if (sr && ss) {
+    const [srh, srm] = sr.split(':').map(Number);
+    const [ssh, ssm] = ss.split(':').map(Number);
+    let mins = (ssh * 60 + ssm) - (srh * 60 + srm);
+    if (mins < 0) mins += 24 * 60;
+    dayLen = `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+  const rows = [
+    kvRow('Sun Sign', c.sunSign),
+    kvRow('Sun Altitude', c.sun ? `${fmtNum(c.sun.altitude, 1)}°` : '--'),
+    kvRow('Sun Azimuth', c.sun ? `${fmtNum(c.sun.azimuth, 1)}° ${compass(c.sun.azimuth)}` : '--'),
+    kvRow('Moon Phase', c.moon?.name),
+    kvRow('Moon Illumination', c.moon ? `${fmtNum(c.moon.illumination * 100, 1)}%` : '--'),
+    kvRow('Moon Age', c.moon ? `${fmtNum(c.moon.age, 1)} days` : '--'),
+    kvRow('Sunrise', sr || '--'),
+    kvRow('Sunset', ss || '--'),
+    kvRow('Day Length', dayLen),
+    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
+    c.nextSolar ? kvRow('Next Solar Event', `${c.nextSolar.name}  /  ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`) : '',
+  ].filter(Boolean).join('');
+  return sec('Celestial', 'computed', rows);
+}
+
+function renderSectionSpaceWeather(s) {
+  const sw = s.spaceWeather, iss = s.iss;
+  if (!sw && !iss) return sec('Space Weather / Orbital', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [
+    kvRow('Kp Index', sw?.kp ? fmtNum(sw.kp.kp, 2) : '--', sw?.kp ? kpCategory(sw.kp.kp) : ''),
+    kvRow('Solar Wind Speed', sw?.solarWind ? `${fmtNum(sw.solarWind.speed)} km/s` : '--'),
+    kvRow('Plasma Density', sw?.solarWind ? `${fmtNum(sw.solarWind.density, 2)} p/cm³` : '--'),
+    kvRow('Plasma Temp', sw?.solarWind ? `${fmtNum(sw.solarWind.temperature)} K` : '--'),
+    kvRow('ISS Latitude', iss ? `${fmtNum(iss.latitude, 2)}°` : '--'),
+    kvRow('ISS Longitude', iss ? `${fmtNum(iss.longitude, 2)}°` : '--'),
+    kvRow('ISS Altitude', iss ? `${fmtNum(iss.altitude, 1)} km` : '--'),
+    kvRow('ISS Velocity', iss ? `${fmtNum(iss.velocity)} km/h` : '--'),
+  ].join('');
+  return sec('Space Weather / Orbital', 'NOAA SWPC, WhereTheISS.at', rows);
+}
+
+function renderSectionTelluric(s) {
+  const eq = s.earthquakes, fires = s.wildfires;
+  if (!eq && !fires) return sec('Telluric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  let rows = '';
+  if (eq) {
+    if (eq.nearby?.length) {
+      const n = eq.nearby[0];
+      rows += kvRow('Nearest Quake', `M${fmtNum(n.mag, 1)} / ${n.place}`);
+      rows += kvRow('Nearest Time', `${humanTime(n.time)} ago`);
+      rows += kvRow('Nearest Depth', `${fmtNum(n.depth, 1)} km`);
+      rows += kvRow('Nearby Count (500km)', `${eq.nearby.length}`);
+    } else {
+      rows += kvRow('Nearby Activity', 'none above M1.5');
+    }
+    if (eq.largest) {
+      rows += kvRow('Largest (24h)', `M${fmtNum(eq.largest.mag, 1)}`);
+      rows += kvRow('Largest Location', eq.largest.place);
+    }
+  }
+  if (fires && !fires.needsKey) {
+    if (fires.count === 0) {
+      rows += kvRow('Wildfire (500km)', 'no detections in last 24h');
+    } else {
+      rows += kvRow('Wildfire (500km)', `${fires.count} thermal anomalies`);
+      if (fires.closest) {
+        rows += kvRow('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km`);
+        rows += kvRow('Fire Radiative Pwr', `${fmtNum(fires.closest.frp, 1)} MW`);
+      }
+    }
+  }
+  return sec('Telluric', 'USGS, NASA FIRMS', rows || '<div class="kv"><span class="v muted">unavailable</span></div>');
+}
+
+function renderSectionHydrosphere(s) {
+  const h = s.hydrosphere;
+  if (!h || (!h.stream && !h.tide)) return sec('Hydrosphere', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [];
+  if (h.stream) {
+    rows.push(kvRow('Nearest Gauge', h.stream.name));
+    rows.push(kvRow('Gauge Distance', `${fmtNum(h.stream.distance, 1)} km`));
+    rows.push(kvRow('Discharge', `${fmtNum(h.stream.discharge, 1)} ft³/s`));
+    if (h.stream.gageHeight != null) rows.push(kvRow('Gauge Height', `${fmtNum(h.stream.gageHeight, 2)} ft`));
+  }
+  if (h.tide) {
+    if (h.tide.inland) {
+      rows.push(kvRow('Tide Status', 'inland (no nearby station)'));
+      if (h.tide.nearestStation) rows.push(kvRow('Nearest Tide Stn', `${h.tide.nearestStation} (${fmtNum(h.tide.distance, 0)}km)`));
+    } else {
+      rows.push(kvRow('Tide Station', h.tide.station || '--'));
+      if (h.tide.level != null) rows.push(kvRow('Water Level', `${fmtNum(h.tide.level, 2)} ft (MLLW)`));
+      rows.push(kvRow('Stn Distance', `${fmtNum(h.tide.distance, 1)} km`));
+    }
+  }
+  return sec('Hydrosphere', 'USGS NWIS, NOAA CO-OPS', rows.join(''));
+}
+
+function renderSectionBiosphere(s) {
+  const b = s.biosphere;
+  if (!b || b.needsKey) return sec('Biosphere', 'eBird', `<div class="kv"><span class="v muted">${b?.needsKey ? 'eBird key was not configured at capture' : 'unavailable'}</span></div>`, { single: true });
+  if (b.error) return sec('Biosphere', 'eBird', `<div class="kv"><span class="v muted">${escapeHtml(b.error)}</span></div>`, { single: true });
+  const items = [];
+  if (b.speciesCount != null) {
+    items.push(`<div class="item"><span class="yr">DIVERSITY</span>${b.speciesCount} species observed within 50km in last 3 days  <span style="color:var(--ink-faint);font-size:11px">(${b.totalRecent || 0} observations)</span></div>`);
+  }
+  if (b.notable?.length) {
+    items.push(`<div class="item"><span class="yr">NOTABLE</span><b>${b.notable.length} rare/unusual ${b.notable.length === 1 ? 'sighting' : 'sightings'} (7 days)</b></div>`);
+    b.notable.forEach((o) => {
+      const meta = o.locName ? ` <span style="color:var(--ink-faint);font-size:11px">(${escapeHtml(o.locName)}${o.howMany ? `, ${o.howMany}` : ''})</span>` : '';
+      items.push(`<div class="item" style="padding-left:24px"><span class="yr" style="opacity:0.5">•</span>${escapeHtml(o.comName)}${meta}</div>`);
+    });
+  }
+  if (b.recent?.length) {
+    const r = b.recent[0];
+    items.push(`<div class="item"><span class="yr">LATEST</span>${escapeHtml(r.comName)}${r.locName ? ` <span style="color:var(--ink-faint);font-size:11px">at ${escapeHtml(r.locName)}</span>` : ''}</div>`);
+  }
+  if (!items.length) return sec('Biosphere', 'eBird', '<div class="kv"><span class="v muted">no observations</span></div>', { single: true });
+  return sec('Biosphere', 'eBird', items.join(''), { prose: true });
+}
+
+function renderSectionMarkets(s) {
+  const m = s.markets;
+  if (!m || (!m.crypto && !m.fx)) return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [];
+  const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
+  if (m.crypto) {
+    if (m.crypto.bitcoin) rows.push(kvRow('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`, fmtPct(m.crypto.bitcoin.usd_24h_change)));
+    if (m.crypto.ethereum) rows.push(kvRow('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`, fmtPct(m.crypto.ethereum.usd_24h_change)));
+    if (m.crypto.monero) rows.push(kvRow('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`, fmtPct(m.crypto.monero.usd_24h_change)));
+  }
+  if (m.fx?.rates) {
+    if (m.fx.rates.EUR) rows.push(kvRow('USD / EUR', fmtNum(m.fx.rates.EUR, 4)));
+    if (m.fx.rates.GBP) rows.push(kvRow('USD / GBP', fmtNum(m.fx.rates.GBP, 4)));
+    if (m.fx.rates.JPY) rows.push(kvRow('USD / JPY', fmtNum(m.fx.rates.JPY, 2)));
+    if (m.fx.rates.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
+  }
+  return sec('Markets', 'CoinGecko, Frankfurter', rows.join(''));
+}
+
+function renderSectionCultural(s) {
+  const c = s.cultural;
+  if (!c || !Object.keys(c).length) return sec('Cultural Pulse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const line = (it) => it ? (it.artistName ? `${it.name}  /  ${it.artistName}` : it.name) : '--';
+  const rows = [
+    kvRow('Top Song', line(c.song)),
+    kvRow('Top Album', line(c.album)),
+    kvRow('Top Movie', line(c.movie)),
+    kvRow('Top Podcast', line(c.podcast)),
+    kvRow('Top Book', line(c.book)),
+  ].join('');
+  return sec('Cultural Pulse', 'Apple Charts', rows, { single: true });
+}
+
+function renderSectionDiscourse(s) {
+  const x = s.discourse;
+  if (!x || (!x.wiki && !x.hackerNews && !x.reddit)) return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const items = [];
+  if (x.wiki?.mostread) {
+    const v = x.wiki.mostread.views ? `${fmtNum(x.wiki.mostread.views, 0)} views` : '';
+    items.push(`<div class="item"><span class="yr">WIKI</span><b>${escapeHtml(x.wiki.mostread.title)}</b>${v ? `  <span style="color:var(--ink-faint);font-size:11px">(${v})</span>` : ''}${x.wiki.mostread.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(x.wiki.mostread.description)}</div>` : ''}</div>`);
+  }
+  if (x.wiki?.news?.text) {
+    items.push(`<div class="item"><span class="yr">NEWS</span>${escapeHtml(x.wiki.news.text)}</div>`);
+  }
+  if (x.hackerNews) {
+    const meta = `${x.hackerNews.score || 0} pts / ${x.hackerNews.descendants || 0} comments`;
+    items.push(`<div class="item"><span class="yr">HN</span><b>${escapeHtml(x.hackerNews.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
+  }
+  if (x.reddit) {
+    const meta = `r/${x.reddit.subreddit} / ${fmtNum(x.reddit.score, 0)} pts / ${fmtNum(x.reddit.comments, 0)} comments`;
+    items.push(`<div class="item"><span class="yr">RDDT</span><b>${escapeHtml(x.reddit.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
+  }
+  return sec('Discourse', 'Wikipedia, HN, Reddit', items.join(''), { prose: true });
+}
+
+function renderSectionCurio(s) {
+  const c = s.curio;
+  if (!c || (!c.apod && !c.xkcd)) return sec('Curio', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const items = [];
+  if (c.apod) {
+    const expl = c.apod.explanation ? c.apod.explanation.slice(0, 240) + (c.apod.explanation.length > 240 ? '...' : '') : '';
+    const credit = c.apod.copyright ? ` <span style="color:var(--ink-faint);font-size:11px">(© ${escapeHtml(c.apod.copyright.trim())})</span>` : '';
+    items.push(`<div class="item"><span class="yr">APOD</span><b>${escapeHtml(c.apod.title || '')}</b>${credit}${expl ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(expl)}</div>` : ''}</div>`);
+  }
+  if (c.xkcd) {
+    items.push(`<div class="item"><span class="yr">XKCD</span><b>#${c.xkcd.num} / ${escapeHtml(c.xkcd.title || '')}</b>${c.xkcd.alt ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px;font-style:italic">"${escapeHtml(c.xkcd.alt)}"</div>` : ''}</div>`);
+  }
+  return sec('Curio', 'NASA, xkcd', items.join(''), { prose: true });
+}
+
+function renderSectionOnThisDay(s) {
+  const otd = s.onThisDay;
+  if (!otd || !otd.length) return sec('On This Day', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const items = otd.map((e) => `<div class="item"><span class="yr">${e.year}</span>${escapeHtml(e.text)}</div>`).join('');
+  return sec('On This Day', 'Wikipedia', items, { prose: true });
+}
+
+/* ---------- raw json modal ---------- */
+
+function showRawJson(entry) {
+  $('rawModalTitle').textContent = `Raw JSON / ${entry.filename}`;
+  $('rawModalBody').textContent = JSON.stringify(entry.data, null, 2);
+  $('rawModal').classList.add('visible');
+}
+function hideRawJson() {
+  $('rawModal').classList.remove('visible');
+}
+
+/* ---------- main render ---------- */
+
+function render() {
+  if (STATE.entries.length === 0) {
+    $('emptyState').hidden = false;
+    $('archiveView').hidden = true;
+    $('clearBtn').hidden = true;
+    return;
+  }
+  $('emptyState').hidden = true;
+  $('archiveView').hidden = false;
+  $('clearBtn').hidden = false;
+  renderStats();
+  renderList();
+  renderDetail();
+}
+
+/* ---------- drag and drop ---------- */
+
+const dropZone = $('dropZone');
+['dragenter', 'dragover'].forEach((evt) => {
+  document.addEventListener(evt, (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      dropZone?.classList.add('drag-over');
+    }
+  });
+});
+['dragleave', 'drop'].forEach((evt) => {
+  document.addEventListener(evt, (e) => {
+    e.preventDefault();
+    if (evt === 'dragleave' && e.relatedTarget) return; // ignore inner leaves
+    dropZone?.classList.remove('drag-over');
+  });
+});
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const items = Array.from(e.dataTransfer.items || []);
+  const files = [];
+  if (items.length && items[0].webkitGetAsEntry) {
+    // Try to traverse directories
+    const tasks = items.map((it) => {
+      if (it.kind !== 'file') return Promise.resolve();
+      const entry = it.webkitGetAsEntry();
+      return entry ? readEntry(entry, files) : Promise.resolve();
+    });
+    await Promise.all(tasks);
+  } else {
+    Array.from(e.dataTransfer.files || []).forEach((f) => files.push(f));
+  }
+  if (files.length) await loadFiles(files);
+});
+
+function readEntry(entry, files) {
+  return new Promise((resolve) => {
+    if (entry.isFile) {
+      entry.file((file) => { files.push(file); resolve(); }, () => resolve());
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const readBatch = () => {
+        reader.readEntries(async (batch) => {
+          if (!batch.length) { resolve(); return; }
+          await Promise.all(batch.map((sub) => readEntry(sub, files)));
+          readBatch();
+        }, () => resolve());
+      };
+      readBatch();
+    } else {
+      resolve();
+    }
+  });
+}
+
+/* ---------- wiring ---------- */
+
+$('openFolderBtn').addEventListener('click', openFolder);
+$('openFolderBtn2').addEventListener('click', openFolder);
+$('openFilesBtn').addEventListener('click', openFiles);
+$('openFilesBtn2').addEventListener('click', openFiles);
+$('clearBtn').addEventListener('click', clearAll);
+
+$('filePicker').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length) await loadFiles(files);
+  e.target.value = ''; // reset for re-pick
+});
+
+$('searchBox').addEventListener('input', (e) => {
+  STATE.searchTerm = e.target.value;
+  renderList();
+});
+
+$('rawModalClose').addEventListener('click', hideRawJson);
+$('rawModal').addEventListener('click', (e) => {
+  if (e.target === $('rawModal')) hideRawJson();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideRawJson();
+  // arrow keys navigate list
+  if (!STATE.entries.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (document.activeElement?.tagName === 'INPUT') return;
+    e.preventDefault();
+    const list = STATE.filtered;
+    const idx = list.findIndex((x) => entryKey(x) === STATE.selectedId);
+    let next = idx + (e.key === 'ArrowDown' ? 1 : -1);
+    next = Math.max(0, Math.min(list.length - 1, next));
+    if (list[next]) {
+      STATE.selectedId = entryKey(list[next]);
+      render();
+    }
+  }
+});
+
+// initial render
+render();
+</script>
+</body>
+</html>

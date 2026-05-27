@@ -6,7 +6,7 @@
     "id": 1,
     "serial": "№001",
     "capturedAt": "2026-05-27T17:52:06.994Z",
-    "observation": "",
+    "observation": "hello, world.",
     "snapshot": {
       "timestamp": "2026-05-27T17:52:06.994Z",
       "timestampLocal": "Wed May 27 2026 13:52:06 GMT-0400 (Eastern Daylight Time)",

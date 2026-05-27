@@ -73,6 +73,25 @@ Keys are stored in browser localStorage when available, with an in-memory fallba
 
 **JSON (`.json`)** contains the full structured snapshot of every captured signal plus the observation text. Top-level keys are `instrument`, `series`, `version`, and `entry`. The entry's `snapshot` field holds all raw data returned by each source.
 
+## The Reader
+
+`milepost-reader.html` is a companion viewer for the JSON files you have saved. It loads files from your machine and renders them in the same field-instrument aesthetic, with:
+
+- A searchable sidebar list of all loaded entries, each marked with its own mini milepost glyph
+- A reading-focused detail panel that puts the observation above the data sections (since by the time you are reading an entry, the observation is what you came back for)
+- An aggregate stats strip across the top: entry count, span in days, distinct locations, total words written, average temperature, total species seen
+- Search across observations, locations, weather conditions, cultural picks, news headlines, and filenames
+- Arrow-key navigation between entries
+- A "View Raw JSON" inspector and a print-friendly stylesheet
+
+There are three ways to load files into the reader:
+
+1. **Open Folder** uses the File System Access API to read every JSON in a chosen folder at once. Works in Chromium browsers (Chrome, Edge, Brave, Arc).
+2. **Open Files** uses the standard file picker. Works everywhere. Select one or many JSON files.
+3. **Drag and drop** files or a folder onto the page. Recursive directory drop is supported in most browsers.
+
+The reader does no network requests except to load typography. Loaded entries live only in memory; there is no upload, no telemetry, no caching beyond the current page session. Clearing the page or hitting the **Clear** button discards the loaded archive without touching any files on disk.
+
 ## Privacy
 
 All data stays on your machine. There is no server. Capture requests go directly from your browser to each data source's public API. API keys live in your browser's localStorage. The instrument carries no analytics, no telemetry, no tracking. Saved files are plain files on your disk.
@@ -111,7 +130,8 @@ All sources are free and publicly accessible. No third-party servers proxy any r
 
 ## Files
 
-- `milepost.html` is the entire instrument. Single self-contained file.
+- `milepost.html` is the capture instrument. Open it to take a new entry.
+- `milepost-reader.html` is the companion archive viewer. Open it to browse, search, and read the JSON entries you have saved.
 - `README.md` is this document.
 
 ## Roadmap notes
