@@ -1,0 +1,393 @@
+{
+  "instrument": "MILEPOST",
+  "series": "Field Instrument 003",
+  "version": "0.1",
+  "entry": {
+    "id": 1,
+    "serial": "№001",
+    "capturedAt": "2026-05-27T17:52:06.994Z",
+    "observation": "",
+    "snapshot": {
+      "timestamp": "2026-05-27T17:52:06.994Z",
+      "timestampLocal": "Wed May 27 2026 13:52:06 GMT-0400 (Eastern Daylight Time)",
+      "timezone": "America/New_York",
+      "location": {
+        "latitude": 39.65287,
+        "longitude": -78.76252,
+        "place": "Cumberland, Maryland, US",
+        "timezone": "America/New_York",
+        "source": "ip"
+      },
+      "weather": {
+        "latitude": 39.65235,
+        "longitude": -78.77524,
+        "generationtime_ms": 0.2523660659790039,
+        "utc_offset_seconds": -14400,
+        "timezone": "America/New_York",
+        "timezone_abbreviation": "GMT-4",
+        "elevation": 192,
+        "current_units": {
+          "time": "iso8601",
+          "interval": "seconds",
+          "temperature_2m": "°C",
+          "relative_humidity_2m": "%",
+          "apparent_temperature": "°C",
+          "is_day": "",
+          "precipitation": "mm",
+          "weather_code": "wmo code",
+          "cloud_cover": "%",
+          "pressure_msl": "hPa",
+          "surface_pressure": "hPa",
+          "wind_speed_10m": "km/h",
+          "wind_direction_10m": "°",
+          "wind_gusts_10m": "km/h",
+          "visibility": "m"
+        },
+        "current": {
+          "time": "2026-05-27T13:45",
+          "interval": 900,
+          "temperature_2m": 24.2,
+          "relative_humidity_2m": 85,
+          "apparent_temperature": 31.4,
+          "is_day": 1,
+          "precipitation": 0,
+          "weather_code": 1,
+          "cloud_cover": 24,
+          "pressure_msl": 1013.1,
+          "surface_pressure": 991,
+          "wind_speed_10m": 0.8,
+          "wind_direction_10m": 117,
+          "wind_gusts_10m": 16.2,
+          "visibility": 17100
+        },
+        "daily_units": {
+          "time": "iso8601",
+          "sunrise": "iso8601",
+          "sunset": "iso8601",
+          "uv_index_max": "",
+          "temperature_2m_max": "°C",
+          "temperature_2m_min": "°C",
+          "precipitation_sum": "mm"
+        },
+        "daily": {
+          "time": [
+            "2026-05-27"
+          ],
+          "sunrise": [
+            "2026-05-27T05:51"
+          ],
+          "sunset": [
+            "2026-05-27T20:32"
+          ],
+          "uv_index_max": [
+            4.85
+          ],
+          "temperature_2m_max": [
+            26.8
+          ],
+          "temperature_2m_min": [
+            18.8
+          ],
+          "precipitation_sum": [
+            36.3
+          ]
+        }
+      },
+      "airQuality": {
+        "latitude": 39.699997,
+        "longitude": -78.799995,
+        "generationtime_ms": 0.28955936431884766,
+        "utc_offset_seconds": -14400,
+        "timezone": "America/New_York",
+        "timezone_abbreviation": "GMT-4",
+        "elevation": 192,
+        "current_units": {
+          "time": "iso8601",
+          "interval": "seconds",
+          "us_aqi": "USAQI",
+          "pm10": "μg/m³",
+          "pm2_5": "μg/m³",
+          "carbon_monoxide": "μg/m³",
+          "nitrogen_dioxide": "μg/m³",
+          "ozone": "μg/m³",
+          "alder_pollen": "grains/m³",
+          "birch_pollen": "grains/m³",
+          "grass_pollen": "grains/m³",
+          "mugwort_pollen": "grains/m³",
+          "olive_pollen": "grains/m³",
+          "ragweed_pollen": "grains/m³"
+        },
+        "current": {
+          "time": "2026-05-27T13:00",
+          "interval": 3600,
+          "us_aqi": 28,
+          "pm10": 2.4,
+          "pm2_5": 2.4,
+          "carbon_monoxide": 126,
+          "nitrogen_dioxide": 2,
+          "ozone": 68,
+          "alder_pollen": null,
+          "birch_pollen": null,
+          "grass_pollen": null,
+          "mugwort_pollen": null,
+          "olive_pollen": null,
+          "ragweed_pollen": null
+        }
+      },
+      "celestial": {
+        "moon": {
+          "name": "Waxing Gibbous",
+          "illumination": 0.8489250617961677,
+          "age": 11.01284025301732,
+          "fraction": 0.37292992387784807
+        },
+        "sun": {
+          "altitude": 69.85066015734266,
+          "azimuth": 207.89103462372665
+        },
+        "sunSign": "Gemini",
+        "julianDay": 2461188.2445285534,
+        "nextSolar": {
+          "name": "June Solstice",
+          "date": "2026-06-21T08:23:55.605Z",
+          "days": 25
+        }
+      },
+      "spaceWeather": {
+        "kp": {
+          "kp": null
+        },
+        "solarWind": {
+          "timeTag": "2026-05-27 17:50:00.000",
+          "density": 5.62,
+          "speed": 400.3,
+          "temperature": 62834
+        }
+      },
+      "iss": {
+        "name": "iss",
+        "id": 25544,
+        "latitude": 2.1346969744293,
+        "longitude": -110.38896977151,
+        "altitude": 419.93376065277,
+        "velocity": 27576.443373872,
+        "visibility": "daylight",
+        "footprint": 4507.1264491333,
+        "timestamp": 1779904337,
+        "daynum": 2461188.2446412,
+        "solar_lat": 21.386351304081,
+        "solar_lon": 271.22933798793,
+        "units": "kilometers"
+      },
+      "earthquakes": {
+        "nearby": [
+          {
+            "mag": 1.8,
+            "place": "5 km W of Gladstone, New Jersey",
+            "time": 1779211841735,
+            "depth": 5,
+            "coords": [
+              40.7212,
+              -74.7255
+            ]
+          },
+          {
+            "mag": 2.3,
+            "place": "4 km N of Honeoye, New York",
+            "time": 1778718438277,
+            "depth": 3.876,
+            "coords": [
+              42.8292,
+              -77.5183
+            ]
+          },
+          {
+            "mag": 2.7,
+            "place": "6 km WNW of Carleton, Michigan",
+            "time": 1777930320840,
+            "depth": 6.811,
+            "coords": [
+              42.0715,
+              -83.4652
+            ]
+          }
+        ],
+        "largest": {
+          "mag": 6,
+          "place": "western Indian-Antarctic Ridge",
+          "time": 1779893464419
+        }
+      },
+      "wildfires": {
+        "count": 42,
+        "closest": {
+          "lat": 42.80071,
+          "lon": -80.10147,
+          "distance": 367.4845155480824,
+          "brightness": 303.57,
+          "confidence": "n",
+          "frp": 1.99,
+          "date": "2026-05-27",
+          "time": "839",
+          "daynight": "N"
+        },
+        "highIntensity": []
+      },
+      "hydrosphere": {
+        "stream": {
+          "code": "01601500",
+          "name": "WILLS CREEK NEAR CUMBERLAND, MD",
+          "lat": 39.66961111,
+          "lon": -78.78802778,
+          "distance": 2.8693127203638364,
+          "discharge": 2350,
+          "gageHeight": 5.57,
+          "dateTime": "2026-05-27T13:00:00.000-04:00"
+        },
+        "tide": {
+          "inland": false,
+          "station": "Washington",
+          "stationId": "8594900",
+          "distance": 173.13004124882113,
+          "level": 1.006,
+          "time": "2026-05-27 13:42",
+          "units": "ft (MLLW)"
+        }
+      },
+      "biosphere": {
+        "notable": [
+          {
+            "comName": "White-rumped Sandpiper",
+            "sciName": "Calidris fuscicollis",
+            "locName": "Mexico Farms (Restricted Access)",
+            "howMany": 2,
+            "obsDt": "2026-05-27 08:16"
+          },
+          {
+            "comName": "White-rumped Sandpiper",
+            "sciName": "Calidris fuscicollis",
+            "locName": "Mexico Farms (Restricted Access)",
+            "howMany": 2,
+            "obsDt": "2026-05-27 08:16"
+          },
+          {
+            "comName": "Lesser Scaup",
+            "sciName": "Aythya affinis",
+            "locName": "C&O Canal--North Branch",
+            "howMany": 1,
+            "obsDt": "2026-05-27 07:52"
+          }
+        ],
+        "recent": [
+          {
+            "comName": "Mourning Dove",
+            "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
+            "howMany": 1,
+            "obsDt": "2026-05-27 06:24"
+          },
+          {
+            "comName": "Chimney Swift",
+            "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
+            "howMany": 2,
+            "obsDt": "2026-05-27 06:24"
+          },
+          {
+            "comName": "Fish Crow",
+            "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
+            "howMany": 1,
+            "obsDt": "2026-05-27 06:24"
+          },
+          {
+            "comName": "White-breasted Nuthatch",
+            "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
+            "howMany": 1,
+            "obsDt": "2026-05-27 06:24"
+          },
+          {
+            "comName": "Carolina Wren",
+            "locName": "Atlas Point Count: 17SQE03: 40.04750, -78.64456",
+            "howMany": 1,
+            "obsDt": "2026-05-27 06:24"
+          }
+        ],
+        "speciesCount": 20,
+        "totalRecent": 20
+      },
+      "markets": {
+        "crypto": {
+          "bitcoin": {
+            "usd": 74806,
+            "usd_24h_change": -1.5287934153790732
+          },
+          "ethereum": {
+            "usd": 2053.85,
+            "usd_24h_change": -0.7619514806438141
+          },
+          "monero": {
+            "usd": 392.95,
+            "usd_24h_change": 3.1906713509789957
+          }
+        },
+        "fx": null
+      },
+      "cultural": {},
+      "discourse": {
+        "wiki": {
+          "mostread": {
+            "title": "Obsession (2025 film)",
+            "description": "2025 American horror film by Curry Barker",
+            "views": 230622
+          },
+          "news": {
+            "text": "American jazz saxophonist Sonny Rollins (pictured) dies at the age of 95."
+          },
+          "image": {
+            "title": "Павильон Турецкая Баня 9 6. Екатерининский парк, Пушкин",
+            "description": "Great Pond and Turkish Bath pavilion, Catherine Park, Pushkin town, Saint Petersburg, Russia"
+          }
+        },
+        "hackerNews": {
+          "title": "I'm Tired of Talking to AI",
+          "url": "https://orchidfiles.com/im-tired-of-ai-generated-answers/",
+          "score": 1686,
+          "by": "theorchid",
+          "descendants": 808
+        },
+        "reddit": {
+          "title": "UPDATE: body cam footage from cop who pulled over woman for holding a phone in her other hand",
+          "subreddit": "whoathatsinteresting",
+          "score": 23512,
+          "comments": 3235,
+          "author": "australiughhh",
+          "permalink": "https://reddit.com/r/whoathatsinteresting/comments/1tp3u42/update_body_cam_footage_from_cop_who_pulled_over/"
+        }
+      },
+      "curio": {
+        "apod": {
+          "title": "PK 164 +31.1: The Headphone Nebula",
+          "explanation": "What is a pair of headphones doing in the sky? Today’s image features the Headphone Nebula, also known as PK 164 +31.1 or Jones-Emberson 1. This planetary nebula, the remnant of a dying Sun-like star, faintly occupies an angular region of the Lynx constellation about 1/5th the diameter of the full moon. The red and blue-ish green colors trace hydrogen and oxygen atoms, respectively, that have been excited and ionized by the nebula's central white dwarf. The headphone shape, where two lobes of hydrogen puncture the inner region of oxygen, adds this object to a long list of oddly shaped nebulae. The morphology of such strange nebulae hint at the presence of a stellar or planetary companion, which can stir the material flowing out from the dying star. You can listen to Hubble and JWST sonifications of planetary nebulae through your very own headphones!",
+          "url": "https://apod.nasa.gov/apod/image/2605/headphone_nebula_900.jpg",
+          "hdurl": "https://apod.nasa.gov/apod/image/2605/headphone_nebula.jpg",
+          "mediaType": "image",
+          "copyright": "Bernard Miller\n\nText:\nKeighley Rockcliffe  \n(NASA\nGSFC, \nUMBC CSST, \nCRESST II)",
+          "date": "2026-05-27"
+        },
+        "xkcd": null
+      },
+      "onThisDay": [
+        {
+          "year": 1915,
+          "text": "HMS Princess Irene explodes and sinks off Sheerness, Kent, with the loss of 352 lives."
+        },
+        {
+          "year": 1933,
+          "text": "New Deal: The U.S. Federal Securities Act is signed into law requiring the registration of securities with the Federal Trade Commission."
+        },
+        {
+          "year": 2014,
+          "text": "The football club Kerala Blasters FC and its first supporters' group Manjappada are formed."
+        }
+      ]
+    }
+  }
+}

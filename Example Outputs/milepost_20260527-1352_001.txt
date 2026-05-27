@@ -1,0 +1,126 @@
+MILEPOST / FIELD INSTRUMENT 003
+Environmental Capture / Green Shoe Garage
+================================================================
+
+MILEPOST     №001
+TIMESTAMP    Wed May 27 2026  13:52:06 EDT
+ISO 8601     2026-05-27T17:52:06.994Z
+TIMEZONE     America/New_York
+LOCATION     Cumberland, Maryland, US
+             39.6529°N, 78.7625°W
+SOURCE       ip
+
+================================================================
+ATMOSPHERIC
+----------------------------------------------------------------
+Conditions        Mainly clear
+Temperature       24.2 C  /  75.6 F
+Feels Like        31.4 C
+Humidity          85 %
+Pressure          1,013.1 hPa
+Wind              0.8 km/h ESE
+Gusts             16.2 km/h
+Cloud Cover       24 %
+Precipitation     0.0 mm
+Visibility        17.1 km
+UV Index (peak)   4.9 (moderate)
+AQI (US)          28 (good)
+
+================================================================
+CELESTIAL
+----------------------------------------------------------------
+Sun Sign          Gemini
+Sun Altitude      69.9 deg
+Sun Azimuth       207.9 deg SSW
+Moon Phase        Waxing Gibbous
+Illumination      84.9 %
+Moon Age          11.0 days
+Sunrise           05:51
+Sunset            20:32
+Julian Day        2,461,188.2445
+Next Solar Event  June Solstice in 25 days
+
+================================================================
+SPACE WEATHER / ORBITAL
+----------------------------------------------------------------
+Kp Index          -- (extreme storm)
+Solar Wind        400 km/s
+Plasma Density    5.62 p/cm3
+ISS Position      2.13, -110.39 at 419.9 km
+ISS Velocity      27,576 km/h
+
+================================================================
+TELLURIC
+----------------------------------------------------------------
+Nearest Quake     M1.8, 5 km W of Gladstone, New Jersey, 8d 0h ago, depth 5.0 km
+Nearby Count      3 events in 500km
+Largest (24h)     M6.0, western Indian-Antarctic Ridge
+Wildfire (500km)  42 thermal anomalies
+Nearest Fire      367.5 km, FRP 2.0 MW, conf n
+
+================================================================
+HYDROSPHERE
+----------------------------------------------------------------
+Nearest Gauge     WILLS CREEK NEAR CUMBERLAND, MD (2.9 km)
+Discharge         2,350.0 ft3/s
+Gauge Height      5.57 ft
+Tide Station      Washington (173.1 km)
+Water Level       1.01 ft MLLW
+
+================================================================
+BIOSPHERE
+----------------------------------------------------------------
+Species (50km, 3d)20 distinct, 20 obs
+Notable Sightings 3 in last 7 days
+  White-rumped Sandpiper  at Mexico Farms (Restricted Access)  (2)
+  White-rumped Sandpiper  at Mexico Farms (Restricted Access)  (2)
+  Lesser Scaup  at C&O Canal--North Branch  (1)
+Latest Obs        Mourning Dove at Atlas Point Count: 17SQE03: 40.04750, -78.64456
+
+================================================================
+MARKETS
+----------------------------------------------------------------
+BTC / USD         $74,806
+ETH / USD         $2,054
+XMR / USD         $393
+
+================================================================
+DISCOURSE
+----------------------------------------------------------------
+Wiki Top Article  Obsession (2025 film)
+  views           230,622
+  desc            2025 American horror film by Curry Barker
+In the News       
+  American jazz saxophonist Sonny Rollins (pictured) dies at the age of 95.
+Hacker News       I'm Tired of Talking to AI (1686 pts, 808 comments)
+Reddit Top        UPDATE: body cam footage from cop who pulled over woman for holding a phone in her other hand (r/whoathatsinteresting, 23,512 pts)
+
+================================================================
+CURIO
+----------------------------------------------------------------
+NASA APOD         PK 164 +31.1: The Headphone Nebula
+  credit          Bernard Miller
+
+Text:
+Keighley Rockcliffe  
+(NASA
+GSFC, 
+UMBC CSST, 
+CRESST II)
+  What is a pair of headphones doing in the sky? Today’s image features the Headphone Nebula, also known as PK 164 +31.1 or Jones-Emberson 1. This planetary nebula, the remnant of a dying Sun-like star, faintly occupies an angular region of the Lynx constellation about 1/5th the diameter of the full m...
+
+================================================================
+ON THIS DAY
+----------------------------------------------------------------
+1915  HMS Princess Irene explodes and sinks off Sheerness, Kent, with the loss of 352 lives.
+1933  New Deal: The U.S. Federal Securities Act is signed into law requiring the registration of securities with the Federal Trade Commission.
+2014  The football club Kerala Blasters FC and its first supporters' group Manjappada are formed.
+
+================================================================
+OBSERVATION
+----------------------------------------------------------------
+
+
+
+================================================================
+Milepost / Field Instrument 003 / Green Shoe Garage

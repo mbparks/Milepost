@@ -1,0 +1,2469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MILEPOST / FIELD INSTRUMENT 003</title>
+<!--
+  MILEPOST
+  Field Instrument 003 / Environmental Capture / Journal
+  Green Shoe Garage / Michael B. Parks
+  License: GPL-3.0
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper: #ece3cf;
+  --paper-deep: #e1d6bb;
+  --paper-edge: #d4c8aa;
+  --ink: #1a1611;
+  --ink-soft: #3a2f22;
+  --ink-faint: #6e5e44;
+  --rule: #8a7a5c;
+  --flag: #c0431a;
+  --flag-deep: #962f10;
+  --stamp: #1f3a52;
+  --good: #4a6b3a;
+  --warn: #b88410;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  --serif: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #2a2520;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+}
+
+/* paper background: dot grid + noise + edge vignette */
+.sheet {
+  max-width: 880px;
+  margin: 0 auto;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(0,0,0,0.08), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(0,0,0,0.06), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(110,94,68,0.05) 23px, rgba(110,94,68,0.05) 24px),
+    repeating-linear-gradient(90deg, transparent 0, transparent 23px, rgba(110,94,68,0.05) 23px, rgba(110,94,68,0.05) 24px),
+    var(--paper);
+  background-blend-mode: normal;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.4) inset,
+    0 0 0 1px rgba(0,0,0,0.05),
+    0 4px 12px rgba(0,0,0,0.3),
+    0 24px 48px rgba(0,0,0,0.4);
+  position: relative;
+  padding: 36px 44px 56px;
+  overflow: hidden;
+}
+
+/* grain overlay */
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 0.08 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
+}
+
+/* corner fiducials */
+.fid {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+.fid::before, .fid::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.fid::before { left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; }
+.fid::after { top: 50%; left: 0; right: 0; height: 1px; margin-top: -0.5px; }
+.fid.tl { top: 14px; left: 14px; }
+.fid.tr { top: 14px; right: 14px; }
+.fid.bl { bottom: 14px; left: 14px; }
+.fid.br { bottom: 14px; right: 14px; }
+
+/* header */
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--ink);
+  margin-bottom: 22px;
+  position: relative;
+}
+.head h1 {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.head .sub {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+.head .badge {
+  text-align: right;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.head .badge strong {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+/* stamp */
+.stamp {
+  position: absolute;
+  top: 56px;
+  right: 56px;
+  transform: rotate(-8deg);
+  border: 2px solid var(--flag);
+  color: var(--flag);
+  padding: 6px 12px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(236, 227, 207, 0.4);
+}
+.stamp::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--flag);
+  opacity: 0.6;
+  margin: 1px;
+}
+
+/* capture button */
+.capture-zone {
+  text-align: center;
+  padding: 32px 0 8px;
+}
+
+.capture-btn {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 18px 48px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.06s ease, background 0.15s ease;
+  box-shadow:
+    0 2px 0 var(--flag),
+    0 3px 0 var(--ink);
+}
+.capture-btn:hover { background: var(--flag-deep); }
+.capture-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+.capture-btn[disabled] {
+  background: var(--ink-faint);
+  cursor: not-allowed;
+  box-shadow: 0 2px 0 var(--ink-faint);
+}
+.capture-btn .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--flag);
+  margin-right: 12px;
+  vertical-align: 1px;
+  box-shadow: 0 0 0 2px var(--paper);
+}
+.capture-btn.recording .dot {
+  background: var(--flag);
+  animation: blink 0.9s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.status-strip {
+  margin-top: 18px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+.status-strip .sep {
+  margin: 0 10px;
+  color: var(--rule);
+}
+.status-strip .live {
+  color: var(--flag);
+}
+
+/* hint card */
+.hint {
+  margin: 22px 0 0;
+  padding: 14px 18px;
+  border: 1px dashed var(--rule);
+  background: rgba(255,255,255,0.18);
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+.hint b {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* capture log (progressive feedback) */
+.cap-log {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 18px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.cap-log .row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dotted var(--rule);
+  padding: 4px 0;
+  color: var(--ink-soft);
+}
+.cap-log .row .lab {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.cap-log .row .st {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+}
+.cap-log .row.pending .st { color: var(--ink-faint); }
+.cap-log .row.working .st { color: var(--stamp); }
+.cap-log .row.done .st { color: var(--good); }
+.cap-log .row.fail .st { color: var(--flag); }
+
+/* entry display */
+.entry {
+  margin-top: 28px;
+  display: none;
+}
+.entry.visible { display: block; }
+
+.entry-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink);
+}
+.entry-head .mp-glyph {
+  display: flex;
+  align-items: flex-end;
+  min-width: 44px;
+}
+.entry-head .mp-glyph:empty { display: none; }
+.entry-head .mp-marker {
+  width: 44px;
+  height: 64px;
+  display: block;
+}
+.entry-head .serial {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.entry-head .ts {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+.entry-head .loc {
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+}
+.entry-head .right {
+  text-align: right;
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+.entry-head .right strong {
+  display: block;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+/* sections */
+.sec {
+  margin-bottom: 18px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+}
+.sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.sec-head .sec-meta {
+  color: var(--paper-deep);
+  opacity: 0.7;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+.sec-body {
+  padding: 12px 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 26px;
+}
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dotted rgba(110,94,68,0.4);
+  font-size: 12px;
+}
+.kv:last-child { border-bottom: none; }
+.kv .k {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.kv .v {
+  color: var(--ink);
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.kv .v .qual {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.kv .v.muted { color: var(--ink-faint); font-style: italic; font-weight: 400; }
+
+.sec-body.single { grid-template-columns: 1fr; }
+.sec-body.prose {
+  display: block;
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.sec-body.prose .item {
+  padding: 5px 0;
+  border-bottom: 1px dotted rgba(110,94,68,0.4);
+}
+.sec-body.prose .item:last-child { border-bottom: none; }
+.sec-body.prose .yr {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 8px;
+  font-size: 12px;
+}
+
+/* journal entry */
+.journal {
+  margin-top: 26px;
+}
+.journal-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.journal-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ink);
+}
+.journal textarea {
+  width: 100%;
+  min-height: 240px;
+  padding: 18px 20px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(31,58,82,0.18) 27px, rgba(31,58,82,0.18) 28px),
+    rgba(255,255,255,0.4);
+  border: 1px solid var(--ink);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--ink);
+  resize: vertical;
+  outline: none;
+}
+.journal textarea:focus {
+  border-color: var(--flag);
+  box-shadow: 0 0 0 2px rgba(192,67,26,0.15);
+}
+.journal textarea::placeholder {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* actions */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ink);
+}
+.btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.btn:hover { background: var(--ink); color: var(--paper); }
+.btn.primary { background: var(--flag); color: var(--paper); border-color: var(--flag); }
+.btn.primary:hover { background: var(--flag-deep); border-color: var(--flag-deep); }
+.btn.ghost { background: transparent; border-color: var(--rule); color: var(--ink-faint); }
+.btn.ghost:hover { background: var(--paper-edge); color: var(--ink); }
+
+/* footer */
+.foot {
+  margin-top: 30px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--rule);
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* archive (in-memory log of this session) */
+.archive {
+  margin-top: 26px;
+  display: none;
+}
+.archive.visible { display: block; }
+.archive h3 {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.archive .item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  padding: 8px 12px;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 11px;
+  align-items: center;
+}
+.archive .item .sn {
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.1em;
+}
+.archive .item .preview {
+  color: var(--ink-soft);
+  font-family: var(--serif);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive .item .when {
+  color: var(--ink-faint);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* mobile */
+@media (max-width: 640px) {
+  body { padding: 12px 6px 32px; }
+  .sheet { padding: 24px 18px 36px; }
+  .head { grid-template-columns: 1fr; }
+  .head .badge { text-align: left; }
+  .stamp { top: auto; right: 16px; bottom: -10px; }
+  .cap-log { grid-template-columns: 1fr; }
+  .sec-body { grid-template-columns: 1fr; gap: 0; }
+  .entry-head {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+  .entry-head .right { grid-column: 1 / -1; text-align: left; padding-top: 4px; }
+  .entry-head .mp-marker { width: 38px; height: 56px; }
+  .head h1 { font-size: 18px; }
+}
+
+/* fade in for revealed sections */
+.fade-in {
+  animation: fade 0.4s ease-out;
+}
+@keyframes fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* spinner glyph */
+.spin {
+  display: inline-block;
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* skip state in capture log */
+.cap-log .row.skip .st { color: var(--warn); }
+
+/* settings panel */
+.config {
+  margin-top: 18px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.18);
+  font-size: 11px;
+}
+.config summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  list-style: none;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.config summary::-webkit-details-marker { display: none; }
+.config summary::after {
+  content: '+';
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+.config[open] summary::after { content: '−'; }
+.config summary:hover { background: rgba(0,0,0,0.04); color: var(--ink); }
+.config-body {
+  padding: 12px 14px 16px;
+  border-top: 1px dashed var(--rule);
+}
+.config-note {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  font-style: italic;
+}
+.key-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.key-row label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.key-row input {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  letter-spacing: 0.02em;
+}
+.key-row input:focus { border-color: var(--ink); }
+.key-row a {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--flag);
+  text-decoration: none;
+  border-bottom: 1px solid var(--flag);
+  padding-bottom: 1px;
+  white-space: nowrap;
+}
+.key-row a:hover { color: var(--flag-deep); border-color: var(--flag-deep); }
+.config-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dotted var(--rule);
+}
+.config-status {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.config-status.ok { color: var(--good); }
+.config-status.warn { color: var(--warn); }
+@media (max-width: 640px) {
+  .key-row { grid-template-columns: 1fr; gap: 4px; }
+  .key-row a { justify-self: start; }
+}
+</style>
+</head>
+<body>
+<main class="sheet" id="sheet">
+  <span class="fid tl"></span>
+  <span class="fid tr"></span>
+  <span class="fid bl"></span>
+  <span class="fid br"></span>
+  <span class="stamp">CALIBRATED / IN SERVICE</span>
+
+  <header class="head">
+    <div>
+      <h1>MILEPOST</h1>
+      <div class="sub">Field Instrument 003 &middot; Environmental Capture &middot; Journal</div>
+    </div>
+    <div class="badge">
+      <strong>GSG / MMXXVI</strong>
+      Green Shoe Garage<br />
+      Mountain Maryland
+    </div>
+  </header>
+
+  <section class="capture-zone" id="capZone">
+    <button class="capture-btn" id="capBtn">
+      <span class="dot"></span><span id="capLabel">New Entry</span>
+    </button>
+    <div class="status-strip" id="statusStrip">
+      <span>Status</span><span class="sep">/</span><span id="statusText">Ready</span><span class="sep">/</span><span id="clock">--:--:--</span>
+    </div>
+    <div class="hint">
+      <b>OPERATION.</b> Press <b>NEW ENTRY</b> to take an environmental fix. The instrument will query weather, geomagnetic activity, market signals, seismic and thermal events, water levels, biosphere observations, cultural charts, and other ambient readings, binding them to the moment of capture. Add a written observation, then save the entry as plain text or structured JSON.
+    </div>
+
+    <details class="config" id="configPanel">
+      <summary>API Keys / Configuration</summary>
+      <div class="config-body">
+        <p class="config-note">
+          Two optional sources require free API keys. Without them, those captures are skipped. Keys are stored only in your browser, never transmitted anywhere except to the respective service.
+        </p>
+        <div class="key-row">
+          <label for="key-firms">NASA FIRMS Key</label>
+          <input type="text" id="key-firms" autocomplete="off" spellcheck="false" placeholder="for wildfire thermal anomaly detection" />
+          <a href="https://firms.modaps.eosdis.nasa.gov/api/map_key/" target="_blank" rel="noopener">Request key</a>
+        </div>
+        <div class="key-row">
+          <label for="key-ebird">eBird API Token</label>
+          <input type="text" id="key-ebird" autocomplete="off" spellcheck="false" placeholder="for nearby bird observations" />
+          <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener">Generate token</a>
+        </div>
+        <div class="config-actions">
+          <button class="btn" id="saveKeys">Save Keys</button>
+          <span id="keysStatus" class="config-status"></span>
+        </div>
+      </div>
+    </details>
+
+    <div class="cap-log" id="capLog" style="display:none"></div>
+  </section>
+
+  <section class="entry" id="entry">
+    <div class="entry-head">
+      <div class="mp-glyph" id="mpGlyph" aria-hidden="true"></div>
+      <div class="entry-info">
+        <div class="serial" id="entrySerial">MILEPOST //</div>
+        <div class="ts" id="entryTs">--</div>
+        <div class="loc" id="entryLoc">--</div>
+      </div>
+      <div class="right">
+        <strong id="entryWx">--</strong>
+        <span id="entryTemp">--</span>
+      </div>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="journal">
+      <div class="journal-label">Observation</div>
+      <textarea id="journalText" placeholder="A line. A page. A scrap of weather. Whatever the day asks for."></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="saveTxt">Save .TXT</button>
+      <button class="btn primary" id="saveJson">Save .JSON</button>
+      <button class="btn" id="copyTxt">Copy Text</button>
+      <button class="btn ghost" id="recapture">Refresh Readings</button>
+      <button class="btn ghost" id="newEntry">New Entry</button>
+    </div>
+  </section>
+
+  <section class="archive" id="archive">
+    <h3>Session Archive</h3>
+    <div id="archiveList"></div>
+  </section>
+
+  <footer class="foot">
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.1</span>
+    <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
+  </footer>
+</main>
+
+<script>
+/* ============================================================
+   MILEPOST  /  FIELD INSTRUMENT 003
+   ============================================================ */
+
+const STATE = {
+  serial: 1,
+  current: null,
+  archive: [],
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- clock ---------- */
+function tickClock() {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  $('clock').textContent = `${hh}:${mm}:${ss}`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+/* ---------- utility ---------- */
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const fmtNum = (n, d = 0) => (n == null || isNaN(n)) ? '--' : Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const safe = (v, fb = '--') => (v == null || v === '' || (typeof v === 'number' && isNaN(v))) ? fb : v;
+
+/* haversine distance in km */
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/* ---------- settings (localStorage when available, else in-memory) ---------- */
+const Settings = {
+  _mem: {},
+  get(k) {
+    try {
+      const v = localStorage.getItem(`milepost_${k}`);
+      if (v != null) return v;
+    } catch (e) {}
+    return this._mem[k] || '';
+  },
+  set(k, v) {
+    try {
+      localStorage.setItem(`milepost_${k}`, v);
+      return true;
+    } catch (e) {
+      this._mem[k] = v;
+      return false;
+    }
+  },
+};
+
+/* populate input fields and wire save */
+function initSettings() {
+  const firms = Settings.get('firms');
+  const ebird = Settings.get('ebird');
+  if (firms) $('key-firms').value = firms;
+  if (ebird) $('key-ebird').value = ebird;
+  updateKeysStatus();
+
+  $('saveKeys').addEventListener('click', () => {
+    const f = $('key-firms').value.trim();
+    const e = $('key-ebird').value.trim();
+    Settings.set('firms', f);
+    Settings.set('ebird', e);
+    const status = $('keysStatus');
+    status.textContent = 'Saved';
+    status.className = 'config-status ok';
+    setTimeout(updateKeysStatus, 1500);
+  });
+}
+
+function updateKeysStatus() {
+  const f = Settings.get('firms');
+  const e = Settings.get('ebird');
+  const status = $('keysStatus');
+  const parts = [];
+  parts.push(`FIRMS ${f ? '✓' : '–'}`);
+  parts.push(`eBird ${e ? '✓' : '–'}`);
+  status.textContent = parts.join('  /  ');
+  status.className = 'config-status ' + ((f && e) ? 'ok' : 'warn');
+}
+
+function compass(deg) {
+  if (deg == null) return '--';
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(((deg % 360) / 22.5)) % 16];
+}
+
+function aqiCategory(aqi) {
+  if (aqi == null) return '--';
+  if (aqi <= 50) return 'good';
+  if (aqi <= 100) return 'moderate';
+  if (aqi <= 150) return 'unhealthy for sensitive';
+  if (aqi <= 200) return 'unhealthy';
+  if (aqi <= 300) return 'very unhealthy';
+  return 'hazardous';
+}
+
+function uvCategory(u) {
+  if (u == null) return '--';
+  if (u < 3) return 'low';
+  if (u < 6) return 'moderate';
+  if (u < 8) return 'high';
+  if (u < 11) return 'very high';
+  return 'extreme';
+}
+
+function kpCategory(k) {
+  if (k == null) return '--';
+  if (k < 4) return 'quiet';
+  if (k < 5) return 'unsettled';
+  if (k < 6) return 'minor storm';
+  if (k < 7) return 'moderate storm';
+  if (k < 8) return 'strong storm';
+  if (k < 9) return 'severe storm';
+  return 'extreme storm';
+}
+
+const WMO = {
+  0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+  45:'Fog',48:'Rime fog',
+  51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',
+  56:'Freezing drizzle',57:'Freezing drizzle (dense)',
+  61:'Light rain',63:'Rain',65:'Heavy rain',
+  66:'Freezing rain',67:'Heavy freezing rain',
+  71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',
+  80:'Rain showers',81:'Heavy showers',82:'Violent showers',
+  85:'Snow showers',86:'Heavy snow showers',
+  95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail'
+};
+
+/* ---------- zodiac (tropical) ---------- */
+function zodiac(date) {
+  const m = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  const signs = [
+    ['Capricorn', 1, 1, 1, 19],
+    ['Aquarius', 1, 20, 2, 18],
+    ['Pisces', 2, 19, 3, 20],
+    ['Aries', 3, 21, 4, 19],
+    ['Taurus', 4, 20, 5, 20],
+    ['Gemini', 5, 21, 6, 20],
+    ['Cancer', 6, 21, 7, 22],
+    ['Leo', 7, 23, 8, 22],
+    ['Virgo', 8, 23, 9, 22],
+    ['Libra', 9, 23, 10, 22],
+    ['Scorpio', 10, 23, 11, 21],
+    ['Sagittarius', 11, 22, 12, 21],
+    ['Capricorn', 12, 22, 12, 31],
+  ];
+  for (const [name, sm, sd, em, ed] of signs) {
+    if ((m === sm && d >= sd) || (m === em && d <= ed)) return name;
+  }
+  return 'Capricorn';
+}
+
+/* ---------- moon phase (Conway approximation refined) ---------- */
+function moonPhase(date) {
+  const synodic = 29.530588853;
+  const ref = Date.UTC(2000, 0, 6, 18, 14, 0); // known new moon
+  const days = (date.getTime() - ref) / 86400000;
+  let p = (days / synodic) % 1;
+  if (p < 0) p += 1;
+  const age = p * synodic;
+  const illum = (1 - Math.cos(2 * Math.PI * p)) / 2;
+  let name;
+  if (p < 0.03 || p > 0.97) name = 'New Moon';
+  else if (p < 0.22) name = 'Waxing Crescent';
+  else if (p < 0.28) name = 'First Quarter';
+  else if (p < 0.47) name = 'Waxing Gibbous';
+  else if (p < 0.53) name = 'Full Moon';
+  else if (p < 0.72) name = 'Waning Gibbous';
+  else if (p < 0.78) name = 'Last Quarter';
+  else name = 'Waning Crescent';
+  return { name, illumination: illum, age, fraction: p };
+}
+
+/* ---------- sun position (approximate) ---------- */
+function julianDay(date) {
+  return date.getTime() / 86400000 + 2440587.5;
+}
+
+function sunPosition(date, lat, lon) {
+  if (lat == null || lon == null) return null;
+  const J = julianDay(date);
+  const n = J - 2451545.0;
+  const L = (280.460 + 0.9856474 * n) % 360;
+  const g = ((357.528 + 0.9856003 * n) % 360) * Math.PI / 180;
+  const lambda = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI / 180;
+  const epsilon = 23.439 * Math.PI / 180;
+  const ra = Math.atan2(Math.cos(epsilon) * Math.sin(lambda), Math.cos(lambda));
+  const dec = Math.asin(Math.sin(epsilon) * Math.sin(lambda));
+  // sidereal time
+  const gmst = (18.697374558 + 24.06570982441908 * n) % 24;
+  const lst = (gmst * 15 + lon) * Math.PI / 180;
+  const ha = lst - ra;
+  const latR = lat * Math.PI / 180;
+  const alt = Math.asin(Math.sin(latR) * Math.sin(dec) + Math.cos(latR) * Math.cos(dec) * Math.cos(ha));
+  const az = Math.atan2(-Math.sin(ha), Math.tan(dec) * Math.cos(latR) - Math.sin(latR) * Math.cos(ha));
+  return {
+    altitude: alt * 180 / Math.PI,
+    azimuth: ((az * 180 / Math.PI) + 360) % 360,
+  };
+}
+
+/* ---------- equinoxes and solstices (Meeus, accurate to ~minutes for current era) ---------- */
+function solarEvents(year) {
+  const Y = (year - 2000) / 1000;
+  const Y2 = Y*Y, Y3 = Y2*Y, Y4 = Y3*Y;
+  const fromJD = (jd) => new Date((jd - 2440587.5) * 86400000);
+  return {
+    'March Equinox':      fromJD(2451623.80984 + 365242.37404*Y + 0.05169*Y2 - 0.00411*Y3 - 0.00057*Y4),
+    'June Solstice':      fromJD(2451716.56767 + 365241.62603*Y + 0.00325*Y2 + 0.00888*Y3 - 0.00030*Y4),
+    'September Equinox':  fromJD(2451810.21715 + 365242.01767*Y - 0.11575*Y2 + 0.00337*Y3 + 0.00078*Y4),
+    'December Solstice':  fromJD(2451900.05952 + 365242.74049*Y - 0.06223*Y2 - 0.00823*Y3 + 0.00032*Y4),
+  };
+}
+
+function nextSolarEvent(now) {
+  const yr = now.getUTCFullYear();
+  const all = [
+    ...Object.entries(solarEvents(yr)),
+    ...Object.entries(solarEvents(yr + 1)),
+  ];
+  for (const [name, date] of all) {
+    if (date > now) {
+      const days = Math.ceil((date - now) / 86400000);
+      return { name, date: date.toISOString(), days };
+    }
+  }
+  return null;
+}
+
+/* ---------- data sources ---------- */
+
+async function getLocation() {
+  // try browser geo first; quick timeout; otherwise IP
+  return new Promise((resolve) => {
+    let resolved = false;
+    const tip = setTimeout(() => {
+      if (!resolved) ipFallback().then((v) => { resolved = true; resolve(v); });
+    }, 4000);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(tip);
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          // reverse geocode via Open-Meteo
+          let place = null;
+          try {
+            const r = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=en`);
+            const j = await r.json();
+            if (j.results && j.results[0]) {
+              const p = j.results[0];
+              place = [p.name, p.admin1, p.country_code].filter(Boolean).join(', ');
+            }
+          } catch (e) {}
+          resolve({ latitude: lat, longitude: lon, place, source: 'gps', elevation: pos.coords.altitude });
+        },
+        async () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(tip);
+          resolve(await ipFallback());
+        },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+      );
+    } else {
+      ipFallback().then((v) => { resolved = true; resolve(v); });
+    }
+  });
+}
+
+async function ipFallback() {
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    const j = await r.json();
+    return {
+      latitude: j.latitude,
+      longitude: j.longitude,
+      place: [j.city, j.region, j.country_code].filter(Boolean).join(', '),
+      timezone: j.timezone,
+      source: 'ip',
+    };
+  } catch (e) {
+    return { latitude: null, longitude: null, place: 'Unknown', source: 'unknown', error: String(e) };
+  }
+}
+
+async function getWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility` +
+    `&daily=sunrise,sunset,uv_index_max,temperature_2m_max,temperature_2m_min,precipitation_sum` +
+    `&timezone=auto&forecast_days=1&temperature_unit=celsius&wind_speed_unit=kmh`;
+  const r = await fetch(url);
+  return await r.json();
+}
+
+async function getAirQuality(lat, lon) {
+  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}` +
+    `&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto`;
+  const r = await fetch(url);
+  return await r.json();
+}
+
+async function getISS() {
+  const r = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+  return await r.json();
+}
+
+async function getKp() {
+  const r = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+  const j = await r.json();
+  // j[0] is header row; last row is most recent
+  const last = j[j.length - 1];
+  return { timeTag: last[0], kp: parseFloat(last[1]), aRunning: last[2] };
+}
+
+async function getSolarWind() {
+  const r = await fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json');
+  const j = await r.json();
+  // find last row with non-null speed
+  for (let i = j.length - 1; i >= 1; i--) {
+    const row = j[i];
+    if (row[2] && row[2] !== 'null') {
+      return {
+        timeTag: row[0],
+        density: parseFloat(row[1]),
+        speed: parseFloat(row[2]),
+        temperature: parseFloat(row[3]),
+      };
+    }
+  }
+  return null;
+}
+
+async function getEarthquakes(lat, lon) {
+  const out = { nearby: [], largest: null };
+  try {
+    if (lat != null && lon != null) {
+      const u = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lon}&maxradiuskm=500&limit=5&orderby=time&minmagnitude=1.5`;
+      const r = await fetch(u);
+      const j = await r.json();
+      out.nearby = (j.features || []).map((f) => ({
+        mag: f.properties.mag,
+        place: f.properties.place,
+        time: f.properties.time,
+        depth: f.geometry.coordinates[2],
+        coords: [f.geometry.coordinates[1], f.geometry.coordinates[0]],
+      }));
+    }
+  } catch (e) {}
+  try {
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const u2 = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${since}&limit=1&orderby=magnitude&minmagnitude=4`;
+    const r2 = await fetch(u2);
+    const j2 = await r2.json();
+    if (j2.features && j2.features[0]) {
+      const f = j2.features[0];
+      out.largest = {
+        mag: f.properties.mag,
+        place: f.properties.place,
+        time: f.properties.time,
+      };
+    }
+  } catch (e) {}
+  return out;
+}
+
+/* ---------- wildfires (NASA FIRMS, key required) ---------- */
+async function getWildfires(lat, lon, key) {
+  if (!key) return { needsKey: true };
+  if (lat == null || lon == null) return null;
+  // bbox for ~500km radius (degrees of latitude / longitude scaled by latitude)
+  const dLat = 500 / 111;
+  const dLon = 500 / (111 * Math.max(Math.cos(lat * Math.PI / 180), 0.1));
+  const west  = (lon - dLon).toFixed(4);
+  const east  = (lon + dLon).toFixed(4);
+  const south = (lat - dLat).toFixed(4);
+  const north = (lat + dLat).toFixed(4);
+  // VIIRS_SNPP_NRT is most current; 1-day window
+  const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${encodeURIComponent(key)}/VIIRS_SNPP_NRT/${west},${south},${east},${north}/1`;
+  const r = await fetch(url);
+  const text = await r.text();
+  // FIRMS returns plaintext error if key is invalid
+  if (text.startsWith('Invalid') || text.toLowerCase().includes('error')) {
+    return { error: text.slice(0, 100), count: 0 };
+  }
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return { count: 0, fires: [] };
+  const headers = lines[0].split(',').map((h) => h.trim());
+  const ix = (name) => headers.indexOf(name);
+  const idxLat = ix('latitude'), idxLon = ix('longitude'),
+        idxBright = ix('bright_ti4'), idxConf = ix('confidence'),
+        idxDate = ix('acq_date'), idxTime = ix('acq_time'),
+        idxFrp = ix('frp'), idxDayNight = ix('daynight');
+  const fires = lines.slice(1).map((line) => {
+    const c = line.split(',');
+    const fLat = parseFloat(c[idxLat]), fLon = parseFloat(c[idxLon]);
+    if (isNaN(fLat) || isNaN(fLon)) return null;
+    return {
+      lat: fLat,
+      lon: fLon,
+      distance: haversineKm(lat, lon, fLat, fLon),
+      brightness: parseFloat(c[idxBright]),
+      confidence: c[idxConf],
+      frp: parseFloat(c[idxFrp]),
+      date: c[idxDate],
+      time: c[idxTime],
+      daynight: c[idxDayNight],
+    };
+  }).filter(Boolean).sort((a, b) => a.distance - b.distance);
+  return {
+    count: fires.length,
+    closest: fires[0] || null,
+    highIntensity: fires.filter((f) => f.frp > 50).slice(0, 3),
+  };
+}
+
+/* ---------- biosphere (eBird, key required) ---------- */
+async function getBirds(lat, lon, key) {
+  if (!key) return { needsKey: true };
+  if (lat == null || lon == null) return null;
+  const headers = { 'X-eBirdApiToken': key };
+  let recent = [], notable = [];
+  try {
+    const r = await fetch(`https://api.ebird.org/v2/data/obs/geo/recent?lat=${lat.toFixed(4)}&lng=${lon.toFixed(4)}&dist=50&maxResults=20&back=3`, { headers });
+    if (r.ok) recent = await r.json();
+    else if (r.status === 401 || r.status === 403) return { error: 'invalid key' };
+  } catch (e) {}
+  try {
+    const r = await fetch(`https://api.ebird.org/v2/data/obs/geo/recent/notable?lat=${lat.toFixed(4)}&lng=${lon.toFixed(4)}&dist=50&maxResults=10&back=7`, { headers });
+    if (r.ok) notable = await r.json();
+  } catch (e) {}
+  return {
+    notable: notable.slice(0, 3).map((o) => ({
+      comName: o.comName, sciName: o.sciName, locName: o.locName,
+      howMany: o.howMany, obsDt: o.obsDt,
+    })),
+    recent: recent.slice(0, 5).map((o) => ({
+      comName: o.comName, locName: o.locName, howMany: o.howMany, obsDt: o.obsDt,
+    })),
+    speciesCount: new Set(recent.map((o) => o.speciesCode)).size,
+    totalRecent: recent.length,
+  };
+}
+
+/* ---------- hydrosphere: streamflow (USGS) ---------- */
+async function getStreamflow(lat, lon) {
+  if (lat == null || lon == null) return null;
+  // Expanding-window search: tries progressively larger bboxes
+  const tries = [0.3, 0.6, 1.2, 2.0];
+  for (const d of tries) {
+    const bbox = `${(lon-d).toFixed(4)},${(lat-d).toFixed(4)},${(lon+d).toFixed(4)},${(lat+d).toFixed(4)}`;
+    const url = `https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${bbox}&parameterCd=00060,00065&siteStatus=active`;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const series = j.value?.timeSeries || [];
+      if (!series.length) continue;
+      const sites = {};
+      series.forEach((s) => {
+        const code = s.sourceInfo?.siteCode?.[0]?.value;
+        const name = s.sourceInfo?.siteName;
+        const gl = s.sourceInfo?.geoLocation?.geogLocation;
+        const sLat = gl?.latitude, sLon = gl?.longitude;
+        if (sLat == null || sLon == null || !code) return;
+        const pc = s.variable?.variableCode?.[0]?.value;
+        const v = s.values?.[0]?.value?.[0];
+        if (!v) return;
+        if (!sites[code]) {
+          sites[code] = {
+            code, name, lat: sLat, lon: sLon,
+            distance: haversineKm(lat, lon, sLat, sLon),
+            discharge: null, gageHeight: null, dateTime: null,
+          };
+        }
+        const num = parseFloat(v.value);
+        if (pc === '00060' && num >= 0) {
+          sites[code].discharge = num;
+          sites[code].dateTime = v.dateTime;
+        } else if (pc === '00065' && num >= 0) {
+          sites[code].gageHeight = num;
+        }
+      });
+      const found = Object.values(sites).filter((s) => s.discharge != null).sort((a, b) => a.distance - b.distance);
+      if (found.length) return found[0];
+    } catch (e) {}
+  }
+  return null;
+}
+
+/* ---------- hydrosphere: tides (NOAA) ---------- */
+let _noaaStationsCache = null;
+async function getNoaaStations() {
+  if (_noaaStationsCache) return _noaaStationsCache;
+  const r = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=waterlevels');
+  const j = await r.json();
+  _noaaStationsCache = j.stations || [];
+  return _noaaStationsCache;
+}
+
+async function getTide(lat, lon) {
+  if (lat == null || lon == null) return null;
+  let stations;
+  try {
+    stations = await getNoaaStations();
+  } catch (e) {
+    return { error: 'station list unavailable' };
+  }
+  let nearest = null, minDist = Infinity;
+  for (const s of stations) {
+    const sLat = parseFloat(s.lat), sLon = parseFloat(s.lng);
+    if (isNaN(sLat) || isNaN(sLon)) continue;
+    const d = haversineKm(lat, lon, sLat, sLon);
+    if (d < minDist) { minDist = d; nearest = s; }
+  }
+  if (!nearest) return null;
+  // If user is far from coast, report distance but skip water level query
+  if (minDist > 200) {
+    return {
+      inland: true,
+      nearestStation: nearest.name,
+      nearestStationId: nearest.id,
+      distance: minDist,
+    };
+  }
+  try {
+    const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=Milepost&date=latest&station=${nearest.id}&time_zone=lst_ldt&units=english&datum=MLLW&format=json`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const obs = j.data?.[0];
+    return {
+      inland: false,
+      station: nearest.name,
+      stationId: nearest.id,
+      distance: minDist,
+      level: obs ? parseFloat(obs.v) : null,
+      time: obs?.t || null,
+      units: 'ft (MLLW)',
+    };
+  } catch (e) {
+    return {
+      inland: false,
+      station: nearest.name,
+      stationId: nearest.id,
+      distance: minDist,
+      error: String(e),
+    };
+  }
+}
+
+async function getCrypto() {
+  const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,monero&vs_currencies=usd&include_24hr_change=true');
+  return await r.json();
+}
+
+async function getFx() {
+  const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD');
+  return await r.json();
+}
+
+async function getOnThisDay() {
+  const d = new Date();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const r = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${m}/${day}`);
+  const j = await r.json();
+  if (!j.events) return [];
+  // pick 3 random spread across centuries
+  const events = j.events.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+  return events.map((e) => ({ year: e.year, text: e.text })).sort((a, b) => a.year - b.year);
+}
+
+/* ---------- cultural pulse (Apple RSS, no key required) ---------- */
+
+const APPLE_FEEDS = {
+  song:    'https://rss.applemarketingtools.com/api/v2/us/music/most-played/1/songs.json',
+  album:   'https://rss.applemarketingtools.com/api/v2/us/music/most-played/1/albums.json',
+  movie:   'https://rss.applemarketingtools.com/api/v2/us/movies/top-movies/1/movies.json',
+  podcast: 'https://rss.applemarketingtools.com/api/v2/us/podcasts/top/1/podcasts.json',
+  book:    'https://rss.applemarketingtools.com/api/v2/us/books/top-free/1/books.json',
+};
+
+async function getCultural() {
+  const out = {};
+  await Promise.all(Object.entries(APPLE_FEEDS).map(async ([key, url]) => {
+    try {
+      const r = await fetch(url);
+      const j = await r.json();
+      const it = j.feed?.results?.[0];
+      if (it) {
+        out[key] = {
+          name: it.name,
+          artistName: it.artistName || null,
+          releaseDate: it.releaseDate || null,
+          kind: it.kind || null,
+          url: it.url || null,
+          genres: (it.genres || []).map((g) => g.name).filter((n) => n !== 'Music' && n !== 'Movies' && n !== 'Books' && n !== 'Podcasts'),
+        };
+      }
+    } catch (e) {}
+  }));
+  return out;
+}
+
+/* ---------- information pulse ---------- */
+
+async function getWikiFeatured() {
+  const d = new Date();
+  const url = `https://en.wikipedia.org/api/rest_v1/feed/featured/${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const out = { mostread: null, news: null, image: null };
+  if (j.mostread?.articles?.length) {
+    // skip the special "main page" entry if present
+    const article = j.mostread.articles.find((a) => a.titles?.normalized !== 'Special:Search' && !a.titles?.normalized?.startsWith('Main_Page'));
+    if (article) {
+      out.mostread = {
+        title: article.titles?.normalized || article.title,
+        description: article.description || article.extract?.slice(0, 140) || null,
+        views: article.views,
+      };
+    }
+  }
+  if (j.news?.length) {
+    // strip HTML tags from the story text
+    const story = j.news[0].story?.replace(/<[^>]+>/g, '').trim();
+    out.news = { text: story };
+  }
+  if (j.image) {
+    out.image = {
+      title: j.image.title?.replace(/^File:/, '').replace(/\.[^.]+$/, ''),
+      description: j.image.description?.text?.replace(/<[^>]+>/g, '').trim() || null,
+    };
+  }
+  return out;
+}
+
+async function getTopHN() {
+  const ids = await (await fetch('https://hacker-news.firebaseio.com/v0/topstories.json')).json();
+  if (!ids?.length) return null;
+  // skip any "Ask HN" / "Show HN" if user wants pure news? actually keep, they're zeitgeist too
+  const item = await (await fetch(`https://hacker-news.firebaseio.com/v0/item/${ids[0]}.json`)).json();
+  return {
+    title: item.title,
+    url: item.url || `https://news.ycombinator.com/item?id=${item.id}`,
+    score: item.score,
+    by: item.by,
+    descendants: item.descendants,
+  };
+}
+
+async function getTopReddit() {
+  // Reddit's CORS is finicky; we use the json endpoint which usually works
+  // from browsers because the browser supplies its own User-Agent.
+  const r = await fetch('https://www.reddit.com/r/popular.json?limit=5', { headers: { 'Accept': 'application/json' } });
+  const j = await r.json();
+  const posts = j.data?.children || [];
+  // skip stickied posts / announcements
+  const post = posts.find((p) => !p.data.stickied)?.data || posts[0]?.data;
+  if (!post) return null;
+  return {
+    title: post.title,
+    subreddit: post.subreddit,
+    score: post.ups,
+    comments: post.num_comments,
+    author: post.author,
+    permalink: `https://reddit.com${post.permalink}`,
+  };
+}
+
+async function getDiscourse() {
+  const out = { wiki: null, hackerNews: null, reddit: null };
+  const tasks = [
+    (async () => { out.wiki = await getWikiFeatured(); })(),
+    (async () => { out.hackerNews = await getTopHN(); })(),
+    (async () => { out.reddit = await getTopReddit(); })(),
+  ];
+  // allow individual failures
+  await Promise.allSettled(tasks);
+  return out;
+}
+
+/* ---------- curio ---------- */
+
+async function getApod() {
+  // NASA's DEMO_KEY is rate-limited but fine for personal use.
+  const r = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&thumbs=true');
+  const j = await r.json();
+  return {
+    title: j.title,
+    explanation: j.explanation,
+    url: j.url,
+    hdurl: j.hdurl || null,
+    mediaType: j.media_type,
+    copyright: j.copyright || null,
+    date: j.date,
+  };
+}
+
+async function getXkcd() {
+  const r = await fetch('https://xkcd.com/info.0.json');
+  const j = await r.json();
+  return {
+    num: j.num,
+    title: j.title,
+    safe_title: j.safe_title,
+    alt: j.alt,
+    img: j.img,
+    day: j.day, month: j.month, year: j.year,
+  };
+}
+
+async function getCurio() {
+  const out = { apod: null, xkcd: null };
+  const tasks = [
+    (async () => { out.apod = await getApod(); })(),
+    (async () => { out.xkcd = await getXkcd(); })(),
+  ];
+  await Promise.allSettled(tasks);
+  return out;
+}
+
+/* ---------- capture pipeline ---------- */
+
+const SOURCES = [
+  { id: 'loc',    label: 'Location' },
+  { id: 'wx',     label: 'Atmospheric' },
+  { id: 'air',    label: 'Air Quality' },
+  { id: 'cel',    label: 'Celestial' },
+  { id: 'sw',     label: 'Space Weather' },
+  { id: 'iss',    label: 'Orbital' },
+  { id: 'eq',     label: 'Telluric / Quakes' },
+  { id: 'fire',   label: 'Telluric / Fires' },
+  { id: 'hydro',  label: 'Hydrosphere' },
+  { id: 'bio',    label: 'Biosphere' },
+  { id: 'mkt',    label: 'Markets' },
+  { id: 'cult',   label: 'Cultural Pulse' },
+  { id: 'disc',   label: 'Discourse' },
+  { id: 'curio',  label: 'Curio' },
+  { id: 'otd',    label: 'Historical' },
+];
+
+function renderCapLog(state) {
+  const log = $('capLog');
+  log.style.display = 'grid';
+  log.innerHTML = SOURCES.map((s) => {
+    const st = state[s.id] || 'pending';
+    const label = {
+      pending: '. . .',
+      working: '...working',
+      done: 'captured',
+      fail: 'unavailable',
+      skip: 'key required',
+    }[st];
+    return `<div class="row ${st}"><span class="lab">${s.label}</span><span class="st">${label}</span></div>`;
+  }).join('');
+}
+
+async function captureAll() {
+  const btn = $('capBtn');
+  btn.disabled = true;
+  btn.classList.add('recording');
+  $('capLabel').textContent = 'Capturing';
+  $('statusText').innerHTML = '<span class="live">Recording</span>';
+
+  const state = {};
+  SOURCES.forEach((s) => (state[s.id] = 'pending'));
+  renderCapLog(state);
+
+  const data = {
+    timestamp: new Date().toISOString(),
+    timestampLocal: new Date().toString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    location: null,
+    weather: null,
+    airQuality: null,
+    celestial: null,
+    spaceWeather: null,
+    iss: null,
+    earthquakes: null,
+    wildfires: null,
+    hydrosphere: null,
+    biosphere: null,
+    markets: null,
+    cultural: null,
+    discourse: null,
+    curio: null,
+    onThisDay: null,
+  };
+
+  // location first; everything else depends on it
+  state.loc = 'working'; renderCapLog(state);
+  data.location = await getLocation().catch((e) => ({ error: String(e) }));
+  state.loc = data.location && data.location.latitude != null ? 'done' : 'fail';
+  renderCapLog(state);
+
+  const lat = data.location?.latitude;
+  const lon = data.location?.longitude;
+  const firmsKey = Settings.get('firms');
+  const ebirdKey = Settings.get('ebird');
+
+  // run remaining in parallel
+  const tasks = [
+    ['wx', async () => {
+      if (lat == null) return null;
+      data.weather = await getWeather(lat, lon);
+    }],
+    ['air', async () => {
+      if (lat == null) return null;
+      data.airQuality = await getAirQuality(lat, lon);
+    }],
+    ['cel', async () => {
+      const now = new Date();
+      data.celestial = {
+        moon: moonPhase(now),
+        sun: sunPosition(now, lat, lon),
+        sunSign: zodiac(now),
+        julianDay: julianDay(now),
+        nextSolar: nextSolarEvent(now),
+      };
+    }],
+    ['sw', async () => {
+      const kp = await getKp().catch(() => null);
+      const sw = await getSolarWind().catch(() => null);
+      data.spaceWeather = { kp, solarWind: sw };
+    }],
+    ['iss', async () => {
+      data.iss = await getISS();
+    }],
+    ['eq', async () => {
+      data.earthquakes = await getEarthquakes(lat, lon);
+    }],
+    ['fire', async () => {
+      data.wildfires = await getWildfires(lat, lon, firmsKey);
+      if (data.wildfires?.needsKey) throw new Error('needsKey');
+    }],
+    ['hydro', async () => {
+      const [stream, tide] = await Promise.all([
+        getStreamflow(lat, lon).catch(() => null),
+        getTide(lat, lon).catch(() => null),
+      ]);
+      data.hydrosphere = { stream, tide };
+    }],
+    ['bio', async () => {
+      data.biosphere = await getBirds(lat, lon, ebirdKey);
+      if (data.biosphere?.needsKey) throw new Error('needsKey');
+    }],
+    ['mkt', async () => {
+      const [c, f] = await Promise.all([getCrypto().catch(() => null), getFx().catch(() => null)]);
+      data.markets = { crypto: c, fx: f };
+    }],
+    ['cult', async () => {
+      data.cultural = await getCultural();
+    }],
+    ['disc', async () => {
+      data.discourse = await getDiscourse();
+    }],
+    ['curio', async () => {
+      data.curio = await getCurio();
+    }],
+    ['otd', async () => {
+      data.onThisDay = await getOnThisDay();
+    }],
+  ];
+
+  await Promise.all(tasks.map(async ([key, fn]) => {
+    state[key] = 'working'; renderCapLog(state);
+    try {
+      await fn();
+      state[key] = 'done';
+    } catch (e) {
+      // distinguish "needsKey" from other failures
+      state[key] = (String(e.message || e).includes('needsKey')) ? 'skip' : 'fail';
+    }
+    renderCapLog(state);
+  }));
+
+  // build entry record
+  const id = STATE.serial++;
+  STATE.current = {
+    id,
+    serialDisplay: `№${pad(id, 3)}`,
+    capturedAt: data.timestamp,
+    data,
+    text: '',
+  };
+
+  btn.disabled = false;
+  btn.classList.remove('recording');
+  $('capLabel').textContent = 'Capture Again';
+  $('statusText').textContent = 'Captured';
+
+  renderEntry(STATE.current);
+  $('entry').classList.add('visible');
+  $('entry').classList.add('fade-in');
+  $('entry').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ---------- entry rendering ---------- */
+
+function mileMarkerSvg(id) {
+  // B&O-inspired concrete milepost: rounded-top rectangle, serif M
+  // stacked over the mile number, painted ink on whitewashed cream.
+  const num = String(id).padStart(3, '0');
+  const numFontSize = num.length <= 3 ? 17 : num.length === 4 ? 14 : 12;
+  return `<svg viewBox="0 0 56 80" xmlns="http://www.w3.org/2000/svg" class="mp-marker" role="img" aria-label="Milepost ${num}">
+    <defs>
+      <linearGradient id="mp-grad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="rgba(0,0,0,0.06)"/>
+        <stop offset="50%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.10)"/>
+      </linearGradient>
+    </defs>
+    <!-- ground shadow -->
+    <path d="M 9 8 Q 9 4 13 4 L 47 4 Q 51 4 51 8 L 51 75 L 9 75 Z"
+          fill="rgba(20,15,10,0.22)"/>
+    <!-- concrete post body -->
+    <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z"
+          fill="var(--paper)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+    <!-- subtle weathering gradient -->
+    <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z"
+          fill="url(#mp-grad)" stroke="none"/>
+    <!-- horizontal divider between M and number -->
+    <line x1="10" y1="29" x2="42" y2="29" stroke="var(--ink)" stroke-width="0.6" opacity="0.65"/>
+    <!-- a tiny chip on the bottom corner (imperfection as beauty) -->
+    <path d="M 5 70 L 8 73 L 5 73 Z" fill="rgba(20,15,10,0.18)"/>
+    <!-- "M" -->
+    <text x="26" y="24" text-anchor="middle"
+          font-family="'Newsreader', 'Iowan Old Style', Georgia, serif"
+          font-weight="700" font-size="18" fill="var(--ink)">M</text>
+    <!-- mile number -->
+    <text x="26" y="58" text-anchor="middle"
+          font-family="'JetBrains Mono', ui-monospace, monospace"
+          font-weight="700" font-size="${numFontSize}" fill="var(--ink)" letter-spacing="0.5">${num}</text>
+  </svg>`;
+}
+
+function renderEntry(entry) {
+  const d = entry.data;
+  $('mpGlyph').innerHTML = mileMarkerSvg(entry.id);
+  $('entrySerial').textContent = `MILEPOST ${entry.serialDisplay}`;
+  const ts = new Date(d.timestamp);
+  $('entryTs').textContent = formatLocalTimestamp(ts);
+  $('entryLoc').textContent = d.location?.latitude != null
+    ? `${d.location.place || 'unknown'}  /  ${fmtLat(d.location.latitude)}, ${fmtLon(d.location.longitude)}`
+    : 'Location unavailable';
+  const wcode = d.weather?.current?.weather_code;
+  $('entryWx').textContent = WMO[wcode] || '--';
+  const t = d.weather?.current?.temperature_2m;
+  $('entryTemp').textContent = t != null ? `${fmtNum(t, 1)}°C / ${fmtNum(t * 9/5 + 32, 0)}°F` : '--';
+
+  const sections = $('sections');
+  sections.innerHTML = '';
+  sections.appendChild(sectionAtmospheric(d));
+  sections.appendChild(sectionCelestial(d));
+  sections.appendChild(sectionSpaceWeather(d));
+  sections.appendChild(sectionTelluric(d));
+  sections.appendChild(sectionHydrosphere(d));
+  sections.appendChild(sectionBiosphere(d));
+  sections.appendChild(sectionMarkets(d));
+  sections.appendChild(sectionCultural(d));
+  sections.appendChild(sectionDiscourse(d));
+  sections.appendChild(sectionCurio(d));
+  sections.appendChild(sectionOnThisDay(d));
+  // restore journal text
+  $('journalText').value = entry.text || '';
+  $('journalText').focus();
+}
+
+function formatLocalTimestamp(d) {
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  const tzAbbr = d.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+  return `${dow} ${mon} ${pad(d.getDate())} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${tzAbbr}`;
+}
+
+function fmtLat(c) { return c == null ? '--' : `${Math.abs(c).toFixed(4)}°${c >= 0 ? 'N' : 'S'}`; }
+function fmtLon(c) { return c == null ? '--' : `${Math.abs(c).toFixed(4)}°${c >= 0 ? 'E' : 'W'}`; }
+
+function sec(title, meta, rows, opts = {}) {
+  const el = document.createElement('div');
+  el.className = 'sec fade-in';
+  el.innerHTML = `
+    <div class="sec-head"><span>${title}</span><span class="sec-meta">${meta || ''}</span></div>
+    <div class="sec-body ${opts.single ? 'single' : ''} ${opts.prose ? 'prose' : ''}">${rows}</div>
+  `;
+  return el;
+}
+
+function kvRow(k, v, qual) {
+  const muted = v === '--' || v == null;
+  const q = qual ? `<span class="qual">${qual}</span>` : '';
+  return `<div class="kv"><span class="k">${k}</span><span class="v ${muted ? 'muted' : ''}">${safe(v)}${q}</span></div>`;
+}
+
+function sectionAtmospheric(d) {
+  const w = d.weather?.current;
+  const daily = d.weather?.daily;
+  const aq = d.airQuality?.current;
+  if (!w) {
+    return sec('Atmospheric', '', `<div class="kv"><span class="v muted">unavailable</span></div>`, { single: true });
+  }
+  const rows = [
+    kvRow('Conditions', WMO[w.weather_code] || '--'),
+    kvRow('Temperature', `${fmtNum(w.temperature_2m, 1)}°C / ${fmtNum(w.temperature_2m * 9/5 + 32, 1)}°F`),
+    kvRow('Feels Like', `${fmtNum(w.apparent_temperature, 1)}°C`),
+    kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
+    kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
+    kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
+    kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
+    kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
+    kvRow('Precipitation', `${fmtNum(w.precipitation, 1)} mm`),
+    kvRow('Visibility', w.visibility ? `${fmtNum(w.visibility/1000, 1)} km` : '--'),
+    kvRow('UV Index (peak)', daily ? `${fmtNum(daily.uv_index_max?.[0], 1)}` : '--', daily ? uvCategory(daily.uv_index_max?.[0]) : ''),
+    kvRow('AQI (US)', aq ? fmtNum(aq.us_aqi) : '--', aq ? aqiCategory(aq.us_aqi) : ''),
+  ];
+  // pollen, only shown if any non-null (Open-Meteo provides for Europe only)
+  if (aq) {
+    const pol = {
+      'Alder': aq.alder_pollen, 'Birch': aq.birch_pollen, 'Grass': aq.grass_pollen,
+      'Mugwort': aq.mugwort_pollen, 'Olive': aq.olive_pollen, 'Ragweed': aq.ragweed_pollen,
+    };
+    const hasPollen = Object.values(pol).some((v) => v != null && !isNaN(v));
+    if (hasPollen) {
+      Object.entries(pol).forEach(([name, v]) => {
+        if (v != null && !isNaN(v)) {
+          rows.push(kvRow(`${name} Pollen`, `${fmtNum(v, 1)} g/m³`, pollenCategory(v)));
+        }
+      });
+    }
+  }
+  return sec('Atmospheric', 'Open-Meteo', rows.join(''));
+}
+
+function pollenCategory(v) {
+  if (v == null) return '';
+  if (v < 1) return 'none';
+  if (v < 10) return 'low';
+  if (v < 50) return 'moderate';
+  if (v < 100) return 'high';
+  return 'very high';
+}
+
+function sectionCelestial(d) {
+  const c = d.celestial;
+  if (!c) return sec('Celestial', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const daily = d.weather?.daily;
+  const sr = daily?.sunrise?.[0]?.slice(11, 16);
+  const ss = daily?.sunset?.[0]?.slice(11, 16);
+  let dayLen = '--';
+  if (sr && ss) {
+    const [srh, srm] = sr.split(':').map(Number);
+    const [ssh, ssm] = ss.split(':').map(Number);
+    let mins = (ssh * 60 + ssm) - (srh * 60 + srm);
+    if (mins < 0) mins += 24 * 60;
+    dayLen = `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+  const rows = [
+    kvRow('Sun Sign', c.sunSign),
+    kvRow('Sun Altitude', c.sun ? `${fmtNum(c.sun.altitude, 1)}°` : '--'),
+    kvRow('Sun Azimuth', c.sun ? `${fmtNum(c.sun.azimuth, 1)}° ${compass(c.sun.azimuth)}` : '--'),
+    kvRow('Moon Phase', c.moon.name),
+    kvRow('Moon Illumination', `${fmtNum(c.moon.illumination * 100, 1)}%`),
+    kvRow('Moon Age', `${fmtNum(c.moon.age, 1)} days`),
+    kvRow('Sunrise', sr || '--'),
+    kvRow('Sunset', ss || '--'),
+    kvRow('Day Length', dayLen),
+    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
+    c.nextSolar ? kvRow('Next Solar Event', `${c.nextSolar.name}  /  ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`) : '',
+  ].filter(Boolean).join('');
+  return sec('Celestial', 'computed', rows);
+}
+
+function sectionSpaceWeather(d) {
+  const sw = d.spaceWeather;
+  const iss = d.iss;
+  if (!sw && !iss) return sec('Space Weather / Orbital', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [
+    kvRow('Kp Index', sw?.kp ? fmtNum(sw.kp.kp, 2) : '--', sw?.kp ? kpCategory(sw.kp.kp) : ''),
+    kvRow('Solar Wind Speed', sw?.solarWind ? `${fmtNum(sw.solarWind.speed)} km/s` : '--'),
+    kvRow('Plasma Density', sw?.solarWind ? `${fmtNum(sw.solarWind.density, 2)} p/cm³` : '--'),
+    kvRow('Plasma Temp', sw?.solarWind ? `${fmtNum(sw.solarWind.temperature)} K` : '--'),
+    kvRow('ISS Latitude', iss ? `${fmtNum(iss.latitude, 2)}°` : '--'),
+    kvRow('ISS Longitude', iss ? `${fmtNum(iss.longitude, 2)}°` : '--'),
+    kvRow('ISS Altitude', iss ? `${fmtNum(iss.altitude, 1)} km` : '--'),
+    kvRow('ISS Velocity', iss ? `${fmtNum(iss.velocity)} km/h` : '--'),
+  ].join('');
+  return sec('Space Weather / Orbital', 'NOAA SWPC, WhereTheISS.at', rows);
+}
+
+function sectionTelluric(d) {
+  const eq = d.earthquakes;
+  if (!eq) return sec('Telluric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  let rows = '';
+  if (eq.nearby && eq.nearby.length) {
+    const nearest = eq.nearby[0];
+    const ago = humanTime(nearest.time);
+    rows += kvRow('Nearest Quake', `M${fmtNum(nearest.mag, 1)} / ${nearest.place}`);
+    rows += kvRow('Nearest Time', `${ago} ago`);
+    rows += kvRow('Nearest Depth', `${fmtNum(nearest.depth, 1)} km`);
+    rows += kvRow('Nearby Count (500km)', `${eq.nearby.length} in recent days`);
+  } else {
+    rows += kvRow('Nearby Activity', 'none above M1.5');
+  }
+  if (eq.largest) {
+    rows += kvRow('Largest (24h)', `M${fmtNum(eq.largest.mag, 1)}`);
+    rows += kvRow('Largest Location', eq.largest.place);
+  }
+  // wildfires (FIRMS)
+  const fires = d.wildfires;
+  if (fires) {
+    if (fires.needsKey) {
+      rows += kvRow('Wildfire Watch', 'add FIRMS key in settings');
+    } else if (fires.error) {
+      rows += kvRow('Wildfire Watch', `error: ${fires.error}`);
+    } else if (fires.count === 0) {
+      rows += kvRow('Wildfire (500km)', 'no detections in last 24h');
+    } else {
+      rows += kvRow('Wildfire (500km)', `${fires.count} thermal anomalies`);
+      if (fires.closest) {
+        rows += kvRow('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km`);
+        rows += kvRow('Fire Radiative Pwr', `${fmtNum(fires.closest.frp, 1)} MW`);
+        rows += kvRow('Confidence', String(fires.closest.confidence || '--'));
+      }
+    }
+  }
+  return sec('Telluric', 'USGS, NASA FIRMS', rows);
+}
+
+function sectionHydrosphere(d) {
+  const h = d.hydrosphere;
+  if (!h || (!h.stream && !h.tide)) {
+    return sec('Hydrosphere', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  }
+  const rows = [];
+  if (h.stream) {
+    rows.push(kvRow('Nearest Gauge', h.stream.name || '--'));
+    rows.push(kvRow('Gauge Distance', `${fmtNum(h.stream.distance, 1)} km`));
+    rows.push(kvRow('Discharge', `${fmtNum(h.stream.discharge, 1)} ft³/s`));
+    if (h.stream.gageHeight != null) rows.push(kvRow('Gauge Height', `${fmtNum(h.stream.gageHeight, 2)} ft`));
+  } else {
+    rows.push(kvRow('Streamflow', 'no gauge found nearby'));
+  }
+  if (h.tide) {
+    if (h.tide.inland) {
+      rows.push(kvRow('Tide Status', 'inland (no nearby station)'));
+      if (h.tide.nearestStation) rows.push(kvRow('Nearest Tide Stn', `${h.tide.nearestStation} (${fmtNum(h.tide.distance, 0)}km)`));
+    } else if (h.tide.error) {
+      rows.push(kvRow('Tide Station', h.tide.station || '--'));
+      rows.push(kvRow('Tide Status', `error: ${h.tide.error}`));
+    } else {
+      rows.push(kvRow('Tide Station', h.tide.station || '--'));
+      if (h.tide.level != null) rows.push(kvRow('Water Level', `${fmtNum(h.tide.level, 2)} ft (MLLW)`));
+      rows.push(kvRow('Stn Distance', `${fmtNum(h.tide.distance, 1)} km`));
+    }
+  }
+  return sec('Hydrosphere', 'USGS NWIS, NOAA CO-OPS', rows.join(''));
+}
+
+function sectionBiosphere(d) {
+  const b = d.biosphere;
+  if (!b) return sec('Biosphere', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  if (b.needsKey) return sec('Biosphere', 'eBird', '<div class="kv"><span class="v muted">add eBird token in settings</span></div>', { single: true });
+  if (b.error) return sec('Biosphere', 'eBird', `<div class="kv"><span class="v muted">${escapeHtml(b.error)}</span></div>`, { single: true });
+
+  const items = [];
+  if (b.speciesCount != null) {
+    items.push(`<div class="item"><span class="yr">DIVERSITY</span>${b.speciesCount} species observed within 50km in last 3 days  <span style="color:var(--ink-faint);font-size:11px">(${b.totalRecent || 0} observations)</span></div>`);
+  }
+  if (b.notable?.length) {
+    items.push(`<div class="item"><span class="yr">NOTABLE</span><b>${b.notable.length} rare/unusual ${b.notable.length === 1 ? 'sighting' : 'sightings'} (7 days)</b></div>`);
+    b.notable.forEach((o) => {
+      const meta = o.locName ? ` <span style="color:var(--ink-faint);font-size:11px">(${escapeHtml(o.locName)}${o.howMany ? `, ${o.howMany}` : ''})</span>` : '';
+      items.push(`<div class="item" style="padding-left:24px"><span class="yr" style="opacity:0.5">•</span>${escapeHtml(o.comName)}${meta}</div>`);
+    });
+  }
+  if (b.recent?.length) {
+    const r = b.recent[0];
+    items.push(`<div class="item"><span class="yr">LATEST</span>${escapeHtml(r.comName)}${r.locName ? ` <span style="color:var(--ink-faint);font-size:11px">at ${escapeHtml(r.locName)}</span>` : ''}</div>`);
+  }
+  if (!items.length) return sec('Biosphere', 'eBird', '<div class="kv"><span class="v muted">no recent observations within 50km</span></div>', { single: true });
+  return sec('Biosphere', 'eBird', items.join(''), { prose: true });
+}
+
+function humanTime(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ${mins % 60}m`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ${hrs % 24}h`;
+}
+
+function sectionMarkets(d) {
+  const m = d.markets;
+  if (!m || (!m.crypto && !m.fx)) return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [];
+  if (m.crypto) {
+    const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
+    if (m.crypto.bitcoin) rows.push(kvRow('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`, fmtPct(m.crypto.bitcoin.usd_24h_change)));
+    if (m.crypto.ethereum) rows.push(kvRow('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`, fmtPct(m.crypto.ethereum.usd_24h_change)));
+    if (m.crypto.monero) rows.push(kvRow('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`, fmtPct(m.crypto.monero.usd_24h_change)));
+  }
+  if (m.fx) {
+    if (m.fx.rates?.EUR) rows.push(kvRow('USD / EUR', fmtNum(m.fx.rates.EUR, 4)));
+    if (m.fx.rates?.GBP) rows.push(kvRow('USD / GBP', fmtNum(m.fx.rates.GBP, 4)));
+    if (m.fx.rates?.JPY) rows.push(kvRow('USD / JPY', fmtNum(m.fx.rates.JPY, 2)));
+    if (m.fx.rates?.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
+  }
+  return sec('Markets', 'CoinGecko, Frankfurter', rows.join(''));
+}
+
+function fmtCultLine(item) {
+  if (!item) return '--';
+  if (item.artistName) return `${item.name}  /  ${item.artistName}`;
+  return item.name;
+}
+
+function sectionCultural(d) {
+  const c = d.cultural;
+  if (!c || Object.keys(c).length === 0) return sec('Cultural Pulse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const rows = [
+    kvRow('Top Song', fmtCultLine(c.song)),
+    kvRow('Top Album', fmtCultLine(c.album)),
+    kvRow('Top Movie', fmtCultLine(c.movie)),
+    kvRow('Top Podcast', fmtCultLine(c.podcast)),
+    kvRow('Top Book', fmtCultLine(c.book)),
+  ].join('');
+  return sec('Cultural Pulse', 'Apple Charts', rows, { single: true });
+}
+
+function sectionDiscourse(d) {
+  const x = d.discourse;
+  if (!x || (!x.wiki && !x.hackerNews && !x.reddit)) {
+    return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  }
+  const items = [];
+  if (x.wiki?.mostread) {
+    const v = x.wiki.mostread.views ? `${fmtNum(x.wiki.mostread.views, 0)} views` : '';
+    items.push(`<div class="item"><span class="yr">WIKI</span><b>${escapeHtml(x.wiki.mostread.title)}</b>${v ? `  <span style="color:var(--ink-faint);font-size:11px">(${v})</span>` : ''}${x.wiki.mostread.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(x.wiki.mostread.description)}</div>` : ''}</div>`);
+  }
+  if (x.wiki?.news?.text) {
+    items.push(`<div class="item"><span class="yr">NEWS</span>${escapeHtml(x.wiki.news.text)}</div>`);
+  }
+  if (x.hackerNews) {
+    const meta = `${x.hackerNews.score || 0} pts / ${x.hackerNews.descendants || 0} comments`;
+    items.push(`<div class="item"><span class="yr">HN</span><b>${escapeHtml(x.hackerNews.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
+  }
+  if (x.reddit) {
+    const meta = `r/${x.reddit.subreddit} / ${fmtNum(x.reddit.score, 0)} pts / ${fmtNum(x.reddit.comments, 0)} comments`;
+    items.push(`<div class="item"><span class="yr">RDDT</span><b>${escapeHtml(x.reddit.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
+  }
+  return sec('Discourse', 'Wikipedia, HN, Reddit', items.join(''), { prose: true });
+}
+
+function sectionCurio(d) {
+  const c = d.curio;
+  if (!c || (!c.apod && !c.xkcd)) {
+    return sec('Curio', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  }
+  const items = [];
+  if (c.apod) {
+    const expl = c.apod.explanation ? c.apod.explanation.slice(0, 240) + (c.apod.explanation.length > 240 ? '...' : '') : '';
+    const credit = c.apod.copyright ? ` <span style="color:var(--ink-faint);font-size:11px">(© ${escapeHtml(c.apod.copyright.trim())})</span>` : '';
+    items.push(`<div class="item"><span class="yr">APOD</span><b>${escapeHtml(c.apod.title || '')}</b>${credit}${expl ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(expl)}</div>` : ''}</div>`);
+  }
+  if (c.xkcd) {
+    items.push(`<div class="item"><span class="yr">XKCD</span><b>#${c.xkcd.num} / ${escapeHtml(c.xkcd.title || '')}</b>${c.xkcd.alt ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px;font-style:italic">"${escapeHtml(c.xkcd.alt)}"</div>` : ''}</div>`);
+  }
+  return sec('Curio', 'NASA, xkcd', items.join(''), { prose: true });
+}
+
+function sectionOnThisDay(d) {
+  const otd = d.onThisDay;
+  if (!otd || !otd.length) return sec('On This Day', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const items = otd.map((e) => `<div class="item"><span class="yr">${e.year}</span>${escapeHtml(e.text)}</div>`).join('');
+  return sec('On This Day', 'Wikipedia', items, { prose: true });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ---------- export ---------- */
+
+function buildTextExport(entry) {
+  const d = entry.data;
+  const w = d.weather?.current;
+  const daily = d.weather?.daily;
+  const aq = d.airQuality?.current;
+  const c = d.celestial;
+  const sw = d.spaceWeather;
+  const iss = d.iss;
+  const eq = d.earthquakes;
+  const m = d.markets;
+  const ts = new Date(d.timestamp);
+
+  const RULE  = '='.repeat(64);
+  const RULE2 = '-'.repeat(64);
+
+  let out = '';
+  out += `MILEPOST / FIELD INSTRUMENT 003\n`;
+  out += `Environmental Capture / Green Shoe Garage\n`;
+  out += RULE + '\n\n';
+  out += `MILEPOST     ${entry.serialDisplay}\n`;
+  out += `TIMESTAMP    ${formatLocalTimestamp(ts)}\n`;
+  out += `ISO 8601     ${d.timestamp}\n`;
+  out += `TIMEZONE     ${d.timezone}\n`;
+  if (d.location?.latitude != null) {
+    out += `LOCATION     ${d.location.place || 'unknown'}\n`;
+    out += `             ${fmtLat(d.location.latitude)}, ${fmtLon(d.location.longitude)}\n`;
+    out += `SOURCE       ${d.location.source}\n`;
+  }
+  out += '\n';
+
+  if (w) {
+    out += `${RULE}\nATMOSPHERIC\n${RULE2}\n`;
+    out += line('Conditions', WMO[w.weather_code] || '');
+    out += line('Temperature', `${fmtNum(w.temperature_2m, 1)} C  /  ${fmtNum(w.temperature_2m * 9/5 + 32, 1)} F`);
+    out += line('Feels Like', `${fmtNum(w.apparent_temperature, 1)} C`);
+    out += line('Humidity', `${fmtNum(w.relative_humidity_2m)} %`);
+    out += line('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`);
+    out += line('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`);
+    if (w.wind_gusts_10m) out += line('Gusts', `${fmtNum(w.wind_gusts_10m, 1)} km/h`);
+    out += line('Cloud Cover', `${fmtNum(w.cloud_cover)} %`);
+    out += line('Precipitation', `${fmtNum(w.precipitation, 1)} mm`);
+    if (w.visibility) out += line('Visibility', `${fmtNum(w.visibility/1000, 1)} km`);
+    if (daily?.uv_index_max?.[0] != null) out += line('UV Index (peak)', `${fmtNum(daily.uv_index_max[0], 1)} (${uvCategory(daily.uv_index_max[0])})`);
+    if (aq?.us_aqi != null) out += line('AQI (US)', `${fmtNum(aq.us_aqi)} (${aqiCategory(aq.us_aqi)})`);
+    // pollen (when present)
+    if (aq) {
+      const polEntries = [
+        ['Alder Pollen', aq.alder_pollen], ['Birch Pollen', aq.birch_pollen],
+        ['Grass Pollen', aq.grass_pollen], ['Mugwort Pollen', aq.mugwort_pollen],
+        ['Olive Pollen', aq.olive_pollen], ['Ragweed Pollen', aq.ragweed_pollen],
+      ];
+      polEntries.forEach(([k, v]) => {
+        if (v != null && !isNaN(v)) out += line(k, `${fmtNum(v, 1)} g/m3 (${pollenCategory(v)})`);
+      });
+    }
+    out += '\n';
+  }
+
+  if (c) {
+    out += `${RULE}\nCELESTIAL\n${RULE2}\n`;
+    out += line('Sun Sign', c.sunSign);
+    if (c.sun) {
+      out += line('Sun Altitude', `${fmtNum(c.sun.altitude, 1)} deg`);
+      out += line('Sun Azimuth', `${fmtNum(c.sun.azimuth, 1)} deg ${compass(c.sun.azimuth)}`);
+    }
+    out += line('Moon Phase', c.moon.name);
+    out += line('Illumination', `${fmtNum(c.moon.illumination * 100, 1)} %`);
+    out += line('Moon Age', `${fmtNum(c.moon.age, 1)} days`);
+    if (daily) {
+      out += line('Sunrise', daily.sunrise?.[0]?.slice(11, 16) || '');
+      out += line('Sunset', daily.sunset?.[0]?.slice(11, 16) || '');
+    }
+    out += line('Julian Day', fmtNum(c.julianDay, 4));
+    if (c.nextSolar) {
+      out += line('Next Solar Event', `${c.nextSolar.name} in ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`);
+    }
+    out += '\n';
+  }
+
+  if (sw || iss) {
+    out += `${RULE}\nSPACE WEATHER / ORBITAL\n${RULE2}\n`;
+    if (sw?.kp) out += line('Kp Index', `${fmtNum(sw.kp.kp, 2)} (${kpCategory(sw.kp.kp)})`);
+    if (sw?.solarWind) {
+      out += line('Solar Wind', `${fmtNum(sw.solarWind.speed)} km/s`);
+      out += line('Plasma Density', `${fmtNum(sw.solarWind.density, 2)} p/cm3`);
+    }
+    if (iss) {
+      out += line('ISS Position', `${fmtNum(iss.latitude, 2)}, ${fmtNum(iss.longitude, 2)} at ${fmtNum(iss.altitude, 1)} km`);
+      out += line('ISS Velocity', `${fmtNum(iss.velocity)} km/h`);
+    }
+    out += '\n';
+  }
+
+  const fires = d.wildfires;
+  if ((eq && (eq.nearby?.length || eq.largest)) || (fires && !fires.needsKey)) {
+    out += `${RULE}\nTELLURIC\n${RULE2}\n`;
+    if (eq?.nearby?.length) {
+      const n = eq.nearby[0];
+      out += line('Nearest Quake', `M${fmtNum(n.mag, 1)}, ${n.place}, ${humanTime(n.time)} ago, depth ${fmtNum(n.depth, 1)} km`);
+      out += line('Nearby Count', `${eq.nearby.length} events in 500km`);
+    }
+    if (eq?.largest) out += line('Largest (24h)', `M${fmtNum(eq.largest.mag, 1)}, ${eq.largest.place}`);
+    if (fires && !fires.needsKey) {
+      if (fires.count === 0) {
+        out += line('Wildfire (500km)', 'no detections in last 24h');
+      } else {
+        out += line('Wildfire (500km)', `${fires.count} thermal anomalies`);
+        if (fires.closest) {
+          out += line('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km, FRP ${fmtNum(fires.closest.frp, 1)} MW, conf ${fires.closest.confidence}`);
+        }
+      }
+    }
+    out += '\n';
+  }
+
+  const h = d.hydrosphere;
+  if (h && (h.stream || h.tide)) {
+    out += `${RULE}\nHYDROSPHERE\n${RULE2}\n`;
+    if (h.stream) {
+      out += line('Nearest Gauge', `${h.stream.name} (${fmtNum(h.stream.distance, 1)} km)`);
+      out += line('Discharge', `${fmtNum(h.stream.discharge, 1)} ft3/s`);
+      if (h.stream.gageHeight != null) out += line('Gauge Height', `${fmtNum(h.stream.gageHeight, 2)} ft`);
+    }
+    if (h.tide) {
+      if (h.tide.inland) {
+        out += line('Tide Status', `inland; nearest station ${h.tide.nearestStation || ''} at ${fmtNum(h.tide.distance, 0)} km`);
+      } else if (h.tide.level != null) {
+        out += line('Tide Station', `${h.tide.station} (${fmtNum(h.tide.distance, 1)} km)`);
+        out += line('Water Level', `${fmtNum(h.tide.level, 2)} ft MLLW`);
+      }
+    }
+    out += '\n';
+  }
+
+  const bio = d.biosphere;
+  if (bio && !bio.needsKey && !bio.error) {
+    out += `${RULE}\nBIOSPHERE\n${RULE2}\n`;
+    if (bio.speciesCount != null) {
+      out += line('Species (50km, 3d)', `${bio.speciesCount} distinct, ${bio.totalRecent || 0} obs`);
+    }
+    if (bio.notable?.length) {
+      out += line('Notable Sightings', `${bio.notable.length} in last 7 days`);
+      bio.notable.forEach((o) => {
+        out += `  ${o.comName}${o.locName ? `  at ${o.locName}` : ''}${o.howMany ? `  (${o.howMany})` : ''}\n`;
+      });
+    }
+    if (bio.recent?.[0]) {
+      out += line('Latest Obs', `${bio.recent[0].comName}${bio.recent[0].locName ? ` at ${bio.recent[0].locName}` : ''}`);
+    }
+    out += '\n';
+  }
+
+
+  if (m) {
+    out += `${RULE}\nMARKETS\n${RULE2}\n`;
+    if (m.crypto?.bitcoin) out += line('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`);
+    if (m.crypto?.ethereum) out += line('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`);
+    if (m.crypto?.monero) out += line('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`);
+    if (m.fx?.rates?.EUR) out += line('USD / EUR', fmtNum(m.fx.rates.EUR, 4));
+    if (m.fx?.rates?.GBP) out += line('USD / GBP', fmtNum(m.fx.rates.GBP, 4));
+    if (m.fx?.rates?.JPY) out += line('USD / JPY', fmtNum(m.fx.rates.JPY, 2));
+    out += '\n';
+  }
+
+  const cult = d.cultural;
+  if (cult && Object.keys(cult).length) {
+    out += `${RULE}\nCULTURAL PULSE\n${RULE2}\n`;
+    const c1 = (it) => it ? (it.artistName ? `${it.name} / ${it.artistName}` : it.name) : '';
+    if (cult.song) out += line('Top Song', c1(cult.song));
+    if (cult.album) out += line('Top Album', c1(cult.album));
+    if (cult.movie) out += line('Top Movie', c1(cult.movie));
+    if (cult.podcast) out += line('Top Podcast', c1(cult.podcast));
+    if (cult.book) out += line('Top Book', c1(cult.book));
+    out += '\n';
+  }
+
+  const disc = d.discourse;
+  if (disc && (disc.wiki || disc.hackerNews || disc.reddit)) {
+    out += `${RULE}\nDISCOURSE\n${RULE2}\n`;
+    if (disc.wiki?.mostread) {
+      out += line('Wiki Top Article', disc.wiki.mostread.title);
+      if (disc.wiki.mostread.views) out += line('  views', fmtNum(disc.wiki.mostread.views, 0));
+      if (disc.wiki.mostread.description) out += line('  desc', disc.wiki.mostread.description);
+    }
+    if (disc.wiki?.news?.text) {
+      out += line('In the News', '');
+      out += `  ${disc.wiki.news.text}\n`;
+    }
+    if (disc.hackerNews) {
+      out += line('Hacker News', `${disc.hackerNews.title} (${disc.hackerNews.score} pts, ${disc.hackerNews.descendants} comments)`);
+    }
+    if (disc.reddit) {
+      out += line('Reddit Top', `${disc.reddit.title} (r/${disc.reddit.subreddit}, ${fmtNum(disc.reddit.score, 0)} pts)`);
+    }
+    out += '\n';
+  }
+
+  const cu = d.curio;
+  if (cu && (cu.apod || cu.xkcd)) {
+    out += `${RULE}\nCURIO\n${RULE2}\n`;
+    if (cu.apod) {
+      out += line('NASA APOD', cu.apod.title || '');
+      if (cu.apod.copyright) out += line('  credit', cu.apod.copyright.trim());
+      if (cu.apod.explanation) {
+        const excerpt = cu.apod.explanation.slice(0, 300) + (cu.apod.explanation.length > 300 ? '...' : '');
+        out += `  ${excerpt}\n`;
+      }
+    }
+    if (cu.xkcd) {
+      out += line('xkcd', `#${cu.xkcd.num} / ${cu.xkcd.title || ''}`);
+      if (cu.xkcd.alt) out += line('  alt', `"${cu.xkcd.alt}"`);
+    }
+    out += '\n';
+  }
+
+  if (d.onThisDay?.length) {
+    out += `${RULE}\nON THIS DAY\n${RULE2}\n`;
+    d.onThisDay.forEach((e) => {
+      out += `${e.year}  ${e.text}\n`;
+    });
+    out += '\n';
+  }
+
+  out += `${RULE}\nOBSERVATION\n${RULE2}\n\n`;
+  out += (entry.text || '').trim() + '\n\n';
+  out += RULE + '\n';
+  out += `Milepost / Field Instrument 003 / Green Shoe Garage\n`;
+  return out;
+}
+
+function line(k, v) {
+  return `${k.padEnd(18, ' ')}${v}\n`;
+}
+
+function downloadFile(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
+function filenameStem(entry) {
+  const d = new Date(entry.data.timestamp);
+  const s = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  return `milepost_${s}_${pad(entry.id, 3)}`;
+}
+
+function archivePush(entry) {
+  STATE.archive.push({
+    id: entry.id,
+    serial: entry.serialDisplay,
+    timestamp: entry.data.timestamp,
+    text: entry.text,
+    snapshot: entry.data,
+  });
+  renderArchive();
+}
+
+function renderArchive() {
+  const a = $('archive');
+  const list = $('archiveList');
+  if (!STATE.archive.length) {
+    a.classList.remove('visible');
+    return;
+  }
+  a.classList.add('visible');
+  list.innerHTML = STATE.archive.slice().reverse().map((e) => {
+    const d = new Date(e.timestamp);
+    const prev = (e.text || '').slice(0, 80).replace(/\n/g, ' ') || '<span style="opacity:0.5">no observation recorded</span>';
+    return `<div class="item">
+      <span class="sn">${e.serial}</span>
+      <span class="preview">${escapeHtml(prev)}</span>
+      <span class="when">${pad(d.getHours())}:${pad(d.getMinutes())}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- wiring ---------- */
+
+initSettings();
+
+$('capBtn').addEventListener('click', () => {
+  // if there's an existing entry with text, archive it first
+  if (STATE.current && (STATE.current.text || '').trim()) {
+    archivePush(STATE.current);
+  }
+  captureAll();
+});
+
+$('newEntry').addEventListener('click', () => {
+  if (STATE.current && (STATE.current.text || '').trim()) {
+    archivePush(STATE.current);
+  }
+  captureAll();
+});
+
+$('recapture').addEventListener('click', async () => {
+  // refresh data while keeping the journal text
+  const keepText = $('journalText').value;
+  await captureAll();
+  STATE.current.text = keepText;
+  $('journalText').value = keepText;
+});
+
+$('journalText').addEventListener('input', (e) => {
+  if (STATE.current) STATE.current.text = e.target.value;
+});
+
+$('saveTxt').addEventListener('click', () => {
+  if (!STATE.current) return;
+  STATE.current.text = $('journalText').value;
+  const txt = buildTextExport(STATE.current);
+  downloadFile(`${filenameStem(STATE.current)}.txt`, txt, 'text/plain;charset=utf-8');
+});
+
+$('saveJson').addEventListener('click', () => {
+  if (!STATE.current) return;
+  STATE.current.text = $('journalText').value;
+  const payload = {
+    instrument: 'MILEPOST',
+    series: 'Field Instrument 003',
+    version: '0.1',
+    entry: {
+      id: STATE.current.id,
+      serial: STATE.current.serialDisplay,
+      capturedAt: STATE.current.capturedAt,
+      observation: STATE.current.text,
+      snapshot: STATE.current.data,
+    },
+  };
+  downloadFile(`${filenameStem(STATE.current)}.json`, JSON.stringify(payload, null, 2), 'application/json');
+});
+
+$('copyTxt').addEventListener('click', async () => {
+  if (!STATE.current) return;
+  STATE.current.text = $('journalText').value;
+  const txt = buildTextExport(STATE.current);
+  try {
+    await navigator.clipboard.writeText(txt);
+    flashStatus('Copied to clipboard');
+  } catch (e) {
+    flashStatus('Copy failed');
+  }
+});
+
+function flashStatus(msg) {
+  const orig = $('statusText').textContent;
+  $('statusText').textContent = msg;
+  setTimeout(() => { $('statusText').textContent = orig; }, 2200);
+}
+
+// keyboard shortcut: cmd/ctrl + enter to save txt
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    if (STATE.current) $('saveTxt').click();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'n') {
+    e.preventDefault();
+    $('capBtn').click();
+  }
+});
+
+</script>
+</body>
+</html>
