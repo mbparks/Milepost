@@ -372,7 +372,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.9</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.11</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -408,6 +408,17 @@ const TEST_LAT = 39.6;
 const TEST_LON = -78.8;
 
 const SOURCES = [
+  // ---------- Transport ----------
+  { category: 'Transport', name: 'CORS proxy (AllOrigins)', domain: 'api.allorigins.win', run: async () => {
+    // Probe the proxy by asking it to fetch a small known-good URL.
+    const probe = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
+    const r = await fetch(`https://api.allorigins.win/raw?url=${probe}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!j.title) throw new Error('unexpected proxy response shape');
+    return 'AllOrigins reachable, can route requests';
+  }},
+
   // ---------- Location ----------
   { category: 'Location', name: 'Browser Geolocation', domain: 'navigator.geolocation', run: async () => {
     if (!navigator.geolocation) throw new Error('not supported in this browser');
@@ -558,6 +569,15 @@ const SOURCES = [
     const close = parseFloat(cells[6]);
     if (!isFinite(close) || close === 0) throw new Error('no price');
     return `S&P at ${close.toFixed(2)}`;
+  }},
+  { category: 'Markets', name: 'DJIA Milestone (Wikipedia)', domain: 'en.wikipedia.org', run: async () => {
+    const r = await fetch('https://en.wikipedia.org/w/api.php?action=parse&page=Closing_milestones_of_the_Dow_Jones_Industrial_Average&prop=wikitext&format=json&origin=*&redirects=1');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.info);
+    const wt = j.parse?.wikitext?.['*'];
+    if (!wt) throw new Error('no wikitext');
+    return `${(wt.length / 1024).toFixed(1)}KB of wikitext (milestone table parseable)`;
   }},
   { category: 'Markets', name: 'Crypto (CoinGecko)', domain: 'api.coingecko.com', run: async () => {
     const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');

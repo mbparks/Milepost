@@ -1069,6 +1069,14 @@ body {
           <label for="soundToggle">Capture Sound</label>
           <label class="toggle-inline"><input type="checkbox" id="soundToggle" /> play locomotive whistle on capture completion</label>
         </div>
+        <p class="config-note">
+          When fetching directly from a source is blocked by browser CORS policy (e.g. Yahoo Finance, Apple Marketing Tools, Frankfurter from some networks), Milepost can route the request through a CORS proxy that fetches the page server-side and returns it with the right headers. Think of it as a clipping service. The default proxy is AllOrigins, which is free and unauthenticated; you can substitute another or disable proxying entirely by clearing the field.
+        </p>
+        <div class="key-row">
+          <label for="cors-proxy">CORS Proxy</label>
+          <input type="text" id="cors-proxy" autocomplete="off" spellcheck="false" placeholder="leave empty to disable" />
+          <a href="https://github.com/gnuns/allorigins" target="_blank" rel="noopener">About AllOrigins</a>
+        </div>
         <div class="config-actions">
           <button class="btn" id="saveKeys">Save Settings</button>
           <span id="keysStatus" class="config-status"></span>
@@ -1218,7 +1226,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.9</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.11</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1265,12 +1273,13 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 /* ---------- settings (localStorage when available, else in-memory) ---------- */
 const Settings = {
   _mem: {},
-  get(k) {
+  get(k, defaultVal = '') {
     try {
       const v = localStorage.getItem(`milepost_${k}`);
       if (v != null) return v;
     } catch (e) {}
-    return this._mem[k] || '';
+    if (this._mem[k] != null) return this._mem[k];
+    return defaultVal;
   },
   set(k, v) {
     try {
@@ -1288,18 +1297,24 @@ function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
   const sound = Settings.get('sound');
+  // First-time users get AllOrigins as the default proxy; once they save Settings,
+  // their explicit value (which may be empty to disable) takes precedence.
+  const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
   if (sound === 'on') $('soundToggle').checked = true;
+  $('cors-proxy').value = proxy;
   updateKeysStatus();
 
   $('saveKeys').addEventListener('click', () => {
     const f = $('key-firms').value.trim();
     const e = $('key-ebird').value.trim();
     const s = $('soundToggle').checked ? 'on' : 'off';
+    const p = $('cors-proxy').value.trim();
     Settings.set('firms', f);
     Settings.set('ebird', e);
     Settings.set('sound', s);
+    Settings.set('cors_proxy', p);
     const status = $('keysStatus');
     status.textContent = 'Saved';
     status.className = 'config-status ok';
@@ -1311,11 +1326,13 @@ function updateKeysStatus() {
   const f = Settings.get('firms');
   const e = Settings.get('ebird');
   const s = Settings.get('sound') === 'on';
+  const p = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   const status = $('keysStatus');
   const parts = [];
   parts.push(`FIRMS ${f ? '✓' : '–'}`);
   parts.push(`eBird ${e ? '✓' : '–'}`);
   parts.push(`Sound ${s ? '✓' : '–'}`);
+  parts.push(`Proxy ${p ? '✓' : '–'}`);
   status.textContent = parts.join('  /  ');
   status.className = 'config-status ' + ((f && e) ? 'ok' : 'warn');
 }
@@ -1383,6 +1400,54 @@ const WMO = {
   85:'Snow showers',86:'Heavy snow showers',
   95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail'
 };
+
+/* ---------- CORS proxy (the "clipping service") ----------
+   Many useful public endpoints reject browser-origin requests because they do not
+   set Access-Control-Allow-Origin: *. From a server they're fine; from a browser
+   they fail with CORS errors. To get around this without abandoning sources, the
+   instrument routes requests through a configurable CORS proxy that fetches the
+   page server-side and re-serves it with the right headers. Think of it as a
+   clipping service: someone else grabs the newspaper and hands you the cutout.
+
+   The default proxy is AllOrigins (https://api.allorigins.win/raw?url=ENCODED).
+   Users can set their own proxy URL in Settings, or clear the field to disable
+   proxying entirely. The pattern is "base URL + URL-encoded target URL", which
+   most public proxies follow (AllOrigins, corsproxy.io with ?url= prefix, etc.).
+
+   fetchScrape() tries direct first (faster, no third party), then falls back to
+   the proxy if direct fails for any reason. Each fetcher records its source via
+   the returned URL (proxied or direct) so we can see in console which was used. */
+const DEFAULT_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+function proxiedUrl(url) {
+  const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
+  if (!proxy) return null;
+  return `${proxy}${encodeURIComponent(url)}`;
+}
+
+async function fetchScrape(url, opts = {}) {
+  // Try direct fetch first (faster, no third party). On any failure (network,
+  // CORS, HTTP error), fall back to the configured proxy if any.
+  let directErr = null;
+  try {
+    const r = await fetch(url, opts);
+    if (r.ok) return r;
+    directErr = new Error(`HTTP ${r.status}`);
+  } catch (e) {
+    directErr = e;
+  }
+  const px = proxiedUrl(url);
+  if (!px) {
+    throw new Error(`direct failed (${directErr.message}); proxy disabled in Settings`);
+  }
+  try {
+    const r = await fetch(px, opts);
+    if (!r.ok) throw new Error(`proxy HTTP ${r.status}`);
+    return r;
+  } catch (proxyErr) {
+    throw new Error(`direct: ${directErr.message}; proxy: ${proxyErr.message}`);
+  }
+}
 
 /* ---------- zodiac (tropical) ---------- */
 function zodiac(date) {
@@ -1825,7 +1890,9 @@ async function getCrypto() {
 }
 
 async function getFx() {
-  const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD');
+  // Frankfurter has historically been CORS-friendly but some networks/browsers see it
+  // blocked. fetchScrape tries direct then falls back to the configured proxy.
+  const r = await fetchScrape('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD');
   return await r.json();
 }
 
@@ -1861,8 +1928,7 @@ async function getStooqIndex(yahooSymbol) {
   const stooqSym = STOOQ_SYMBOLS[yahooSymbol];
   if (!stooqSym) throw new Error(`no stooq mapping for ${yahooSymbol}`);
   const url = `https://stooq.com/q/l/?s=${encodeURIComponent(stooqSym)}&f=sd2t2ohlcv&h&e=csv`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const r = await fetchScrape(url);
   const text = (await r.text()).trim();
   if (/exceeded the daily hits limit/i.test(text)) throw new Error('rate limit');
   const lines = text.split(/\r?\n/);
@@ -1898,11 +1964,12 @@ async function getStooqIndex(yahooSymbol) {
 }
 
 async function getStockIndex(symbol) {
-  // Try Yahoo Finance first (richer schema, true day-over-day change)
+  // Try Yahoo Finance first (richer schema, true day-over-day change). Yahoo
+  // routinely blocks browser-origin requests since their Feb 2025 redesign, so
+  // we route through fetchScrape which falls back to the configured CORS proxy.
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const r = await fetchScrape(url);
     const j = await r.json();
     if (j.chart?.error) throw new Error(j.chart.error.description || 'yahoo API error');
     const meta = j.chart?.result?.[0]?.meta;
@@ -2073,9 +2140,12 @@ async function getTopMovie() {
    split on |- delimiters, then scan each row's cells for a quoted song
    title (or italic album title) followed by an artist wikilink. */
 async function getTopChartFromWikipedia(year, kind) {
+  // Note: songs use "number_ones" and albums use "number-one_albums". These are
+  // distinct page-naming conventions on Wikipedia, not interchangeable. Getting
+  // these wrong silently returns "page does not exist" and the fallback yields null.
   const titleMap = {
     song:  `List_of_Billboard_Hot_100_number_ones_of_${year}`,
-    album: `List_of_Billboard_200_number_ones_of_${year}`,
+    album: `List_of_Billboard_200_number-one_albums_of_${year}`,
   };
   const title = titleMap[kind];
   if (!title) throw new Error(`unknown chart kind ${kind}`);
@@ -2158,14 +2228,12 @@ async function getTopAlbum() {
 async function getCultural() {
   const out = {};
   const tasks = [
-    // Apple Marketing Tools RSS feeds (primary for all 5 chart types)
+    // Apple Marketing Tools RSS feeds (primary for all 5 chart types). Apple's
+    // marketing tools host is blocked at the network or browser level for a lot
+    // of users; fetchScrape tries direct first, then falls back to the proxy.
     ...Object.entries(APPLE_FEEDS).map(async ([key, url]) => {
       try {
-        const r = await fetch(url);
-        if (!r.ok) {
-          console.warn(`[Milepost] cultural/${key}: HTTP ${r.status} from ${url}`);
-          return;
-        }
+        const r = await fetchScrape(url);
         const j = await r.json();
         const it = j.feed?.results?.[0];
         if (!it) {
@@ -2669,6 +2737,73 @@ async function getTreasuries() {
   return Object.keys(out).length ? out : null;
 }
 
+/* ---------- DJIA most-recent milestone close (Wikipedia "Closing milestones") ----------
+   Wikipedia maintains an editor-curated article tracking every time the DJIA crosses
+   a major round-number threshold (every 500 or 1000 points at present levels). The
+   article's main table has rows like:
+     | 50,000 || February 6, 2026 || 50,115.67 || ...
+   We scrape this for the most recent milestone close: a definite date and a
+   definite close value, editorially confirmed. This is NOT a daily close (it lags
+   by however long it's been since the last major threshold), but it's the most
+   definitive scrapeable record of "Dow Jones closed at X on date Y" that Wikipedia
+   maintains, and it's a meaningful newspaper-style data point on its own.
+   Returns null on parse failure so the rest of markets still captures. */
+async function getDjiaMilestone() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const title = 'Closing_milestones_of_the_Dow_Jones_Industrial_Average';
+  const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${title}&prop=wikitext&format=json&origin=*&redirects=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.info || 'parse error');
+  const wt = j.parse?.wikitext?.['*'];
+  if (!wt) throw new Error('no wikitext');
+
+  // Split into rows and look for cells with a date + a comma-grouped close value
+  const rows = wt.split(/\n\|-+\s*\n?/);
+  const milestones = [];
+  for (const row of rows) {
+    const cells = row.split(/\s*\|\|\s*|\n\s*\|\s+/);
+    let dateObj = null, dateStr = null, value = null;
+    for (const cell of cells) {
+      if (!dateObj) {
+        const dm = cell.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/);
+        if (dm) {
+          const monthIdx = MONTHS.indexOf(dm[1]);
+          const dayN = parseInt(dm[2], 10);
+          const yearN = parseInt(dm[3], 10);
+          if (monthIdx >= 0 && dayN >= 1 && dayN <= 31 && yearN >= 1885) {
+            dateObj = new Date(Date.UTC(yearN, monthIdx, dayN));
+            dateStr = `${dm[1]} ${dm[2]}, ${dm[3]}`;
+          }
+        }
+      } else if (!value) {
+        // Comma-grouped number, optionally with decimals. Sanity-bound to DJIA range.
+        const vm = cell.match(/\b(\d{1,3}(?:,\d{3})+(?:\.\d+)?)\b/);
+        if (vm) {
+          const v = parseFloat(vm[1].replace(/,/g, ''));
+          if (v >= 50 && v < 250000) value = v;
+        }
+      }
+    }
+    if (dateObj && value != null) milestones.push({ date: dateObj, dateStr, value });
+  }
+  if (!milestones.length) throw new Error('no milestone rows found');
+
+  // Most recent by date
+  milestones.sort((a, b) => b.date - a.date);
+  const latest = milestones[0];
+  return {
+    symbol: '^DJI',
+    name: 'Dow Jones Industrial Average',
+    closeValue: latest.value,
+    closeDate: latest.dateStr,
+    closeDateISO: latest.date.toISOString().slice(0, 10),
+    source: 'wikipedia-milestones',
+    sourceUrl: `https://en.wikipedia.org/wiki/${title}`,
+  };
+}
+
 /* ---------- arXiv recent paper ---------- */
 async function getArxivPaper() {
   // Most recent submission across a broad mix of categories
@@ -2870,15 +3005,16 @@ async function captureAll() {
       if (data.biosphere?.needsKey) throw new Error('needsKey');
     }],
     ['mkt', async () => {
-      const [c, f, st, com, tr, fg] = await Promise.all([
+      const [c, f, st, com, tr, fg, djm] = await Promise.all([
         getCrypto().catch(() => null),
         getFx().catch(() => null),
         getStocks().catch(() => null),
         getCommodities().catch(() => null),
         getTreasuries().catch(() => null),
         getCryptoFearGreed().catch((e) => { console.warn(`[Milepost] mkt/fng: ${e.message}`); return null; }),
+        getDjiaMilestone().catch((e) => { console.warn(`[Milepost] mkt/djiaMilestone: ${e.message}`); return null; }),
       ]);
-      data.markets = { crypto: c, fx: f, stocks: st, commodities: com, treasuries: tr, sentiment: fg };
+      data.markets = { crypto: c, fx: f, stocks: st, commodities: com, treasuries: tr, sentiment: fg, djiaMilestone: djm };
     }],
     ['cult', async () => {
       data.cultural = await getCultural();
@@ -3590,6 +3726,11 @@ function buildTextExport(entry) {
   if (m) {
     out += `${RULE}\nMARKETS\n${RULE2}\n`;
     const fmtPct = (p) => p == null ? '' : ` (${p >= 0 ? '+' : ''}${p.toFixed(2)}%)`;
+    if (m.djiaMilestone) {
+      const dm = m.djiaMilestone;
+      out += line('DJIA Milestone Close', `${fmtNum(dm.closeValue, 2)} on ${dm.closeDate}`);
+      out += line('  source', 'Wikipedia (Closing milestones of the DJIA)');
+    }
     if (m.stocks?.dji)    out += line('Dow Jones',  `${fmtNum(m.stocks.dji.price, 0)}${fmtPct(m.stocks.dji.changePercent)}`);
     if (m.stocks?.sp500)  out += line('S&P 500',    `${fmtNum(m.stocks.sp500.price, 1)}${fmtPct(m.stocks.sp500.changePercent)}`);
     if (m.stocks?.nasdaq) out += line('NASDAQ',     `${fmtNum(m.stocks.nasdaq.price, 1)}${fmtPct(m.stocks.nasdaq.changePercent)}`);
@@ -4266,7 +4407,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.9',
+    version: '0.0.11',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

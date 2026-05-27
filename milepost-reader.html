@@ -1285,7 +1285,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.9</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.11</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1307,7 +1307,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.9
+   MILEPOST READER  /  v0.0.11
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -2189,11 +2189,15 @@ function renderSectionBiosphere(s) {
 
 function renderSectionMarkets(s) {
   const m = s.markets;
-  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment)) {
+  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment && !m.djiaMilestone)) {
     return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   }
   const rows = [];
   const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
+  if (m.djiaMilestone) {
+    const dm = m.djiaMilestone;
+    rows.push(kvRow('DJIA Milestone Close', fmtNum(dm.closeValue, 2), `on ${dm.closeDate}`));
+  }
   if (m.stocks) {
     if (m.stocks.dji)    rows.push(kvRow('Dow Jones',  fmtNum(m.stocks.dji.price, 0),    fmtPct(m.stocks.dji.changePercent)));
     if (m.stocks.sp500)  rows.push(kvRow('S&P 500',    fmtNum(m.stocks.sp500.price, 1),  fmtPct(m.stocks.sp500.changePercent)));
@@ -2229,7 +2233,8 @@ function renderSectionMarkets(s) {
     if (m.fx.rates.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
   }
   const sources = [
-    (m.stocks || m.commodities || m.treasuries) && 'Yahoo Finance',
+    m.djiaMilestone && 'Wikipedia milestones',
+    (m.stocks || m.commodities || m.treasuries) && 'Yahoo/Stooq',
     m.crypto && 'CoinGecko',
     m.sentiment && 'alternative.me',
     m.fx && 'Frankfurter',
