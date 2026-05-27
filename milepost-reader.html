@@ -1212,7 +1212,7 @@ body { padding: 24px 16px 48px; }
       <div class="badge">
         <strong>GSG / MMXXVI</strong>
         Green Shoe Garage
-        <div class="cross-link"><a href="../milepost">New Entry &rarr;</a></div>
+        <div class="cross-link"><a href="..">New Entry &rarr;</a></div>
         <div class="cross-link"><a href="../status">Run Diagnostic &rarr;</a></div>
       </div>
     </div>
@@ -1285,7 +1285,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.15</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.18</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1307,7 +1307,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.15
+   MILEPOST READER  /  v0.0.18
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1627,7 +1627,14 @@ function computeStats() {
   let fires = 0;
   entries.forEach(e => {
     const s = e.data.entry.snapshot || {};
-    if (s.location?.place) places.add(s.location.place);
+    if (s.location?.place) {
+      places.add(s.location.place);
+    } else if (s.location?.latitude != null && s.location?.longitude != null) {
+      // Pre-v0.0.18 captures stored place: null because the reverse-geocoding
+      // endpoint was broken. Fall back to rounded coordinates so these entries
+      // still register as distinct locations in the stats banner.
+      places.add(`${s.location.latitude.toFixed(2)},${s.location.longitude.toFixed(2)}`);
+    }
     const t = s.weather?.current?.temperature_2m;
     if (t != null && !isNaN(t)) temps.push(t);
     const p = s.weather?.current?.pressure_msl;

@@ -352,7 +352,7 @@ h1 {
       <strong>GSG / MMXXVI</strong>
       Green Shoe Garage<br />
       Mountain Maryland
-      <div class="cross-link"><a href="../milepost">New Entry &rarr;</a></div>
+      <div class="cross-link"><a href="..">New Entry &rarr;</a></div>
       <div class="cross-link"><a href="../reader">Open Reader &rarr;</a></div>
     </div>
   </header>
@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.15</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.18</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -461,14 +461,56 @@ async function probeFetch(url) {
 
 const SOURCES = [
   // ---------- Transport ----------
-  { category: 'Transport', name: 'CORS proxy (AllOrigins)', domain: 'api.allorigins.win', run: async () => {
-    // Probe the proxy by asking it to fetch a small known-good URL.
-    const probe = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
-    const r = await fetch(`https://api.allorigins.win/raw?url=${probe}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = await r.json();
-    if (!j.title) throw new Error('unexpected proxy response shape');
-    return 'AllOrigins reachable, can route requests';
+  { category: 'Transport', name: 'CORS proxy (primary, configured)', domain: 'from Settings', run: async () => {
+    // Read the user's configured primary proxy. If they've deployed a personal
+    // Cloudflare Worker (or set any custom proxy), this probes THAT, not
+    // AllOrigins. Default falls back to AllOrigins for first-run users who
+    // haven't touched Settings.
+    let proxy = 'https://api.allorigins.win/raw?url=';
+    try {
+      const stored = localStorage.getItem('milepost_cors_proxy');
+      if (stored !== null) proxy = stored;
+    } catch (_) {}
+    if (!proxy) throw new Error('proxy disabled in Settings (cleared by user)');
+    let host = 'proxy';
+    try { host = new URL(proxy).host; } catch (_) {}
+    const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
+    const r = await probeFetchWithTimeout(proxy + probeTarget, PROBE_PROXY_TIMEOUT_MS);
+    if (!r.ok) throw new Error(`${host}: HTTP ${r.status}`);
+    // Parse the upstream response (Wikipedia JSON) to confirm pass-through worked
+    let title = null;
+    try {
+      const j = await r.json();
+      title = j.title || (j.titles && j.titles.normalized);
+    } catch (_) {}
+    if (!title) throw new Error(`${host}: response reached us but wasn't valid Wikipedia JSON (proxy may be wrapping or corrupting the body)`);
+    return `${host} reachable, pass-through returned "${title}"`;
+  }},
+  { category: 'Transport', name: 'CORS proxy (fallback, corsproxy.io)', domain: 'corsproxy.io', run: async () => {
+    // Probes the hardcoded secondary that fetchScrape and probeFetch fall to
+    // when the primary fails. corsproxy.io maintains an internal blocklist of
+    // upstream hosts it classifies as commercial APIs (Yahoo, Stooq, FRED,
+    // Frankfurter, Apple, arXiv all hit it), but generic hosts like Wikipedia
+    // pass through fine, which is what this probe tests.
+    //
+    // Because this is a FALLBACK that only matters when the primary is also
+    // broken, an unreachable corsproxy.io is not a real failure for users
+    // with a working primary proxy. v0.0.18 returns __skip on failure so it
+    // doesn't count against the all-green target.
+    const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
+    try {
+      const r = await probeFetchWithTimeout(`${FALLBACK_CORS_PROXY}${probeTarget}`, PROBE_PROXY_TIMEOUT_MS);
+      if (!r.ok) return { __skip: `corsproxy.io returned HTTP ${r.status} (unused when primary works)` };
+      let title = null;
+      try {
+        const j = await r.json();
+        title = j.title || (j.titles && j.titles.normalized);
+      } catch (_) {}
+      if (!title) return { __skip: 'corsproxy.io reached but response not valid Wikipedia JSON (unused when primary works)' };
+      return `corsproxy.io reachable, pass-through returned "${title}"`;
+    } catch (e) {
+      return { __skip: `corsproxy.io unreachable from this network: ${e.message || e}. Unused when primary proxy works.` };
+    }
   }},
 
   // ---------- Location ----------
@@ -483,11 +525,14 @@ const SOURCES = [
     });
   }},
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
-    const r = await fetch('https://ipapi.co/json/');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    // Route through probeFetch so we use the configured proxy chain if
+    // direct fails. ipapi.co is the location fallback when browser geo
+    // is denied or times out, and matches the capture-side path in v0.0.18
+    // (which now uses fetchScrape for ipapi.co too).
+    const { response: r, path } = await probeFetch('https://ipapi.co/json/');
     const j = await r.json();
     if (j.error) throw new Error(j.reason || 'error');
-    return `${j.city || '?'}, ${j.country_name || '?'}`;
+    return `${j.city || '?'}, ${j.country_name || '?'} (via ${path})`;
   }},
 
   // ---------- Atmospheric ----------
@@ -672,22 +717,42 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Extended chain. Public Piped/Invidious instances are individually flaky;
-    // trying many maximizes the chance of hitting one that's currently up.
-    // Each is attempted via probeFetch so direct or proxy-routed paths can both succeed.
+    // Two-phase probe matching the capture-side behavior in v0.0.18:
+    //   Phase 1: short direct attempts on 6 instances to sample whether direct
+    //            works at all from this network.
+    //   Phase 2: if all direct fail, try the configured proxy on the first 2
+    //            instances using probeFetch (which chains primary then
+    //            fallback proxy with their normal budgets).
+    // Trimmed instance list keeps total budget under 30s HARD_TIMEOUT.
     const INSTANCES = [
       'https://pipedapi.kavin.rocks/trending?region=US',
       'https://pipedapi-libre.kavin.rocks/trending?region=US',
       'https://pipedapi.leptons.xyz/trending?region=US',
-      'https://piped-api.privacy.com.de/trending?region=US',
       'https://api.piped.yt/trending?region=US',
-      'https://pipedapi.adminforge.de/trending?region=US',
-      'https://pipedapi.drgns.space/trending?region=US',
       'https://invidious.fdn.fr/api/v1/trending?region=US',
       'https://yewtu.be/api/v1/trending?region=US',
     ];
     const errors = [];
+
+    // Phase 1: direct attempts (3s each)
     for (const url of INSTANCES) {
+      let host = url; try { host = new URL(url).host; } catch (_) {}
+      try {
+        const r = await probeFetchWithTimeout(url, 3000);
+        if (!r.ok) { errors.push(`${host}: HTTP ${r.status}`); continue; }
+        const data = await r.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const t = data[0];
+          return `${host}: #1 = ${(t.title || '(no title)').slice(0, 60)} (via direct)`;
+        }
+        errors.push(`${host}: empty`);
+      } catch (e) {
+        errors.push(`${host}: ${e.name === 'AbortError' ? 'timeout 3s' : String(e.message || e).slice(0, 40)}`);
+      }
+    }
+
+    // Phase 2: proxy fallback (first 2 instances)
+    for (const url of INSTANCES.slice(0, 2)) {
       let host = url; try { host = new URL(url).host; } catch (_) {}
       try {
         const { response: r, path } = await probeFetch(url);
@@ -696,12 +761,12 @@ const SOURCES = [
           const t = data[0];
           return `${host}: #1 = ${(t.title || '(no title)').slice(0, 60)} (via ${path})`;
         }
-        errors.push(`${host}: empty`);
       } catch (e) {
-        errors.push(`${host}: ${String(e.message || e).slice(0, 40)}`);
+        errors.push(`${host} (proxy): ${String(e.message || e).slice(0, 40)}`);
       }
     }
-    throw new Error(`${INSTANCES.length} instances failed (${errors.slice(0, 3).join('; ')})`);
+
+    throw new Error(`${INSTANCES.length} instances failed direct and proxy (${errors.slice(0, 3).join('; ')})`);
   }},
   { category: 'Discourse', name: 'Wikipedia Featured', domain: 'en.wikipedia.org', run: async () => {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
@@ -943,7 +1008,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.15',
+    milepost_status_version: 'v0.0.18',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,

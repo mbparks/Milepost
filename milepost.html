@@ -1231,7 +1231,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.15</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.18</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1613,14 +1613,22 @@ async function getLocation() {
           clearTimeout(tip);
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-          // reverse geocode via Open-Meteo
+          // Reverse geocode via Nominatim (OpenStreetMap). Open-Meteo's
+          // geocoding API is FORWARD-only at /v1/search; the /v1/reverse path
+          // doesn't exist and silently 404'd, leaving place=null on every
+          // capture (which is why the Reader was counting 0 locations).
+          // Open-Meteo themselves point users at Nominatim for reverse work.
           let place = null;
           try {
-            const r = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=en`);
-            const j = await r.json();
-            if (j.results && j.results[0]) {
-              const p = j.results[0];
-              place = [p.name, p.admin1, p.country_code].filter(Boolean).join(', ');
+            const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&zoom=10`;
+            const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (r.ok) {
+              const j = await r.json();
+              const a = j.address || {};
+              const town = a.city || a.town || a.village || a.hamlet || a.municipality || a.suburb;
+              const region = a.state || a.region || a.county;
+              const country = (a.country_code || '').toUpperCase();
+              place = [town, region, country].filter(Boolean).join(', ') || j.display_name || null;
             }
           } catch (e) {}
           resolve({ latitude: lat, longitude: lon, place, source: 'gps', elevation: pos.coords.altitude });
@@ -1640,8 +1648,12 @@ async function getLocation() {
 }
 
 async function ipFallback() {
+  // Route ipapi.co through fetchScrape so it can use the configured proxy.
+  // Direct fetch was failing in some networks (Mike's diagnostic showed
+  // "Failed to fetch" on ipapi.co even when other direct sources worked),
+  // and ipapi.co is CORS-friendly when reachable so the proxy path is fine.
   try {
-    const r = await fetch('https://ipapi.co/json/');
+    const r = await fetchScrape('https://ipapi.co/json/');
     const j = await r.json();
     return {
       latitude: j.latitude,
@@ -2295,53 +2307,91 @@ const YOUTUBE_TRENDING_INSTANCES = [
 ];
 
 async function getTopYouTube() {
+  // Two-phase strategy:
+  //   Phase 1: try direct on each of 9 instances with 3s timeout. Piped and
+  //            Invidious instances are CORS-friendly when reachable, so direct
+  //            is fast when it works.
+  //   Phase 2: if every direct attempt failed (which is the case in networks
+  //            that can't reach the community instances), fall back to the
+  //            configured CORS proxy for the first 2 instances. This lets
+  //            users with their own Cloudflare Worker pick up YouTube even
+  //            when their network can't reach the instances directly.
   let lastErr = null;
+
+  // Phase 1: direct attempts
   for (const inst of YOUTUBE_TRENDING_INSTANCES) {
+    let host = inst.url;
+    try { host = new URL(inst.url).host; } catch (_) {}
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 3000);
+    try {
+      const r = await fetch(inst.url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
+      const data = await r.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        lastErr = new Error('empty response');
+        continue;
+      }
+      return parseYouTubeTop(data[0], inst, host);
+    } catch (e) {
+      clearTimeout(tid);
+      lastErr = e;
+    }
+  }
+
+  // Phase 2: proxy fallback for the first 2 instances
+  console.warn('[Milepost] cultural/youtube: all direct attempts failed; trying proxy fallback');
+  for (const inst of YOUTUBE_TRENDING_INSTANCES.slice(0, 2)) {
     let host = inst.url;
     try { host = new URL(inst.url).host; } catch (_) {}
     try {
       const r = await fetchScrape(inst.url);
       const data = await r.json();
       if (!Array.isArray(data) || data.length === 0) {
-        lastErr = new Error('empty response');
-        console.warn(`[Milepost] cultural/youtube ${host}: empty response`);
+        lastErr = new Error('empty response (via proxy)');
         continue;
       }
-      const top = data[0];
-      let title, channel, views, videoId, videoUrl;
-      if (inst.type === 'piped') {
-        title = top.title;
-        channel = top.uploaderName;
-        views = top.views;
-        const m = top.url?.match(/v=([^&]+)/);
-        videoId = m ? m[1] : null;
-        videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
-      } else { // invidious
-        title = top.title;
-        channel = top.author;
-        views = top.viewCount;
-        videoId = top.videoId;
-        videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+      const parsed = parseYouTubeTop(data[0], inst, host);
+      if (parsed) {
+        parsed.sourceLabel = `${parsed.sourceLabel} (via proxy)`;
+        return parsed;
       }
-      if (!title) {
-        lastErr = new Error('missing title');
-        continue;
-      }
-      return {
-        name: title,
-        artistName: channel || null,
-        viewCount: typeof views === 'number' ? views : null,
-        url: videoUrl,
-        videoId,
-        sourceLabel: `${inst.type === 'piped' ? 'Piped' : 'Invidious'} (${host})`,
-      };
     } catch (e) {
       lastErr = e;
-      console.warn(`[Milepost] cultural/youtube ${host}: ${e.message}`);
+      console.warn(`[Milepost] cultural/youtube ${host} (proxy): ${e.message}`);
     }
   }
+
   if (lastErr) throw lastErr;
   return null;
+}
+
+function parseYouTubeTop(top, inst, host) {
+  let title, channel, views, videoId, videoUrl;
+  if (inst.type === 'piped') {
+    title = top.title;
+    channel = top.uploaderName;
+    views = top.views;
+    const m = top.url?.match(/v=([^&]+)/);
+    videoId = m ? m[1] : null;
+    videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+  } else {
+    title = top.title;
+    channel = top.author;
+    views = top.viewCount;
+    videoId = top.videoId;
+    videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+  }
+  if (!title) return null;
+  return {
+    name: title,
+    artistName: channel || null,
+    viewCount: typeof views === 'number' ? views : null,
+    url: videoUrl,
+    videoId,
+    sourceLabel: `${inst.type === 'piped' ? 'Piped' : 'Invidious'} (${host})`,
+  };
 }
 
 async function getCultural() {
@@ -4230,7 +4280,15 @@ function playWhistle() {
   setTimeout(() => { try { ctx.close(); } catch (e) {} }, duration * 1000 + 200);
 }
 
-/* ---------- internal state sliders ---------- */
+/* ---------- internal state sliders ----------
+   The "set" state is tracked via dataset.set so capture knows whether the user
+   actually interacted with the slider (vs leaving it at the default 5). Before
+   v0.0.18 this was only set on the 'input' event, which requires a value
+   *change*. If you clicked the slider without dragging (e.g. the value you
+   wanted was already 5, the midpoint), no input event fired and capture
+   recorded null. v0.0.18 also listens for 'pointerdown' so the first touch
+   marks the slider as set even if the user doesn't move it. Keyboard users
+   still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
   const sliders = [
     { input: $('moodSlider'), val: $('moodVal') },
@@ -4238,11 +4296,18 @@ function setupInternalState() {
     { input: $('focusSlider'), val: $('focusVal') },
   ];
   sliders.forEach(({ input, val }) => {
-    input.addEventListener('input', () => {
+    const markSet = () => {
       input.dataset.set = '1';
       val.textContent = input.value;
       $('internalState').classList.add('set');
       scheduleDraftSave();
+    };
+    input.addEventListener('input', markSet);
+    // Mark set on first pointer interaction even if value doesn't change.
+    // Use { once: true } to avoid redundant calls; subsequent input events
+    // already keep dataset.set='1' and update the displayed value.
+    input.addEventListener('pointerdown', () => {
+      if (input.dataset.set !== '1') markSet();
     });
   });
   $('clearInternal').addEventListener('click', () => {
@@ -4541,7 +4606,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.15',
+    version: '0.0.18',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
