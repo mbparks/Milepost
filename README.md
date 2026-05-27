@@ -4,21 +4,21 @@
 
 A single-file web instrument that takes an environmental fix of the world at the moment of an entry and binds that snapshot to a written observation. Each entry becomes a milepost: a fixed marker along the route you are walking through time.
 
-Version 0.0.2 / Green Shoe Garage / Mountain Maryland
+Version 0.0.8 / Green Shoe Garage / Mountain Maryland
 
 ---
 
 ## What it captures
 
-When you press **NEW ENTRY**, the instrument queries fifteen distinct sources to assemble a snapshot, running them concurrently after first establishing your location. Each source captures independently and fails gracefully. The capture log shows live status (pending, working, captured, unavailable, key required) for every source.
+When you press **NEW ENTRY**, the instrument queries dozens of distinct sources to assemble a snapshot, running them concurrently after first establishing your location. Each source captures independently and fails gracefully. The capture log shows live status (pending, working, captured, unavailable, key required) for every source.
 
 **Location** via browser geolocation, with IP-based fallback after a 4-second timeout.
 
-**Atmospheric** conditions, temperature, apparent temperature, humidity, pressure, wind (speed, direction, gusts), cloud cover, precipitation, visibility, UV index peak, US AQI, and pollen counts for six taxa where regionally available (Open-Meteo).
+**Atmospheric** conditions, temperature, apparent temperature, humidity, dewpoint, pressure, wind (speed, direction, gusts), cloud cover, precipitation, visibility, current UV index, US AQI, pollen counts for six taxa where regionally available (Open-Meteo), and weekly CO₂ concentration at Mauna Loa with year-over-year change (NOAA Global Monitoring Laboratory).
 
-**Celestial** sun sign, sun altitude and azimuth, moon phase with illumination percentage and lunar age, sunrise, sunset, day length, Julian day, and days until the next equinox or solstice (Meeus astronomical algorithms, computed locally).
+**Celestial** sun sign, sun altitude and azimuth, moon phase with illumination percentage and lunar age, sunrise, sunset, civil and astronomical twilight times, day length, currently-active meteor showers with peak-day flagging, next solar or lunar eclipse with countdown, days until the next equinox or solstice, Julian day, plus a recorded URL for the current NASA SDO solar disk image (Meeus algorithms computed locally; sunrise-sunset.org; NASA SDO; client-side meteor/eclipse tables through 2030).
 
-**Space Weather and Orbital** Kp index with geomagnetic activity classification, solar wind speed, plasma density and temperature, ISS lat/lon/altitude/velocity (NOAA SWPC, WhereTheISS.at).
+**Space Weather and Orbital** Kp index with geomagnetic activity classification, solar wind speed, plasma density and temperature, aurora visibility probability at your coordinates (the OVATION model's 30-minute forecast), ISS lat/lon/altitude/velocity (NOAA SWPC, WhereTheISS.at).
 
 **Telluric** nearest seismic event within 500km with magnitude, place, depth, and time since; count of nearby M1.5+ events; largest M4+ event globally in the last 24 hours; wildfire thermal anomalies within 500km with distance and fire radiative power (USGS Earthquake Hazards Program, NASA FIRMS).
 
@@ -26,13 +26,13 @@ When you press **NEW ENTRY**, the instrument queries fifteen distinct sources to
 
 **Biosphere** bird species diversity within 50km over the past 3 days, up to three notable or rare sightings from the past 7 days with locations and counts, and the latest observation (eBird).
 
-**Markets** BTC, ETH, and XMR vs USD with 24-hour change; USD exchange rates for EUR, GBP, JPY, and CAD (CoinGecko, Frankfurter).
+**Markets** Dow Jones, S&P 500, NASDAQ Composite, and VIX with day change in points and percent; 5-year, 10-year, and 30-year US Treasury yields with the 10y-5y spread flagged inverted or normal; gold, silver, and WTI crude oil futures with day change (all via Yahoo Finance); BTC, ETH, and XMR vs USD with 24h change (CoinGecko); the Crypto Fear & Greed index (alternative.me); USD exchange rates for EUR, GBP, JPY, and CAD (Frankfurter).
 
-**Cultural Pulse** top song, album, movie, podcast, and book from Apple's charts (Apple Marketing Tools RSS).
+**Cultural Pulse** top song, album, app, podcast, and book from Apple's charts (Apple Marketing Tools RSS); current US box office number-one film with weekend gross (Wikipedia).
 
 **Discourse** the most-read Wikipedia article today with view count and description, Wikipedia's "In the News" headline, the top Hacker News story with score and comment count, and the top r/popular post with subreddit and score (Wikipedia REST API, HN Firebase, Reddit JSON).
 
-**Curio** NASA Astronomy Picture of the Day with title and excerpt, and the latest xkcd with title and alt text (NASA APOD, xkcd JSON).
+**Curio** NASA Astronomy Picture of the Day with title and excerpt, the latest xkcd with title and alt text, the most recent arXiv submission across cs.AI / cs.CL / astro-ph.SR / physics.hist-ph with abstract excerpt, and the most-starred new GitHub repository from the past week (NASA APOD, xkcd JSON, arXiv API, GitHub Search API).
 
 **On This Day** three historical events from this calendar date, drawn from across the centuries (Wikipedia).
 
@@ -41,12 +41,12 @@ Each captured entry is labeled with a small SVG milepost glyph styled after the 
 ## Usage
 
 1. Open `milepost.html` in a modern browser, or host the file anywhere.
-2. Optionally enter API keys in the **Configuration** panel for the two key-gated sources.
+2. Optionally enter API keys in the **Configuration** panel for the two key-gated sources, and toggle the locomotive whistle if you want sound on capture.
 3. Press **NEW ENTRY**.
 4. Grant location permission if prompted. The instrument falls back to IP geolocation after 4 seconds if denied or unavailable.
-5. The capture log fills in as each source resolves.
-6. Write your observation in the **Observation** area below the readings.
-7. Save as `.TXT` or `.JSON`, or copy the formatted text to your clipboard.
+5. The capture log fills in as each source resolves. When capture completes, the calibration stamp drops into place from above, the locomotive whistle plays if enabled, and a small swatch row at the top of the journal area shows the **palette of the day** derived from sun altitude and cloud cover.
+6. Write your observation in the **Observation** area below the readings. Optionally adjust the **Mood / Energy / Focus** sliders above the textarea to record an internal-state reading alongside the external one; press **Skip** to leave them unset. Optionally expand **Body / Health Reading** below the textarea to log heart rate, blood pressure, blood oxygen, blood glucose, body temperature, weight, sleep, steps, HRV, and any notes (medications, symptoms, etc.); each field is independently optional and the block stays collapsed by default. Optionally add **Tags** below (comma- or space-separated, with or without `#`) to file the entry under one or more lightweight categories.
+7. Save as `.TXT` or `.JSON`, or copy the formatted text to your clipboard. Anything you've written into the observation, tags, or sliders is auto-saved to localStorage as a draft and restored if the page is reloaded mid-entry; the draft clears the moment you save.
 
 ### Keyboard shortcuts
 
@@ -57,9 +57,13 @@ Each captured entry is labeled with a small SVG milepost glyph styled after the 
 
 Within a session, completed entries are listed at the bottom of the page. The archive clears on page reload, since persistence is via the file exports.
 
+### Source diagnostic
+
+The companion `milepost-status.html` page probes every data source in parallel and reports green (responding under 3 seconds), yellow (responding but slow), red (failing with the error message shown inline), or grey (skipped because no API key is configured). Useful for verifying the instrument is fully calibrated before relying on it, or for tracking down why a particular section came back unavailable on a recent capture. Cross-links between the three pages (capture, reader, status) appear in each page's header badge.
+
 ## API keys (optional)
 
-Two of the fifteen data sources require free API keys. Both are instant signup, no payment, no waiting.
+Two data sources require free API keys. Both are instant signup, no payment, no waiting.
 
 **NASA FIRMS** for wildfire thermal anomaly detection. Request a Map Key at https://firms.modaps.eosdis.nasa.gov/api/map_key/
 
@@ -80,11 +84,13 @@ Keys are stored in browser localStorage when available, with an in-memory fallba
 ### List view (default)
 
 - A searchable sidebar list of all loaded entries, each marked with its own mini milepost glyph
-- A reading-focused detail panel that puts the observation above the data sections (since by the time you are reading an entry, the observation is what you came back for)
-- A per-entry context map between observation and data: a small map centered on the capture point with markers for the nearby quakes, fires, stream gauge, tide station, and notable bird sightings the instrument logged. Legend at the foot of the map identifies each marker type.
+- A **tag filter strip** below the search box listing every unique tag across the loaded archive with counts, plus an "all" pill. Click a tag to scope the list to entries with that tag; click again or pick "all" to clear. Tags shown on each entry's detail view are themselves clickable jump links into the filter.
+- A reading-focused detail panel that puts the observation above the data sections (since by the time you are reading an entry, the observation is what you came back for). Below the observation, entries display their **tags**, the **palette of the day** captured with the entry (four-color swatch row), the **internal-state reading** (Mood / Energy / Focus bars) if the entry had those filled in, and the **body / health reading** (heart rate, blood pressure with clinical category label, blood oxygen, glucose with mmol/L conversion, body temperature in °F and °C, weight in lb and kg, sleep, steps, HRV, and any notes) if any health fields were logged
+- A per-entry context map between the metadata blocks and data sections: a small map centered on the capture point with markers for the nearby quakes, fires, stream gauge, tide station, and notable bird sightings the instrument logged. Legend at the foot of the map identifies each marker type.
 - An aggregate stats strip across the top: entry count, span in days, distinct locations, total words written, average temperature, total species seen
-- Search across observations, locations, weather conditions, cultural picks, news headlines, and filenames
+- Search across observations, locations, weather conditions, cultural picks, news headlines, tags, and filenames
 - Arrow-key navigation between entries
+- A small "captured on _platform_" line in the entry footer drawn from the `meta.client.platform` field
 
 ### Map view
 
@@ -127,32 +133,43 @@ All sources are free and publicly accessible. No third-party servers proxy any r
 | Domain | Source |
 | --- | --- |
 | Weather, air quality, pollen, geocoding | Open-Meteo |
+| Atmospheric CO₂ (weekly Mauna Loa) | NOAA Global Monitoring Laboratory |
+| Sunrise, sunset, civil & astronomical twilight | sunrise-sunset.org |
+| Solar disk image | NASA Solar Dynamics Observatory |
+| Meteor showers, eclipses through 2030 | client-side tables (IMO, NASA Five Millennium Catalog) |
 | ISS position | WhereTheISS.at |
 | Space weather (Kp, solar wind) | NOAA SWPC |
+| Aurora visibility forecast | NOAA SWPC OVATION |
 | Seismic activity | USGS Earthquake Hazards Program |
 | Wildfire detection | NASA FIRMS (VIIRS_SNPP_NRT) |
 | Streamflow | USGS Water Services (NWIS) |
 | Tide levels | NOAA Tides and Currents (CO-OPS) |
 | Bird observations | eBird |
 | Cryptocurrency prices | CoinGecko |
+| Crypto sentiment (Fear & Greed Index) | alternative.me |
 | Currency exchange rates | Frankfurter |
+| Stock indices, treasury yields, commodities | Yahoo Finance (unofficial chart endpoint) |
 | Cultural charts | Apple Marketing Tools RSS |
+| US box office number-one film | Wikipedia (MediaWiki Action API) |
 | Wikipedia featured & on this day | Wikipedia REST API |
 | Tech discourse | Hacker News Firebase API |
 | Popular discourse | Reddit JSON endpoints |
 | Astronomy picture of the day | NASA APOD |
 | Webcomic | xkcd JSON API |
+| Recent scientific paper | arXiv API |
+| Trending code repository | GitHub Search API |
 | IP geolocation fallback | ipapi.co |
 
 ## Files
 
 - `milepost.html` is the capture instrument. Open it to take a new entry.
 - `milepost-reader.html` is the companion archive viewer. Open it to browse, search, and read the JSON entries you have saved.
+- `milepost-status.html` is the source diagnostic. Open it to probe every data source MILEPOST uses and verify the instrument is fully calibrated without needing to make a capture.
 - `README.md` is this document.
 
 ## Roadmap notes
 
-This is v0.0.1. Likely future additions include retroactive instrument names for Field Instruments 001 and 002, optional archive persistence (export the whole session as a bundle), and small visual touches like miniature milepost glyphs in the session archive.
+Possible future additions: retroactive instrument names for Field Instruments 001 and 002, optional archive persistence (export the whole session as a bundle), small visual touches like miniature milepost glyphs in the session archive, and the remaining items from the v0.0.6 brainstorm session that were deferred for CORS or complexity reasons: US Drought Monitor, USGS volcanic alerts, SNOTEL snow water equivalent, PurpleAir air quality, Word of the Day, Poem of the Day, ProductHunt.
 
 ## Acknowledgements
 
@@ -163,6 +180,18 @@ Astronomical algorithms after Jean Meeus, "Astronomical Algorithms."
 Mapping: Leaflet (BSD-2-Clause) over CartoDB Positron tiles (CC BY 3.0) and OpenStreetMap data (ODbL).
 
 ## Changelog
+
+**v0.0.8** body / health reading. The capture instrument gained an optional Body / Health block that appears below the observation textarea as a collapsed `<details>` element, expandable on demand. Inside is a three-column grid of numeric inputs covering Heart Rate (bpm), Blood Pressure (systolic / diastolic mmHg), Blood Oxygen / SpO2 (%), Blood Glucose (mg/dL), Body Temperature (°F), Weight (lb), Sleep last night (hr), Steps today (count), and HRV (ms), plus a free-form Notes textarea for medications, symptoms, exercise, or anything else worth recording. Every field is independently optional; entering anything anywhere flips the block's outline from dashed grey to solid orange and shows a "_N_ fields set" counter so you can confirm at a glance whether body data is attached. A Clear All button resets every field. Values are persisted on the saved JSON snapshot under `data.body` with implicit-unit field names (`heartRate`, `bloodPressure.systolic`, `bloodOxygen`, `bloodGlucose`, `bodyTemperatureF`, `weightLb`, `sleepHours`, `steps`, `hrv`, `notes`). The text export gains a BODY / HEALTH block that displays each entered field with parenthetical unit conversions where they vary by region (glucose in mg/dL + mmol/L, temperature in °F + °C, weight in lb + kg). The reader gains a new Body / Health section in the entry detail view, rendered with the same kv-row style as the data sections, with clinical category qualifiers attached to relevant fields (normal / elevated / stage 1 HTN / hypoxia / fever / etc.) so you can read an old entry and immediately see whether a value was concerning. Notes appear as a bordered prose block with a flag-orange accent. Body data also flows through the draft auto-save, so partially-entered health readings survive page reloads. Older entries without `data.body` continue to load cleanly and simply omit the section.
+
+**v0.0.7** ritual and reflection. The instrument gained nine features focused on capture experience, self-reflection, and meta-tooling rather than new data sources. **Stamp animation** drops the "CALIBRATED / IN SERVICE" stamp from above the page on capture completion, rotating into place with an overshoot easing. **Locomotive whistle** plays optionally on capture using the Web Audio API to synthesize a three-tone G minor steam-whistle chord with vibrato and a faint delayed echo. Off by default; toggle lives in the Configuration panel alongside the API key inputs. **Palette of the day** computes four hex colors (sky, horizon, cloud, accent) from cloud cover and sun altitude, renders as a swatch row at the top of the journal area, and persists in the entry snapshot. **Capture method tag** detects platform from user agent and persists it as `meta.client.platform` (iphone, ipad, android-phone, android-tablet, mobile, desktop) along with viewport size and language. **Self-status page** (`milepost-status.html`) is a new standalone diagnostic that probes every data source in parallel and reports green / yellow (slow over 3s) / red / grey (skipped because no key configured) for each, with summary counts at the top. **Mood / Energy / Focus sliders** capture an internal-state reading (1-10 each) alongside the external-state readings, with a Skip button so they remain optional. Slider values only count when actively set. **Cross-links** appear in the badge area of each page pointing to the others (capture, reader, status). **Tags** are free-form text input below the observation, parsed from comma- or space-separated tokens, displayed as live chips, persisted in the snapshot. The reader gained a tag-filter strip below the search box that lists all unique tags with counts and lets you click to filter; tags on each entry also become clickable jump links to that filter. **Draft auto-save** persists observation text, tags, and slider values to localStorage with a 400ms debounce; on page load, any non-empty draft is restored and a "Draft restored" flash confirms it. Saving an entry clears the draft. Text export gained INTERNAL STATE, PALETTE OF THE DAY, META, and Tags blocks. Reader version bumped to v0.0.7 alongside.
+
+**v0.0.6** broad signal expansion. The instrument now captures eleven additional data points across five sections. **Atmospheric** gained dewpoint and current UV index from Open-Meteo (in addition to the existing daily peak), plus the latest weekly atmospheric CO₂ reading from the NOAA Global Monitoring Laboratory's Mauna Loa observatory with year-over-year change. **Celestial** gained civil and astronomical twilight times via sunrise-sunset.org, a URL pointer to the current NASA SDO solar disk image (HMI Intensitygram), currently-active meteor showers from a client-side table flagging peak days, and the next eclipse with countdown drawn from a static NASA Five Millennium Catalog excerpt running through 2030. **Space Weather** gained an aurora visibility probability for the user's coordinates from NOAA SWPC's OVATION 30-minute forecast. **Markets** gained 5-year, 10-year, and 30-year US Treasury yields with the 10y-5y spread flagged inverted or normal, gold, silver, and WTI crude oil futures, and the Crypto Fear & Greed Index from alternative.me. **Curio** grew from two cards (APOD, xkcd) to four with the most recent arXiv submission in cs.AI / cs.CL / astro-ph.SR / physics.hist-ph and the most-starred new GitHub repository from the past seven days. The capture-log SOURCES list grew a new "Climate / CO₂" row. All new fetchers follow the established try/catch pattern: failures log a tagged warning to the console and the section renders without the missing row. The reader was bumped to v0.0.6 alongside the capture instrument to reflect the substantial schema additions; older entries without the new fields still load cleanly and simply omit the new rows.
+
+**v0.0.5** restored Top Movie to the Cultural Pulse section using Wikipedia as the source. Apple's iTunes Movies feed is permanently gone, so the new fetcher pulls the article "List of YYYY box office number-one films in the United States" via the MediaWiki Action API (CORS-enabled with `origin=*`), scans the weekly box-office table for the last italic-wrapped film link, and captures both the title and the most recent weekend gross. The article is updated by Wikipedia editors every Monday after the weekend numbers settle, so the data is current to within a week. The renderer shows the gross as a secondary value on the Top Movie row (e.g. "Michael / $97,206,874"). Source attribution in the section header is now dynamic, so it reads "Apple Charts, Wikipedia" or just one of those depending on which providers actually returned data.
+
+**v0.0.4** fixed the Cultural Pulse section, which had been silently returning "unavailable" because of two issues: Apple deprecated the iTunes Top Movies feed entirely, and the old `rss.applemarketingtools.com` host now 301-redirects to `rss.marketingtools.apple.com`, which browser CORS preflight refuses to follow for cross-origin requests. The fetchers now use the canonical host directly, the dead Movies row is replaced with Top App (a livelier cultural-zeitgeist signal than iTunes movie rentals were anyway), missing rows are no longer rendered as "--", and any future fetch failure logs a specific reason to the browser console. The schema field `cultural.movie` is preserved on read so legacy entries still render their movie row.
+
+**v0.0.3** added stock market indices (Dow Jones, S&P 500, NASDAQ Composite, VIX) via Yahoo Finance's unofficial chart endpoint. Each carries current price, previous close, day change in points and percent, day high and low, and market state. The endpoint is undocumented and could change without notice; if Yahoo tightens access, that row simply shows unavailable while everything else still captures.
 
 **v0.0.2** added coordinate persistence for NOAA tide stations and notable eBird observations so the reader can plot them on the per-entry context map. Existing v0.0.1 entries still load; they simply lack those map markers. The viewer's full feature set was introduced in this version (per-entry context map, archive overview map with view switcher).
 

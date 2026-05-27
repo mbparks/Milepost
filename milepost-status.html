@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MILEPOST / Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper:    #ece3cf;
+  --paper-2:  #e3d9bf;
+  --ink:      #1a1611;
+  --ink-soft: #3a2f22;
+  --ink-faint:#776952;
+  --rule:     rgba(20,15,10,0.18);
+  --flag:     #c0431a;
+  --flag-deep:#962f10;
+  --stamp:    #1f3a52;
+  --good:     #2a6f3a;
+  --warn:     #b08820;
+  --bad:      #a93726;
+  --mono:     'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --serif:    'Newsreader', Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background:
+    radial-gradient(800px 600px at 50% -100px, rgba(192,67,26,0.08), transparent 60%),
+    radial-gradient(1000px 800px at 110% 110%, rgba(31,58,82,0.10), transparent 60%),
+    var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 100vh;
+  padding: 32px 16px 64px;
+}
+.sheet {
+  max-width: 1000px;
+  margin: 0 auto;
+  background:
+    repeating-linear-gradient(180deg, transparent 0, transparent 31px, rgba(20,15,10,0.025) 31px, rgba(20,15,10,0.025) 32px),
+    var(--paper-2);
+  border: 1px solid var(--ink);
+  padding: 48px 52px 56px;
+  position: relative;
+  box-shadow: 0 30px 60px -30px rgba(20,15,10,0.4);
+}
+.fid {
+  position: absolute;
+  width: 14px; height: 14px;
+  border: 1px solid var(--ink);
+}
+.fid.tl { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+.fid.tr { top: 12px; right: 12px; border-left: none; border-bottom: none; }
+.fid.bl { bottom: 12px; left: 12px; border-right: none; border-top: none; }
+.fid.br { bottom: 12px; right: 12px; border-left: none; border-top: none; }
+
+.stamp {
+  position: absolute;
+  top: 56px;
+  right: 56px;
+  transform: rotate(-8deg);
+  border: 2px solid var(--stamp);
+  color: var(--stamp);
+  padding: 6px 12px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(236,227,207,0.4);
+}
+.stamp::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--stamp);
+  opacity: 0.6;
+  margin: 1px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+h1 {
+  font-family: var(--serif);
+  font-size: 36px;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.sub {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.badge {
+  text-align: right;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+.badge strong {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+.cross-link {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.cross-link a {
+  color: var(--flag);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(192,67,26,0.35);
+}
+.cross-link a:hover { border-bottom-color: var(--flag); }
+
+.intro {
+  padding: 14px 18px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.30);
+  margin-bottom: 24px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+.intro b { color: var(--ink); letter-spacing: 0.06em; }
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+.btn:hover { background: var(--flag); border-color: var(--flag); }
+.btn:disabled { opacity: 0.4; cursor: wait; background: var(--ink); }
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+.btn.ghost:hover { color: var(--flag); border-color: var(--flag); background: transparent; }
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.summary-cell {
+  padding: 10px 14px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.25);
+}
+.summary-cell .label {
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.summary-cell .value {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.summary-cell.good .value { color: var(--good); }
+.summary-cell.warn .value { color: var(--warn); }
+.summary-cell.bad  .value { color: var(--bad); }
+
+.section-header {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 24px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.section-header .sec-meta {
+  font-size: 9.5px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  letter-spacing: 0.16em;
+}
+
+.status-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: rgba(255,255,255,0.20);
+}
+.status-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 90px 110px;
+  gap: 14px;
+  align-items: center;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11.5px;
+}
+.status-row:last-child { border-bottom: none; }
+.status-row .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  border: 1px solid rgba(20,15,10,0.4);
+  flex-shrink: 0;
+}
+.status-row.pending .dot { background: var(--ink-faint); animation: pulse 1.6s ease-in-out infinite; }
+.status-row.good    .dot { background: var(--good); border-color: rgba(42,111,58,0.6); }
+.status-row.warn    .dot { background: var(--warn); border-color: rgba(176,136,32,0.6); }
+.status-row.bad     .dot { background: var(--bad); border-color: rgba(169,55,38,0.6); }
+.status-row.skipped .dot { background: transparent; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+.status-row .source-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.status-row .source-name { font-weight: 600; color: var(--ink); letter-spacing: 0.04em; }
+.status-row .source-domain {
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.10em;
+  text-transform: lowercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-row .timing {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+.status-row.bad .timing { color: var(--bad); }
+.status-row .badge-pill {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  color: var(--ink-faint);
+  border-radius: 1px;
+}
+.status-row.good .badge-pill {
+  background: rgba(42,111,58,0.10);
+  color: var(--good);
+  border-color: rgba(42,111,58,0.4);
+}
+.status-row.warn .badge-pill {
+  background: rgba(176,136,32,0.10);
+  color: var(--warn);
+  border-color: rgba(176,136,32,0.4);
+}
+.status-row.bad .badge-pill {
+  background: rgba(169,55,38,0.10);
+  color: var(--bad);
+  border-color: rgba(169,55,38,0.4);
+}
+.status-row.skipped .badge-pill { color: var(--ink-faint); }
+
+.error-detail {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(169,55,38,0.06);
+  border-left: 3px solid var(--bad);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  word-break: break-word;
+}
+
+.foot {
+  margin-top: 36px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 720px) {
+  body { padding: 12px 6px 32px; }
+  .sheet { padding: 28px 18px 32px; }
+  .stamp { top: auto; right: 16px; bottom: -10px; }
+  h1 { font-size: 26px; }
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  .status-row { grid-template-columns: 18px 1fr 80px; gap: 10px; padding: 8px 10px; }
+  .status-row .timing { display: none; }
+}
+</style>
+</head>
+<body>
+<main class="sheet">
+  <span class="fid tl"></span>
+  <span class="fid tr"></span>
+  <span class="fid bl"></span>
+  <span class="fid br"></span>
+  <span class="stamp">DIAGNOSTIC / IN SERVICE</span>
+
+  <header class="head">
+    <div>
+      <h1>MILEPOST STATUS</h1>
+      <div class="sub">Field Instrument 003 &middot; Source Diagnostic</div>
+    </div>
+    <div class="badge">
+      <strong>GSG / MMXXVI</strong>
+      Green Shoe Garage<br />
+      Mountain Maryland
+      <div class="cross-link"><a href="milepost.html">New Entry &rarr;</a></div>
+      <div class="cross-link"><a href="milepost-reader.html">Open Reader &rarr;</a></div>
+    </div>
+  </header>
+
+  <div class="intro">
+    <b>OPERATION.</b> This page probes every data source MILEPOST uses, in parallel, and reports green (responding under 3s), yellow (responding but slow or partial), red (failing), or grey (skipped because no key is configured). The instrument is fully calibrated when all checks come back green. Probes only fetch tiny test payloads where possible. Press <b>RUN ALL</b> to start.
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="runAll">Run All</button>
+    <button class="btn ghost" id="clearStatus">Clear</button>
+    <span style="margin-left:auto;font-size:10px;letter-spacing:0.16em;color:var(--ink-faint);text-transform:uppercase">Started: <span id="startedAt">--</span></span>
+  </div>
+
+  <div class="summary" id="summary"></div>
+
+  <div id="sections"></div>
+
+  <footer class="foot">
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.8</span>
+    <span>GPL-3.0 &middot; Green Shoe Garage</span>
+  </footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+/* ============================================================
+   Source definitions - each probe is a {category, name, domain, run}
+   run() returns a Promise resolving to {status, detail, elapsed}
+   ============================================================ */
+
+const SLOW_THRESHOLD_MS = 3000;
+const HARD_TIMEOUT_MS = 12000;
+
+function timeoutPromise(ms) {
+  return new Promise((_, rej) => setTimeout(() => rej(new Error(`timeout after ${ms}ms`)), ms));
+}
+async function timed(fn, hardMs = HARD_TIMEOUT_MS) {
+  const t0 = performance.now();
+  try {
+    const result = await Promise.race([fn(), timeoutPromise(hardMs)]);
+    const elapsed = Math.round(performance.now() - t0);
+    return { ok: true, result, elapsed };
+  } catch (e) {
+    const elapsed = Math.round(performance.now() - t0);
+    return { ok: false, error: String(e.message || e), elapsed };
+  }
+}
+
+// A test location (Mountain Maryland-ish, matches Mike's region for realistic probes)
+const TEST_LAT = 39.6;
+const TEST_LON = -78.8;
+
+const SOURCES = [
+  // ---------- Location ----------
+  { category: 'Location', name: 'Browser Geolocation', domain: 'navigator.geolocation', run: async () => {
+    if (!navigator.geolocation) throw new Error('not supported in this browser');
+    return await new Promise((res, rej) => {
+      navigator.geolocation.getCurrentPosition(
+        (p) => res(`${p.coords.latitude.toFixed(2)}, ${p.coords.longitude.toFixed(2)}`),
+        (e) => rej(new Error(e.message || 'permission denied or unavailable')),
+        { timeout: 8000, maximumAge: 60000 }
+      );
+    });
+  }},
+  { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
+    const r = await fetch('https://ipapi.co/json/');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.reason || 'error');
+    return `${j.city || '?'}, ${j.country_name || '?'}`;
+  }},
+
+  // ---------- Atmospheric ----------
+  { category: 'Atmospheric', name: 'Weather', domain: 'api.open-meteo.com', run: async () => {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${TEST_LAT}&longitude=${TEST_LON}&current=temperature_2m,uv_index,dew_point_2m`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const t = j.current?.temperature_2m;
+    if (t == null) throw new Error('missing temperature_2m');
+    return `${t}°C, UV ${j.current?.uv_index ?? '?'}, dewpoint ${j.current?.dew_point_2m ?? '?'}°C`;
+  }},
+  { category: 'Atmospheric', name: 'Air Quality + Pollen', domain: 'air-quality-api.open-meteo.com', run: async () => {
+    const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${TEST_LAT}&longitude=${TEST_LON}&current=us_aqi`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `AQI ${j.current?.us_aqi ?? 'n/a'}`;
+  }},
+  { category: 'Atmospheric', name: 'CO\u2082 (Mauna Loa weekly)', domain: 'gml.noaa.gov', run: async () => {
+    const r = await fetch('https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const text = await r.text();
+    const lines = text.split('\n').filter((l) => l && !l.startsWith('#'));
+    const last = lines[lines.length - 1].trim().split(/\s+/);
+    return `${parseFloat(last[4]).toFixed(2)} ppm (wk ${last[0]}-${last[1].padStart(2,'0')}-${last[2].padStart(2,'0')})`;
+  }},
+
+  // ---------- Celestial ----------
+  { category: 'Celestial', name: 'Sun Times', domain: 'api.sunrise-sunset.org', run: async () => {
+    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${TEST_LAT}&lng=${TEST_LON}&formatted=0`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.status !== 'OK') throw new Error(j.status);
+    return `sunrise ${j.results.sunrise.slice(11,16)} / sunset ${j.results.sunset.slice(11,16)}`;
+  }},
+  { category: 'Celestial', name: 'Solar Disk Image', domain: 'sdo.gsfc.nasa.gov', run: async () => {
+    // HEAD-equivalent: load the image as fetch and check 200
+    const r = await fetch('https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIF.jpg', { method: 'GET', mode: 'no-cors' });
+    // no-cors gives opaque response, so just verify the fetch resolves
+    return 'image endpoint reachable';
+  }},
+
+  // ---------- Space Weather ----------
+  { category: 'Space Weather', name: 'Kp Index', domain: 'services.swpc.noaa.gov', run: async () => {
+    const r = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!Array.isArray(j) || j.length < 2) throw new Error('malformed response');
+    return `Kp ${j[j.length - 1][1]}`;
+  }},
+  { category: 'Space Weather', name: 'Solar Wind', domain: 'services.swpc.noaa.gov', run: async () => {
+    const r = await fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!Array.isArray(j) || j.length < 2) throw new Error('malformed response');
+    return `${j.length - 1} rows`;
+  }},
+  { category: 'Space Weather', name: 'Aurora Forecast (OVATION)', domain: 'services.swpc.noaa.gov', run: async () => {
+    const r = await fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.coordinates?.length || 0} grid cells`;
+  }},
+
+  // ---------- Orbital ----------
+  { category: 'Orbital', name: 'ISS Position', domain: 'api.wheretheiss.at', run: async () => {
+    const r = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `lat ${j.latitude.toFixed(2)} lon ${j.longitude.toFixed(2)} alt ${j.altitude.toFixed(1)} km`;
+  }},
+
+  // ---------- Telluric ----------
+  { category: 'Telluric', name: 'Earthquakes (recent)', domain: 'earthquake.usgs.gov', run: async () => {
+    const r = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_day.geojson');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.features?.length || 0} significant events today`;
+  }},
+  { category: 'Telluric', name: 'Wildfires (FIRMS)', domain: 'firms.modaps.eosdis.nasa.gov', run: async () => {
+    const key = localStorage.getItem('milepost_firms');
+    if (!key) return { __skip: 'no FIRMS key in localStorage' };
+    const r = await fetch(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/VIIRS_SNPP_NRT/world/1`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const text = await r.text();
+    const rows = text.split('\n').filter(Boolean).length - 1;
+    return `${Math.max(0, rows)} thermal anomalies globally`;
+  }},
+
+  // ---------- Hydrosphere ----------
+  { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
+    const r = await fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${TEST_LON-0.5},${TEST_LAT-0.5},${TEST_LON+0.5},${TEST_LAT+0.5}&parameterCd=00060&siteStatus=active`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.value?.timeSeries?.length || 0} active gauges in bbox`;
+  }},
+  { category: 'Hydrosphere', name: 'Tide Stations', domain: 'api.tidesandcurrents.noaa.gov', run: async () => {
+    const r = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=waterlevels');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.stations?.length || 0} stations in NOAA catalog`;
+  }},
+
+  // ---------- Biosphere ----------
+  { category: 'Biosphere', name: 'Bird Observations (eBird)', domain: 'api.ebird.org', run: async () => {
+    const key = localStorage.getItem('milepost_ebird');
+    if (!key) return { __skip: 'no eBird token in localStorage' };
+    const r = await fetch(`https://api.ebird.org/v2/data/obs/geo/recent?lat=${TEST_LAT}&lng=${TEST_LON}&dist=50&maxResults=1`, { headers: { 'X-eBirdApiToken': key } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.length || 0} recent records (limit 1)`;
+  }},
+
+  // ---------- Markets ----------
+  { category: 'Markets', name: 'Stocks/Treasuries/Commodities (Yahoo)', domain: 'query1.finance.yahoo.com', run: async () => {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/^GSPC?interval=1d&range=2d');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const meta = j.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('no meta in response');
+    return `S&P at ${meta.regularMarketPrice?.toFixed(2)}`;
+  }},
+  { category: 'Markets', name: 'Crypto (CoinGecko)', domain: 'api.coingecko.com', run: async () => {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `BTC $${j.bitcoin?.usd?.toLocaleString() || '?'}`;
+  }},
+  { category: 'Markets', name: 'Crypto Fear & Greed', domain: 'api.alternative.me', run: async () => {
+    const r = await fetch('https://api.alternative.me/fng/');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const d = j.data?.[0];
+    if (!d) throw new Error('no data');
+    return `${d.value} (${d.value_classification})`;
+  }},
+  { category: 'Markets', name: 'FX (Frankfurter)', domain: 'api.frankfurter.app', run: async () => {
+    const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `EUR ${j.rates?.EUR?.toFixed(4) || '?'}`;
+  }},
+
+  // ---------- Cultural / Discourse / Curio ----------
+  { category: 'Cultural', name: 'Apple Charts (RSS)', domain: 'rss.marketingtools.apple.com', run: async () => {
+    const r = await fetch('https://rss.marketingtools.apple.com/api/v2/us/music/most-played/1/songs.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const t = j.feed?.results?.[0];
+    if (!t) throw new Error('empty feed');
+    return `#1 song: ${t.name}`;
+  }},
+  { category: 'Cultural', name: 'Box Office (Wikipedia)', domain: 'en.wikipedia.org', run: async () => {
+    const year = new Date().getFullYear();
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=parse&page=List_of_${year}_box_office_number-one_films_in_the_United_States&prop=wikitext&format=json&origin=*`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.info);
+    return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
+  }},
+  { category: 'Discourse', name: 'Wikipedia Featured', domain: 'en.wikipedia.org', run: async () => {
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/featured/${today}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `mostread: ${j.mostread?.articles?.[0]?.normalizedtitle || 'n/a'}`;
+  }},
+  { category: 'Discourse', name: 'Hacker News', domain: 'hacker-news.firebaseio.com', run: async () => {
+    const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.length} stories`;
+  }},
+  { category: 'Discourse', name: 'Reddit r/popular', domain: 'www.reddit.com', run: async () => {
+    const r = await fetch('https://www.reddit.com/r/popular.json?limit=1');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const top = j.data?.children?.[0]?.data;
+    if (!top) throw new Error('empty listing');
+    return `top: ${top.title.slice(0, 60)}...`;
+  }},
+  { category: 'Curio', name: 'NASA APOD', domain: 'api.nasa.gov', run: async () => {
+    const r = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return j.title || 'no title';
+  }},
+  { category: 'Curio', name: 'xkcd', domain: 'xkcd.com', run: async () => {
+    // xkcd's API doesn't enable CORS for arbitrary origins; we probe via image load
+    return await new Promise((res, rej) => {
+      const img = new Image();
+      const t = setTimeout(() => rej(new Error('image load timeout')), 8000);
+      img.onload = () => { clearTimeout(t); res('xkcd asset loaded'); };
+      img.onerror = () => { clearTimeout(t); rej(new Error('image load failed')); };
+      img.src = 'https://xkcd.com/s/0b7742.png?_=' + Date.now();
+    });
+  }},
+  { category: 'Curio', name: 'arXiv', domain: 'export.arxiv.org', run: async () => {
+    const r = await fetch('https://export.arxiv.org/api/query?search_query=cat:cs.AI&max_results=1&sortBy=submittedDate&sortOrder=descending');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const t = await r.text();
+    if (!t.includes('<entry>')) throw new Error('no entries in response');
+    return 'feed has entries';
+  }},
+  { category: 'Curio', name: 'GitHub Trending', domain: 'api.github.com', run: async () => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const r = await fetch(`https://api.github.com/search/repositories?q=created:%3E${sevenDaysAgo}&sort=stars&order=desc&per_page=1`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const repo = j.items?.[0];
+    if (!repo) throw new Error('no items');
+    return `top: ${repo.full_name} (${repo.stargazers_count}★)`;
+  }},
+
+  // ---------- Historical ----------
+  { category: 'Historical', name: 'On This Day (Wikipedia)', domain: 'api.wikimedia.org', run: async () => {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const r = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/${mm}/${dd}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    return `${j.events?.length || 0} events for today`;
+  }},
+];
+
+/* ---------- runner & rendering ---------- */
+
+const RESULTS = new Map();
+
+function renderRow(src, state, detail, elapsed) {
+  const id = `row-${src.category.replace(/\s+/g, '-')}-${src.name.replace(/[^a-z0-9]/gi, '-')}`;
+  const klass = state || 'pending';
+  const label = {
+    pending: '. . . waiting',
+    running: 'probing',
+    good: 'OK',
+    warn: 'slow',
+    bad: 'FAIL',
+    skipped: 'skipped',
+  }[state] || 'pending';
+  const timing = elapsed != null ? `${elapsed} ms` : '';
+  const detailLine = (state === 'bad' && detail)
+    ? `<div class="error-detail">${escapeHtml(detail)}</div>`
+    : '';
+  return `<div class="status-row ${klass}" id="${id}">
+    <span class="dot"></span>
+    <div class="source-info">
+      <span class="source-name">${escapeHtml(src.name)}${state === 'good' && detail ? `: ${escapeHtml(detail)}` : ''}</span>
+      <span class="source-domain">${escapeHtml(src.domain)}</span>
+    </div>
+    <span class="badge-pill">${escapeHtml(label)}</span>
+    <span class="timing">${escapeHtml(timing)}</span>
+    ${detailLine}
+  </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderAll() {
+  // Group sources by category
+  const byCat = new Map();
+  for (const src of SOURCES) {
+    if (!byCat.has(src.category)) byCat.set(src.category, []);
+    byCat.get(src.category).push(src);
+  }
+  const sectionsHtml = [...byCat.entries()].map(([cat, list]) => {
+    const rows = list.map((src) => {
+      const r = RESULTS.get(src);
+      if (!r) return renderRow(src, 'pending');
+      return renderRow(src, r.state, r.detail, r.elapsed);
+    }).join('');
+    const counts = list.reduce((acc, src) => {
+      const r = RESULTS.get(src);
+      if (r) acc[r.state] = (acc[r.state] || 0) + 1;
+      return acc;
+    }, {});
+    const meta = Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(' / ');
+    return `<div class="section-header"><span>${escapeHtml(cat)}</span>${meta ? `<span class="sec-meta">${escapeHtml(meta)}</span>` : ''}</div>
+      <div class="status-list">${rows}</div>`;
+  }).join('');
+  $('sections').innerHTML = sectionsHtml;
+  renderSummary();
+}
+
+function renderSummary() {
+  const total = SOURCES.length;
+  let good = 0, warn = 0, bad = 0, skipped = 0;
+  for (const src of SOURCES) {
+    const r = RESULTS.get(src);
+    if (!r) continue;
+    if (r.state === 'good') good++;
+    else if (r.state === 'warn') warn++;
+    else if (r.state === 'bad') bad++;
+    else if (r.state === 'skipped') skipped++;
+  }
+  const tested = good + warn + bad + skipped;
+  $('summary').innerHTML = `
+    <div class="summary-cell"><div class="label">Sources</div><div class="value">${tested} / ${total}</div></div>
+    <div class="summary-cell good"><div class="label">Healthy</div><div class="value">${good}</div></div>
+    <div class="summary-cell ${warn > 0 ? 'warn' : ''}"><div class="label">Slow</div><div class="value">${warn}</div></div>
+    <div class="summary-cell ${bad > 0 ? 'bad' : ''}"><div class="label">Failing</div><div class="value">${bad}</div></div>
+  `;
+}
+
+async function runOne(src) {
+  RESULTS.set(src, { state: 'running' });
+  renderAll();
+  const out = await timed(src.run);
+  if (out.ok && out.result && typeof out.result === 'object' && out.result.__skip) {
+    RESULTS.set(src, { state: 'skipped', detail: out.result.__skip, elapsed: out.elapsed });
+  } else if (out.ok) {
+    const slow = out.elapsed > SLOW_THRESHOLD_MS;
+    RESULTS.set(src, { state: slow ? 'warn' : 'good', detail: String(out.result), elapsed: out.elapsed });
+  } else {
+    RESULTS.set(src, { state: 'bad', detail: out.error, elapsed: out.elapsed });
+  }
+  renderAll();
+}
+
+async function runAll() {
+  RESULTS.clear();
+  renderAll();
+  $('runAll').disabled = true;
+  $('runAll').textContent = 'Probing...';
+  $('startedAt').textContent = new Date().toLocaleTimeString();
+  // Fire all probes in parallel
+  await Promise.allSettled(SOURCES.map(runOne));
+  $('runAll').disabled = false;
+  $('runAll').textContent = 'Run Again';
+}
+
+$('runAll').addEventListener('click', runAll);
+$('clearStatus').addEventListener('click', () => {
+  RESULTS.clear();
+  $('startedAt').textContent = '--';
+  renderAll();
+});
+
+// Initial render with pending state
+renderAll();
+</script>
+</body>
+</html>

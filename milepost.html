@@ -143,6 +143,20 @@ body {
   letter-spacing: 0.12em;
   color: var(--ink);
 }
+.head .badge .cross-link {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.head .badge .cross-link a {
+  color: var(--flag);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(192, 67, 26, 0.35);
+  padding-bottom: 1px;
+}
+.head .badge .cross-link a:hover {
+  border-bottom-color: var(--flag);
+}
 
 /* stamp */
 .stamp {
@@ -473,6 +487,297 @@ body {
   font-style: italic;
 }
 
+/* palette swatches */
+.palette-strip {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  min-height: 0;
+}
+.palette-strip:empty { margin-bottom: 0; }
+.palette-strip .swatch {
+  flex: 1;
+  height: 18px;
+  border: 1px solid rgba(20,15,10,0.18);
+  position: relative;
+}
+.palette-strip .swatch::after {
+  content: attr(data-hex);
+  position: absolute;
+  bottom: -14px;
+  left: 0;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+}
+.palette-strip.with-labels { margin-bottom: 26px; }
+
+/* internal-state (mood / energy / focus) sliders */
+.internal-state {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(20,15,10,0.25);
+  background: rgba(255,255,255,0.25);
+}
+.internal-state.set {
+  border-style: solid;
+  border-color: var(--ink-faint);
+  background: rgba(255,255,255,0.4);
+}
+.internal-state-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.internal-state label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  flex: 1;
+  min-width: 180px;
+}
+.internal-state input[type="range"] {
+  flex: 1;
+  accent-color: var(--flag);
+  cursor: pointer;
+  min-width: 80px;
+}
+.internal-state .slider-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  min-width: 20px;
+  text-align: right;
+  font-weight: 700;
+}
+.internal-state.set .slider-val { color: var(--flag); }
+.btn.slim {
+  padding: 4px 12px;
+  font-size: 10px;
+}
+
+/* tags */
+.tags-row {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px 12px;
+  align-items: center;
+}
+.tags-label {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+#tagsInput {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--ink-faint);
+  background: rgba(255,255,255,0.5);
+  outline: none;
+  color: var(--ink);
+}
+#tagsInput:focus {
+  border-color: var(--flag);
+  box-shadow: 0 0 0 2px rgba(192,67,26,0.15);
+}
+.tag-chips {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0;
+}
+.tag-chips:empty { display: none; }
+.tag-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  background: var(--stamp);
+  color: var(--paper);
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* body / health reading */
+.body-state {
+  margin-top: 16px;
+  border: 1px dashed rgba(20,15,10,0.25);
+  background: rgba(255,255,255,0.20);
+}
+.body-state[open] {
+  border-style: solid;
+  border-color: var(--ink-faint);
+  background: rgba(255,255,255,0.35);
+}
+.body-state.has-data {
+  border-color: var(--flag);
+  background: rgba(192,67,26,0.04);
+}
+.body-state summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-faint);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+.body-state summary::-webkit-details-marker { display: none; }
+.body-state summary::before {
+  content: '+';
+  display: inline-block;
+  width: 14px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+}
+.body-state[open] summary::before { content: '\2212'; }
+.body-state .body-summary-label { color: var(--ink); letter-spacing: 0.22em; }
+.body-state.has-data .body-summary-label { color: var(--flag); }
+.body-state .body-summary-meta {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  font-weight: 400;
+  text-transform: lowercase;
+  margin-left: auto;
+}
+.body-state.has-data .body-summary-meta {
+  color: var(--flag);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.body-state-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--rule);
+}
+.body-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 18px;
+  margin-bottom: 14px;
+}
+.body-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.body-label {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.body-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.5);
+  padding: 5px 9px;
+}
+.body-input-wrap:focus-within {
+  border-color: var(--flag);
+  box-shadow: 0 0 0 2px rgba(192,67,26,0.12);
+}
+.body-input-wrap input {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  padding: 0;
+  letter-spacing: 0.02em;
+}
+.body-input-wrap input::-webkit-outer-spin-button,
+.body-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.body-input-wrap input[type=number] { -moz-appearance: textfield; }
+.body-input-wrap .body-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: lowercase;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.body-input-wrap.bp .bp-sep {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.body-input-wrap.bp input { text-align: center; }
+.body-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.body-notes textarea {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.5);
+  resize: vertical;
+  outline: none;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.body-notes textarea:focus {
+  border-color: var(--flag);
+  box-shadow: 0 0 0 2px rgba(192,67,26,0.12);
+}
+.body-notes textarea::placeholder {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.body-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.body-status {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.body-status.set { color: var(--flag); font-weight: 600; }
+@media (max-width: 700px) {
+  .body-grid { grid-template-columns: repeat(2, 1fr); gap: 10px 12px; }
+}
+
 /* actions */
 .actions {
   display: flex;
@@ -671,6 +976,24 @@ body {
   white-space: nowrap;
 }
 .key-row a:hover { color: var(--flag-deep); border-color: var(--flag-deep); }
+.key-row.sound-row {
+  grid-template-columns: 160px 1fr;
+}
+.key-row .toggle-inline {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-transform: none;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.key-row .toggle-inline input[type="checkbox"] {
+  accent-color: var(--flag);
+}
 .config-actions {
   display: flex;
   align-items: center;
@@ -710,6 +1033,8 @@ body {
       <strong>GSG / MMXXVI</strong>
       Green Shoe Garage<br />
       Mountain Maryland
+      <div class="cross-link"><a href="milepost-reader.html">Open Reader &rarr;</a></div>
+      <div class="cross-link"><a href="milepost-status.html">Run Diagnostic &rarr;</a></div>
     </div>
   </header>
 
@@ -740,8 +1065,12 @@ body {
           <input type="text" id="key-ebird" autocomplete="off" spellcheck="false" placeholder="for nearby bird observations" />
           <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener">Generate token</a>
         </div>
+        <div class="key-row sound-row">
+          <label for="soundToggle">Capture Sound</label>
+          <label class="toggle-inline"><input type="checkbox" id="soundToggle" /> play locomotive whistle on capture completion</label>
+        </div>
         <div class="config-actions">
-          <button class="btn" id="saveKeys">Save Keys</button>
+          <button class="btn" id="saveKeys">Save Settings</button>
           <span id="keysStatus" class="config-status"></span>
         </div>
       </div>
@@ -768,7 +1097,110 @@ body {
 
     <div class="journal">
       <div class="journal-label">Observation</div>
+      <div class="palette-strip" id="paletteStrip" aria-hidden="true"></div>
+      <div class="internal-state" id="internalState">
+        <div class="internal-state-row">
+          <label>Mood
+            <input type="range" min="1" max="10" value="5" step="1" id="moodSlider" />
+            <span class="slider-val" id="moodVal">--</span>
+          </label>
+          <label>Energy
+            <input type="range" min="1" max="10" value="5" step="1" id="energySlider" />
+            <span class="slider-val" id="energyVal">--</span>
+          </label>
+          <label>Focus
+            <input type="range" min="1" max="10" value="5" step="1" id="focusSlider" />
+            <span class="slider-val" id="focusVal">--</span>
+          </label>
+          <button type="button" class="btn ghost slim" id="clearInternal">Skip</button>
+        </div>
+      </div>
       <textarea id="journalText" placeholder="A line. A page. A scrap of weather. Whatever the day asks for."></textarea>
+      <details class="body-state" id="bodyState">
+        <summary><span class="body-summary-label">Body / Health Reading</span> <span class="body-summary-meta">optional</span></summary>
+        <div class="body-state-body">
+          <div class="body-grid">
+            <label class="body-field">
+              <span class="body-label">Heart Rate</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="numeric" id="bodyHR" min="20" max="250" placeholder="--" />
+                <span class="body-unit">bpm</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Blood Pressure</span>
+              <span class="body-input-wrap bp">
+                <input type="number" inputmode="numeric" id="bodyBPsys" min="60" max="260" placeholder="sys" />
+                <span class="bp-sep">/</span>
+                <input type="number" inputmode="numeric" id="bodyBPdia" min="30" max="160" placeholder="dia" />
+                <span class="body-unit">mmHg</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Blood Oxygen</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="decimal" id="bodySpO2" min="50" max="100" step="0.1" placeholder="--" />
+                <span class="body-unit">%</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Blood Glucose</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="numeric" id="bodyGlucose" min="20" max="700" placeholder="--" />
+                <span class="body-unit">mg/dL</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Body Temp</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="decimal" id="bodyTemp" min="90" max="115" step="0.1" placeholder="--" />
+                <span class="body-unit">&deg;F</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Weight</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="decimal" id="bodyWeight" min="30" max="800" step="0.1" placeholder="--" />
+                <span class="body-unit">lb</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Sleep (last night)</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="decimal" id="bodySleep" min="0" max="24" step="0.25" placeholder="--" />
+                <span class="body-unit">hr</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">Steps (today)</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="numeric" id="bodySteps" min="0" max="200000" step="1" placeholder="--" />
+                <span class="body-unit">count</span>
+              </span>
+            </label>
+            <label class="body-field">
+              <span class="body-label">HRV</span>
+              <span class="body-input-wrap">
+                <input type="number" inputmode="numeric" id="bodyHRV" min="0" max="500" step="1" placeholder="--" />
+                <span class="body-unit">ms</span>
+              </span>
+            </label>
+          </div>
+          <label class="body-notes">
+            <span class="body-label">Notes</span>
+            <textarea id="bodyNotes" rows="2" placeholder="medications, symptoms, exercise, anything else worth noting"></textarea>
+          </label>
+          <div class="body-actions">
+            <button type="button" class="btn ghost slim" id="clearBody">Clear All</button>
+            <span class="body-status" id="bodyStatus"></span>
+          </div>
+        </div>
+      </details>
+      <div class="tags-row">
+        <label class="tags-label" for="tagsInput">Tags</label>
+        <input type="text" id="tagsInput" autocomplete="off" spellcheck="false" placeholder="comma or space separated: workshop, walk, novel" />
+        <div class="tag-chips" id="tagChips"></div>
+      </div>
     </div>
 
     <div class="actions">
@@ -786,7 +1218,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.2</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -855,15 +1287,19 @@ const Settings = {
 function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
+  const sound = Settings.get('sound');
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
+  if (sound === 'on') $('soundToggle').checked = true;
   updateKeysStatus();
 
   $('saveKeys').addEventListener('click', () => {
     const f = $('key-firms').value.trim();
     const e = $('key-ebird').value.trim();
+    const s = $('soundToggle').checked ? 'on' : 'off';
     Settings.set('firms', f);
     Settings.set('ebird', e);
+    Settings.set('sound', s);
     const status = $('keysStatus');
     status.textContent = 'Saved';
     status.className = 'config-status ok';
@@ -874,10 +1310,12 @@ function initSettings() {
 function updateKeysStatus() {
   const f = Settings.get('firms');
   const e = Settings.get('ebird');
+  const s = Settings.get('sound') === 'on';
   const status = $('keysStatus');
   const parts = [];
   parts.push(`FIRMS ${f ? '✓' : '–'}`);
   parts.push(`eBird ${e ? '✓' : '–'}`);
+  parts.push(`Sound ${s ? '✓' : '–'}`);
   status.textContent = parts.join('  /  ');
   status.className = 'config-status ' + ((f && e) ? 'ok' : 'warn');
 }
@@ -886,6 +1324,21 @@ function compass(deg) {
   if (deg == null) return '--';
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return dirs[Math.round(((deg % 360) / 22.5)) % 16];
+}
+
+function detectClient() {
+  const ua = navigator.userAgent || '';
+  let platform = 'desktop';
+  if (/iPhone|iPod/i.test(ua)) platform = 'iphone';
+  else if (/iPad/i.test(ua)) platform = 'ipad';
+  else if (/Android/i.test(ua)) platform = /Mobile/i.test(ua) ? 'android-phone' : 'android-tablet';
+  else if (/Mobile|Tablet/i.test(ua)) platform = 'mobile';
+  return {
+    platform,
+    userAgent: ua,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    language: navigator.language || null,
+  };
 }
 
 function aqiCategory(aqi) {
@@ -1095,7 +1548,7 @@ async function ipFallback() {
 
 async function getWeather(lat, lon) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility` +
+    `&current=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,uv_index` +
     `&daily=sunrise,sunset,uv_index_max,temperature_2m_max,temperature_2m_min,precipitation_sum` +
     `&timezone=auto&forecast_days=1&temperature_unit=celsius&wind_speed_unit=kmh`;
   const r = await fetch(url);
@@ -1376,6 +1829,52 @@ async function getFx() {
   return await r.json();
 }
 
+/* ---------- stock indices (Yahoo Finance unofficial chart endpoint) ---------- */
+const STOCK_INDICES = {
+  dji:    { symbol: '^DJI',  name: 'Dow Jones' },
+  sp500:  { symbol: '^GSPC', name: 'S&P 500' },
+  nasdaq: { symbol: '^IXIC', name: 'NASDAQ' },
+  vix:    { symbol: '^VIX',  name: 'VIX' },
+};
+
+async function getStockIndex(symbol) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.chart?.error) throw new Error(j.chart.error.description || 'API error');
+  const meta = j.chart?.result?.[0]?.meta;
+  if (!meta) return null;
+  const prev = meta.chartPreviousClose ?? meta.previousClose;
+  const price = meta.regularMarketPrice;
+  return {
+    symbol: meta.symbol,
+    price,
+    prevClose: prev,
+    change: price != null && prev != null ? price - prev : null,
+    changePercent: price != null && prev != null && prev !== 0 ? ((price - prev) / prev) * 100 : null,
+    dayHigh: meta.regularMarketDayHigh ?? null,
+    dayLow: meta.regularMarketDayLow ?? null,
+    timestamp: meta.regularMarketTime ?? null,
+    currency: meta.currency || 'USD',
+    exchangeName: meta.exchangeName ?? null,
+    marketState: meta.marketState ?? null,
+  };
+}
+
+async function getStocks() {
+  const out = {};
+  await Promise.all(Object.entries(STOCK_INDICES).map(async ([key, def]) => {
+    try {
+      const data = await getStockIndex(def.symbol);
+      if (data) out[key] = { name: def.name, ...data };
+    } catch (e) {
+      // individual symbol failure is non-fatal
+    }
+  }));
+  return Object.keys(out).length ? out : null;
+}
+
 async function getOnThisDay() {
   const d = new Date();
   const m = pad(d.getMonth() + 1);
@@ -1391,21 +1890,95 @@ async function getOnThisDay() {
 /* ---------- cultural pulse (Apple RSS, no key required) ---------- */
 
 const APPLE_FEEDS = {
-  song:    'https://rss.applemarketingtools.com/api/v2/us/music/most-played/1/songs.json',
-  album:   'https://rss.applemarketingtools.com/api/v2/us/music/most-played/1/albums.json',
-  movie:   'https://rss.applemarketingtools.com/api/v2/us/movies/top-movies/1/movies.json',
-  podcast: 'https://rss.applemarketingtools.com/api/v2/us/podcasts/top/1/podcasts.json',
-  book:    'https://rss.applemarketingtools.com/api/v2/us/books/top-free/1/books.json',
+  song:    'https://rss.marketingtools.apple.com/api/v2/us/music/most-played/1/songs.json',
+  album:   'https://rss.marketingtools.apple.com/api/v2/us/music/most-played/1/albums.json',
+  app:     'https://rss.marketingtools.apple.com/api/v2/us/apps/top-free/1/apps.json',
+  podcast: 'https://rss.marketingtools.apple.com/api/v2/us/podcasts/top/1/podcasts.json',
+  book:    'https://rss.marketingtools.apple.com/api/v2/us/books/top-free/1/books.json',
 };
+
+/* ---------- top movie via Wikipedia (Apple deprecated their movies feed in 2024) ---------- */
+/* Wikipedia maintains "List of YYYY box office number-one films in the United States",
+   updated weekly by editors. We fetch the article wikitext via the MediaWiki Action API
+   (CORS-enabled with origin=*), find the last italic-wrapped wiki-link in the weekly
+   table (the canonical wikitext format for film titles), and pull the most recent
+   dollar amount as the gross. */
+async function getTopMovieForYear(year) {
+  const title = `List_of_${year}_box_office_number-one_films_in_the_United_States`;
+  const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*&redirects=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.info || 'parse error');
+  const wikitext = j.parse?.wikitext?.['*'];
+  if (!wikitext) throw new Error('no wikitext');
+
+  // Truncate before the "Highest-grossing" recap section so we only scan the weekly table
+  const cutoffIdx = wikitext.search(/==\s*Highest[- ]grossing/i);
+  const tableText = cutoffIdx > 0 ? wikitext.slice(0, cutoffIdx) : wikitext;
+
+  // Match italic-wrapped wiki-links: ''[[Article]]'' or ''[[Article|Display]]''
+  // Films in these tables are always formatted this way
+  const filmRe = /''\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]''/g;
+  let lastMatch = null;
+  let m;
+  while ((m = filmRe.exec(tableText)) !== null) lastMatch = m;
+  if (!lastMatch) return null;
+
+  // Display name is the pipe alias if present, else the article name
+  const name = (lastMatch[2] || lastMatch[1]).trim();
+
+  // Most recent gross is the last $NN,NNN,NNN... pattern in the table
+  const grossMatches = [...tableText.matchAll(/\$([0-9](?:[0-9,]*[0-9])?)/g)];
+  const gross = grossMatches.length ? `$${grossMatches[grossMatches.length - 1][1]}` : null;
+
+  return {
+    name,
+    artistName: null,
+    releaseDate: null,
+    kind: 'movie',
+    url: `https://en.wikipedia.org/wiki/${title}`,
+    gross,
+    sourceLabel: 'Wikipedia',
+    genres: [],
+  };
+}
+
+async function getTopMovie() {
+  const year = new Date().getUTCFullYear();
+  try {
+    const r = await getTopMovieForYear(year);
+    if (r) return r;
+  } catch (e) {
+    console.warn(`[Milepost] cultural/movie ${year}: ${e.message}`);
+  }
+  // Fall back to previous year (e.g. in early January before this year's article is seeded)
+  try {
+    const r = await getTopMovieForYear(year - 1);
+    if (r) return r;
+  } catch (e) {
+    console.warn(`[Milepost] cultural/movie ${year - 1}: ${e.message}`);
+  }
+  return null;
+}
 
 async function getCultural() {
   const out = {};
-  await Promise.all(Object.entries(APPLE_FEEDS).map(async ([key, url]) => {
-    try {
-      const r = await fetch(url);
-      const j = await r.json();
-      const it = j.feed?.results?.[0];
-      if (it) {
+  const tasks = [
+    // Apple Marketing Tools RSS feeds
+    ...Object.entries(APPLE_FEEDS).map(async ([key, url]) => {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) {
+          console.warn(`[Milepost] cultural/${key}: HTTP ${r.status} from ${url}`);
+          return;
+        }
+        const j = await r.json();
+        const it = j.feed?.results?.[0];
+        if (!it) {
+          console.warn(`[Milepost] cultural/${key}: no results in response`);
+          return;
+        }
         out[key] = {
           name: it.name,
           artistName: it.artistName || null,
@@ -1414,9 +1987,21 @@ async function getCultural() {
           url: it.url || null,
           genres: (it.genres || []).map((g) => g.name).filter((n) => n !== 'Music' && n !== 'Movies' && n !== 'Books' && n !== 'Podcasts'),
         };
+      } catch (e) {
+        console.warn(`[Milepost] cultural/${key}: ${e.message}`);
       }
-    } catch (e) {}
-  }));
+    }),
+    // Wikipedia: current US box office #1
+    (async () => {
+      try {
+        const movie = await getTopMovie();
+        if (movie) out.movie = movie;
+      } catch (e) {
+        console.warn(`[Milepost] cultural/movie: ${e.message}`);
+      }
+    })(),
+  ];
+  await Promise.all(tasks);
   return out;
 }
 
@@ -1529,13 +2114,276 @@ async function getXkcd() {
 }
 
 async function getCurio() {
-  const out = { apod: null, xkcd: null };
+  const out = { apod: null, xkcd: null, arxiv: null, github: null };
   const tasks = [
-    (async () => { out.apod = await getApod(); })(),
-    (async () => { out.xkcd = await getXkcd(); })(),
+    (async () => { try { out.apod = await getApod(); } catch (e) { console.warn(`[Milepost] curio/apod: ${e.message}`); } })(),
+    (async () => { try { out.xkcd = await getXkcd(); } catch (e) { console.warn(`[Milepost] curio/xkcd: ${e.message}`); } })(),
+    (async () => { try { out.arxiv = await getArxivPaper(); } catch (e) { console.warn(`[Milepost] curio/arxiv: ${e.message}`); } })(),
+    (async () => { try { out.github = await getGitHubTrending(); } catch (e) { console.warn(`[Milepost] curio/github: ${e.message}`); } })(),
   ];
   await Promise.allSettled(tasks);
   return out;
+}
+
+/* ---------- CO2 (NOAA GML Mauna Loa weekly file) ---------- */
+async function getCO2() {
+  // Weekly Mauna Loa CO2 readings, whitespace-separated text format.
+  // Each line: yr mo day decimal ppm ndays year_ago ten_year_ago since_1800
+  const r = await fetch('https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const text = await r.text();
+  const lines = text.split('\n').filter((l) => l && !l.startsWith('#'));
+  if (!lines.length) throw new Error('no data rows');
+  const last = lines[lines.length - 1].trim().split(/\s+/);
+  const ppm = parseFloat(last[4]);
+  if (!isFinite(ppm) || ppm < 0) throw new Error('invalid ppm');
+  const yearAgo = parseFloat(last[6]);
+  const tenYearAgo = parseFloat(last[7]);
+  const since1800 = parseFloat(last[8]);
+  return {
+    ppm,
+    yearAgo: isFinite(yearAgo) && yearAgo > 0 ? yearAgo : null,
+    tenYearAgo: isFinite(tenYearAgo) && tenYearAgo > 0 ? tenYearAgo : null,
+    increaseSince1800: isFinite(since1800) ? since1800 : null,
+    weekStart: `${last[0]}-${String(last[1]).padStart(2, '0')}-${String(last[2]).padStart(2, '0')}`,
+    station: 'Mauna Loa, Hawaii',
+    source: 'NOAA GML',
+  };
+}
+
+/* ---------- Aurora visibility forecast (NOAA SWPC OVATION) ---------- */
+async function getAuroraForecast(lat, lon) {
+  // OVATION publishes a probability grid of aurora visibility for the next 30 minutes.
+  // Format: { Forecast Time, Observation Time, coordinates: [[lon, lat, aurora_probability], ...] }
+  const r = await fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  // Grid uses longitude 0..360, latitude -90..90, integer steps
+  const lonAdj = lon < 0 ? Math.round(lon + 360) : Math.round(lon);
+  const latRound = Math.round(lat);
+  let prob = 0;
+  // Linear search; the grid has ~64,800 entries but each is just 3 numbers
+  for (const [glon, glat, p] of j.coordinates) {
+    if (glat === latRound && glon === lonAdj) { prob = p; break; }
+  }
+  return {
+    probability: prob,
+    forecastTime: j['Forecast Time'] || null,
+    observationTime: j['Observation Time'] || null,
+    source: 'NOAA SWPC OVATION',
+  };
+}
+
+/* ---------- Solar disk image (NASA SDO) ---------- */
+function getSolarDisk() {
+  // NASA's Solar Dynamics Observatory publishes a continually-updated image at a stable URL.
+  // We just record the URL; the image at capture time is preserved by accessing the
+  // dated archive URL: https://sdo.gsfc.nasa.gov/assets/img/browse/YYYY/MM/DD/
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(now.getUTCDate()).padStart(2, '0');
+  return {
+    latestUrl: 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIF.jpg',
+    archiveDirectoryUrl: `https://sdo.gsfc.nasa.gov/assets/img/browse/${y}/${m}/${d}/`,
+    wavelength: 'HMI Intensitygram (visible-light continuum)',
+    capturedAt: now.toISOString(),
+    source: 'NASA SDO',
+  };
+}
+
+/* ---------- Sunrise/sunset/twilight times (sunrise-sunset.org) ---------- */
+async function getSunTimes(lat, lon) {
+  const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&formatted=0`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.status !== 'OK') throw new Error(`API status: ${j.status}`);
+  return {
+    sunrise: j.results.sunrise,
+    sunset: j.results.sunset,
+    solarNoon: j.results.solar_noon,
+    dayLengthSeconds: j.results.day_length,
+    civilTwilightBegin: j.results.civil_twilight_begin,
+    civilTwilightEnd: j.results.civil_twilight_end,
+    nauticalTwilightBegin: j.results.nautical_twilight_begin,
+    nauticalTwilightEnd: j.results.nautical_twilight_end,
+    astronomicalTwilightBegin: j.results.astronomical_twilight_begin,
+    astronomicalTwilightEnd: j.results.astronomical_twilight_end,
+    source: 'sunrise-sunset.org',
+  };
+}
+
+/* ---------- Astronomical events (client-side from curated tables) ---------- */
+// Major annual meteor showers with active windows and ZHR (zenith hourly rate at peak)
+const METEOR_SHOWERS = [
+  { name: 'Quadrantids',          start: '12-28', end: '01-12', peak: '01-04', zhr: 110 },
+  { name: 'Lyrids',               start: '04-16', end: '04-30', peak: '04-22', zhr: 18  },
+  { name: 'Eta Aquariids',        start: '04-19', end: '05-28', peak: '05-06', zhr: 60  },
+  { name: 'Southern Delta Aquariids', start: '07-12', end: '08-23', peak: '07-30', zhr: 25 },
+  { name: 'Perseids',             start: '07-17', end: '08-24', peak: '08-13', zhr: 100 },
+  { name: 'Draconids',            start: '10-06', end: '10-10', peak: '10-08', zhr: 10  },
+  { name: 'Orionids',             start: '10-02', end: '11-07', peak: '10-21', zhr: 25  },
+  { name: 'Leonids',              start: '11-06', end: '11-30', peak: '11-17', zhr: 15  },
+  { name: 'Geminids',             start: '12-04', end: '12-17', peak: '12-14', zhr: 150 },
+  { name: 'Ursids',               start: '12-17', end: '12-26', peak: '12-22', zhr: 10  },
+];
+
+// Major solar and lunar eclipses through 2030 (NASA Five Millennium Catalog)
+const ECLIPSES = [
+  { date: '2026-02-17', type: 'annular solar',    region: 'Antarctica' },
+  { date: '2026-03-03', type: 'total lunar',      region: 'Pacific, Americas, Western Europe, Western Africa' },
+  { date: '2026-08-12', type: 'total solar',      region: 'Greenland, Iceland, Spain' },
+  { date: '2026-08-28', type: 'partial lunar',    region: 'Americas, Europe, Africa' },
+  { date: '2027-02-06', type: 'annular solar',    region: 'Pacific, Argentina, Atlantic' },
+  { date: '2027-02-20', type: 'penumbral lunar',  region: 'Pacific, Americas' },
+  { date: '2027-08-02', type: 'total solar',      region: 'Atlantic, Spain, North Africa, Saudi Arabia, Indian Ocean' },
+  { date: '2028-01-12', type: 'partial lunar',    region: 'Asia, Australia, Pacific' },
+  { date: '2028-01-26', type: 'annular solar',    region: 'Pacific, Ecuador, Brazil, Atlantic' },
+  { date: '2028-07-06', type: 'partial lunar',    region: 'Asia, Australia, Pacific, Americas' },
+  { date: '2028-07-22', type: 'total solar',      region: 'Indian Ocean, Australia, New Zealand' },
+  { date: '2029-01-14', type: 'partial solar',    region: 'North America' },
+  { date: '2029-06-12', type: 'partial solar',    region: 'Arctic, Scandinavia, Russia, Alaska' },
+  { date: '2029-12-05', type: 'partial solar',    region: 'Antarctica, Southern South America' },
+  { date: '2030-06-01', type: 'annular solar',    region: 'North Africa, Greece, Russia, Japan' },
+  { date: '2030-11-25', type: 'total solar',      region: 'Botswana, South Africa, Australia' },
+];
+
+function getAstronomicalEvents() {
+  const now = new Date();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(now.getUTCDate()).padStart(2, '0');
+  const today = `${mm}-${dd}`;
+  const todayIso = now.toISOString().slice(0, 10);
+
+  const isInRange = (start, end, day) => {
+    // Handles ranges that span the year boundary (e.g. Quadrantids Dec 28 to Jan 12)
+    if (start <= end) return day >= start && day <= end;
+    return day >= start || day <= end;
+  };
+
+  const activeShowers = METEOR_SHOWERS
+    .filter((s) => isInRange(s.start, s.end, today))
+    .map((s) => ({
+      name: s.name,
+      peak: s.peak,
+      zhr: s.zhr,
+      atPeak: today === s.peak,
+    }));
+
+  // Next eclipse from now
+  const upcoming = ECLIPSES
+    .filter((e) => e.date >= todayIso)
+    .sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  const daysAway = upcoming ? Math.round((new Date(upcoming.date + 'T00:00:00Z') - now) / 86400000) : null;
+
+  return {
+    activeMeteorShowers: activeShowers,
+    nextEclipse: upcoming ? { ...upcoming, daysAway } : null,
+    source: 'computed (NASA/IMO references)',
+  };
+}
+
+/* ---------- Crypto Fear & Greed Index (alternative.me) ---------- */
+async function getCryptoFearGreed() {
+  const r = await fetch('https://api.alternative.me/fng/');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const d = j.data?.[0];
+  if (!d) throw new Error('no data');
+  const value = parseInt(d.value, 10);
+  if (!isFinite(value)) throw new Error('invalid value');
+  return {
+    value,
+    classification: d.value_classification, // "Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"
+    timestamp: d.timestamp,
+    source: 'alternative.me',
+  };
+}
+
+/* ---------- Commodities and Treasury yields (Yahoo Finance, extends getStockIndex) ---------- */
+const COMMODITIES = {
+  gold:   { symbol: 'GC=F', name: 'Gold' },
+  oil:    { symbol: 'CL=F', name: 'WTI Crude' },
+  silver: { symbol: 'SI=F', name: 'Silver' },
+};
+const TREASURIES = {
+  yr5:  { symbol: '^FVX', name: '5Y Treasury' },
+  yr10: { symbol: '^TNX', name: '10Y Treasury' },
+  yr30: { symbol: '^TYX', name: '30Y Treasury' },
+};
+
+async function getCommodities() {
+  const out = {};
+  await Promise.all(Object.entries(COMMODITIES).map(async ([key, def]) => {
+    try {
+      const data = await getStockIndex(def.symbol);
+      if (data) out[key] = { name: def.name, ...data };
+    } catch (e) {
+      console.warn(`[Milepost] markets/commodity/${key}: ${e.message}`);
+    }
+  }));
+  return Object.keys(out).length ? out : null;
+}
+
+async function getTreasuries() {
+  const out = {};
+  await Promise.all(Object.entries(TREASURIES).map(async ([key, def]) => {
+    try {
+      const data = await getStockIndex(def.symbol);
+      if (data) out[key] = { name: def.name, ...data };
+    } catch (e) {
+      console.warn(`[Milepost] markets/treasury/${key}: ${e.message}`);
+    }
+  }));
+  return Object.keys(out).length ? out : null;
+}
+
+/* ---------- arXiv recent paper ---------- */
+async function getArxivPaper() {
+  // Most recent submission across a broad mix of categories
+  const url = 'https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.CL+OR+cat:astro-ph.SR+OR+cat:physics.hist-ph&sortBy=submittedDate&sortOrder=descending&max_results=1';
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const text = await r.text();
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  const entry = doc.querySelector('entry');
+  if (!entry) throw new Error('no entry');
+  const title = entry.querySelector('title')?.textContent?.trim().replace(/\s+/g, ' ') || null;
+  const summary = entry.querySelector('summary')?.textContent?.trim().replace(/\s+/g, ' ') || null;
+  const author = entry.querySelector('author > name')?.textContent || null;
+  const id = entry.querySelector('id')?.textContent || null;
+  const published = entry.querySelector('published')?.textContent || null;
+  const cat = entry.querySelector('category')?.getAttribute('term') || null;
+  return {
+    title,
+    summary: summary ? summary.slice(0, 280) + (summary.length > 280 ? '...' : '') : null,
+    author,
+    link: id,
+    published,
+    category: cat,
+    source: 'arXiv',
+  };
+}
+
+/* ---------- GitHub trending repository (Search API: most-starred repo from past week) ---------- */
+async function getGitHubTrending() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const url = `https://api.github.com/search/repositories?q=created:%3E${sevenDaysAgo}&sort=stars&order=desc&per_page=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  const repo = j.items?.[0];
+  if (!repo) throw new Error('no items');
+  return {
+    name: repo.full_name,
+    description: repo.description,
+    stars: repo.stargazers_count,
+    language: repo.language,
+    link: repo.html_url,
+    created: repo.created_at,
+    source: 'GitHub Search API',
+  };
 }
 
 /* ---------- capture pipeline ---------- */
@@ -1544,6 +2392,7 @@ const SOURCES = [
   { id: 'loc',    label: 'Location' },
   { id: 'wx',     label: 'Atmospheric' },
   { id: 'air',    label: 'Air Quality' },
+  { id: 'co2',    label: 'Climate / CO\u2082' },
   { id: 'cel',    label: 'Celestial' },
   { id: 'sw',     label: 'Space Weather' },
   { id: 'iss',    label: 'Orbital' },
@@ -1589,9 +2438,13 @@ async function captureAll() {
     timestamp: new Date().toISOString(),
     timestampLocal: new Date().toString(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    meta: {
+      client: detectClient(),
+    },
     location: null,
     weather: null,
     airQuality: null,
+    climate: null,
     celestial: null,
     spaceWeather: null,
     iss: null,
@@ -1604,6 +2457,10 @@ async function captureAll() {
     discourse: null,
     curio: null,
     onThisDay: null,
+    palette: null,
+    internal: null,
+    body: null,
+    tags: null,
   };
 
   // location first; everything else depends on it
@@ -1629,18 +2486,37 @@ async function captureAll() {
     }],
     ['cel', async () => {
       const now = new Date();
+      const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
+        console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
+      }) : null;
       data.celestial = {
         moon: moonPhase(now),
         sun: sunPosition(now, lat, lon),
         sunSign: zodiac(now),
         julianDay: julianDay(now),
         nextSolar: nextSolarEvent(now),
+        sunTimes,
+        solarDisk: getSolarDisk(),
+        events: getAstronomicalEvents(),
       };
     }],
     ['sw', async () => {
-      const kp = await getKp().catch(() => null);
-      const sw = await getSolarWind().catch(() => null);
-      data.spaceWeather = { kp, solarWind: sw };
+      const [kp, sw, aurora] = await Promise.all([
+        getKp().catch(() => null),
+        getSolarWind().catch(() => null),
+        lat != null ? getAuroraForecast(lat, lon).catch((e) => {
+          console.warn(`[Milepost] sw/aurora: ${e.message}`); return null;
+        }) : Promise.resolve(null),
+      ]);
+      data.spaceWeather = { kp, solarWind: sw, aurora };
+    }],
+    ['co2', async () => {
+      try {
+        data.climate = { co2: await getCO2() };
+      } catch (e) {
+        console.warn(`[Milepost] climate/co2: ${e.message}`);
+        data.climate = { co2: null };
+      }
     }],
     ['iss', async () => {
       data.iss = await getISS();
@@ -1664,8 +2540,15 @@ async function captureAll() {
       if (data.biosphere?.needsKey) throw new Error('needsKey');
     }],
     ['mkt', async () => {
-      const [c, f] = await Promise.all([getCrypto().catch(() => null), getFx().catch(() => null)]);
-      data.markets = { crypto: c, fx: f };
+      const [c, f, st, com, tr, fg] = await Promise.all([
+        getCrypto().catch(() => null),
+        getFx().catch(() => null),
+        getStocks().catch(() => null),
+        getCommodities().catch(() => null),
+        getTreasuries().catch(() => null),
+        getCryptoFearGreed().catch((e) => { console.warn(`[Milepost] mkt/fng: ${e.message}`); return null; }),
+      ]);
+      data.markets = { crypto: c, fx: f, stocks: st, commodities: com, treasuries: tr, sentiment: fg };
     }],
     ['cult', async () => {
       data.cultural = await getCultural();
@@ -1695,6 +2578,7 @@ async function captureAll() {
 
   // build entry record
   const id = STATE.serial++;
+  data.palette = computePalette(data);
   STATE.current = {
     id,
     serialDisplay: `№${pad(id, 3)}`,
@@ -1709,8 +2593,11 @@ async function captureAll() {
   $('statusText').textContent = 'Captured';
 
   renderEntry(STATE.current);
+  renderPalette(data.palette);
   $('entry').classList.add('visible');
   $('entry').classList.add('fade-in');
+  animateStamp();
+  playWhistle();
   $('entry').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -1815,6 +2702,7 @@ function sectionAtmospheric(d) {
   const w = d.weather?.current;
   const daily = d.weather?.daily;
   const aq = d.airQuality?.current;
+  const co2 = d.climate?.co2;
   if (!w) {
     return sec('Atmospheric', '', `<div class="kv"><span class="v muted">unavailable</span></div>`, { single: true });
   }
@@ -1823,16 +2711,18 @@ function sectionAtmospheric(d) {
     kvRow('Temperature', `${fmtNum(w.temperature_2m, 1)}°C / ${fmtNum(w.temperature_2m * 9/5 + 32, 1)}°F`),
     kvRow('Feels Like', `${fmtNum(w.apparent_temperature, 1)}°C`),
     kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
+    w.dew_point_2m != null ? kvRow('Dewpoint', `${fmtNum(w.dew_point_2m, 1)}°C / ${fmtNum(w.dew_point_2m * 9/5 + 32, 1)}°F`) : '',
     kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
     kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
     kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
     kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
     kvRow('Precipitation', `${fmtNum(w.precipitation, 1)} mm`),
     kvRow('Visibility', w.visibility ? `${fmtNum(w.visibility/1000, 1)} km` : '--'),
-    kvRow('UV Index (peak)', daily ? `${fmtNum(daily.uv_index_max?.[0], 1)}` : '--', daily ? uvCategory(daily.uv_index_max?.[0]) : ''),
+    kvRow('UV Index (now)', w.uv_index != null ? fmtNum(w.uv_index, 1) : (daily ? `${fmtNum(daily.uv_index_max?.[0], 1)} peak` : '--'), w.uv_index != null ? uvCategory(w.uv_index) : (daily ? uvCategory(daily.uv_index_max?.[0]) : '')),
     kvRow('AQI (US)', aq ? fmtNum(aq.us_aqi) : '--', aq ? aqiCategory(aq.us_aqi) : ''),
-  ];
-  // pollen, only shown if any non-null (Open-Meteo provides for Europe only)
+    co2 ? kvRow('CO\u2082 (Mauna Loa)', `${fmtNum(co2.ppm, 2)} ppm`, co2.yearAgo ? `+${fmtNum(co2.ppm - co2.yearAgo, 2)} yr/yr` : '') : '',
+  ].filter(Boolean);
+  // pollen (Open-Meteo provides for Europe only)
   if (aq) {
     const pol = {
       'Alder': aq.alder_pollen, 'Birch': aq.birch_pollen, 'Grass': aq.grass_pollen,
@@ -1847,7 +2737,8 @@ function sectionAtmospheric(d) {
       });
     }
   }
-  return sec('Atmospheric', 'Open-Meteo', rows.join(''));
+  const sources = ['Open-Meteo', co2 && 'NOAA GML'].filter(Boolean).join(', ');
+  return sec('Atmospheric', sources, rows.join(''));
 }
 
 function pollenCategory(v) {
@@ -1863,16 +2754,29 @@ function sectionCelestial(d) {
   const c = d.celestial;
   if (!c) return sec('Celestial', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const daily = d.weather?.daily;
-  const sr = daily?.sunrise?.[0]?.slice(11, 16);
-  const ss = daily?.sunset?.[0]?.slice(11, 16);
+  const st = c.sunTimes;
+  // Prefer sunrise-sunset.org times if available, fall back to Open-Meteo daily
+  const fmtTime = (iso) => iso ? iso.slice(11, 16) : null;
+  const sr = st ? fmtTime(st.sunrise) : (daily?.sunrise?.[0]?.slice(11, 16));
+  const ss = st ? fmtTime(st.sunset) : (daily?.sunset?.[0]?.slice(11, 16));
   let dayLen = '--';
-  if (sr && ss) {
+  if (st?.dayLengthSeconds) {
+    const m = Math.round(st.dayLengthSeconds / 60);
+    dayLen = `${Math.floor(m/60)}h ${m%60}m`;
+  } else if (sr && ss) {
     const [srh, srm] = sr.split(':').map(Number);
     const [ssh, ssm] = ss.split(':').map(Number);
     let mins = (ssh * 60 + ssm) - (srh * 60 + srm);
     if (mins < 0) mins += 24 * 60;
     dayLen = `${Math.floor(mins/60)}h ${mins%60}m`;
   }
+  const ev = c.events;
+  const activeShowers = ev?.activeMeteorShowers || [];
+  const showerLabel = activeShowers.length
+    ? activeShowers.map((s) => s.atPeak ? `${s.name} (peaking, ZHR ${s.zhr})` : `${s.name}`).join(', ')
+    : 'none active';
+  const ecl = ev?.nextEclipse;
+  const eclipseLabel = ecl ? `${ecl.type}, ${ecl.daysAway} ${ecl.daysAway === 1 ? 'day' : 'days'} away` : '--';
   const rows = [
     kvRow('Sun Sign', c.sunSign),
     kvRow('Sun Altitude', c.sun ? `${fmtNum(c.sun.altitude, 1)}°` : '--'),
@@ -1882,28 +2786,39 @@ function sectionCelestial(d) {
     kvRow('Moon Age', `${fmtNum(c.moon.age, 1)} days`),
     kvRow('Sunrise', sr || '--'),
     kvRow('Sunset', ss || '--'),
+    st ? kvRow('Civil Twilight', `${fmtTime(st.civilTwilightBegin)} / ${fmtTime(st.civilTwilightEnd)}`) : '',
+    st ? kvRow('Astro Twilight', `${fmtTime(st.astronomicalTwilightBegin)} / ${fmtTime(st.astronomicalTwilightEnd)}`) : '',
     kvRow('Day Length', dayLen),
-    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
+    kvRow('Meteor Showers', showerLabel),
+    kvRow('Next Eclipse', eclipseLabel),
     c.nextSolar ? kvRow('Next Solar Event', `${c.nextSolar.name}  /  ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`) : '',
+    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
   ].filter(Boolean).join('');
-  return sec('Celestial', 'computed', rows);
+  const sources = ['computed', st && 'sunrise-sunset.org', c.solarDisk && 'NASA SDO'].filter(Boolean).join(', ');
+  return sec('Celestial', sources, rows);
 }
 
 function sectionSpaceWeather(d) {
   const sw = d.spaceWeather;
   const iss = d.iss;
   if (!sw && !iss) return sec('Space Weather / Orbital', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const aurora = sw?.aurora;
+  const auroraLabel = aurora && aurora.probability != null
+    ? (aurora.probability >= 60 ? 'very likely' : aurora.probability >= 30 ? 'possible' : aurora.probability >= 10 ? 'low' : 'unlikely')
+    : '';
   const rows = [
     kvRow('Kp Index', sw?.kp ? fmtNum(sw.kp.kp, 2) : '--', sw?.kp ? kpCategory(sw.kp.kp) : ''),
     kvRow('Solar Wind Speed', sw?.solarWind ? `${fmtNum(sw.solarWind.speed)} km/s` : '--'),
     kvRow('Plasma Density', sw?.solarWind ? `${fmtNum(sw.solarWind.density, 2)} p/cm³` : '--'),
     kvRow('Plasma Temp', sw?.solarWind ? `${fmtNum(sw.solarWind.temperature)} K` : '--'),
+    aurora ? kvRow('Aurora at Location', `${fmtNum(aurora.probability, 0)}%`, auroraLabel) : '',
     kvRow('ISS Latitude', iss ? `${fmtNum(iss.latitude, 2)}°` : '--'),
     kvRow('ISS Longitude', iss ? `${fmtNum(iss.longitude, 2)}°` : '--'),
     kvRow('ISS Altitude', iss ? `${fmtNum(iss.altitude, 1)} km` : '--'),
     kvRow('ISS Velocity', iss ? `${fmtNum(iss.velocity)} km/h` : '--'),
-  ].join('');
-  return sec('Space Weather / Orbital', 'NOAA SWPC, WhereTheISS.at', rows);
+  ].filter(Boolean).join('');
+  const sources = ['NOAA SWPC', aurora && 'OVATION', 'WhereTheISS.at'].filter(Boolean).join(', ');
+  return sec('Space Weather / Orbital', sources, rows);
 }
 
 function sectionTelluric(d) {
@@ -2012,25 +2927,61 @@ function humanTime(ts) {
 
 function sectionMarkets(d) {
   const m = d.markets;
-  if (!m || (!m.crypto && !m.fx)) return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
-  const rows = [];
-  if (m.crypto) {
-    const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
-    if (m.crypto.bitcoin) rows.push(kvRow('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`, fmtPct(m.crypto.bitcoin.usd_24h_change)));
-    if (m.crypto.ethereum) rows.push(kvRow('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`, fmtPct(m.crypto.ethereum.usd_24h_change)));
-    if (m.crypto.monero) rows.push(kvRow('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`, fmtPct(m.crypto.monero.usd_24h_change)));
+  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment)) {
+    return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   }
+  const rows = [];
+  const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
+  // Indices
+  if (m.stocks) {
+    if (m.stocks.dji)    rows.push(kvRow('Dow Jones',  fmtNum(m.stocks.dji.price, 0),    fmtPct(m.stocks.dji.changePercent)));
+    if (m.stocks.sp500)  rows.push(kvRow('S&P 500',    fmtNum(m.stocks.sp500.price, 1),  fmtPct(m.stocks.sp500.changePercent)));
+    if (m.stocks.nasdaq) rows.push(kvRow('NASDAQ',     fmtNum(m.stocks.nasdaq.price, 1), fmtPct(m.stocks.nasdaq.changePercent)));
+    if (m.stocks.vix)    rows.push(kvRow('VIX',        fmtNum(m.stocks.vix.price, 2),    fmtPct(m.stocks.vix.changePercent)));
+  }
+  // Treasury yields (price is the yield as percent)
+  if (m.treasuries) {
+    if (m.treasuries.yr5)  rows.push(kvRow('5Y Treasury',  `${fmtNum(m.treasuries.yr5.price, 3)}%`,  fmtPct(m.treasuries.yr5.changePercent)));
+    if (m.treasuries.yr10) rows.push(kvRow('10Y Treasury', `${fmtNum(m.treasuries.yr10.price, 3)}%`, fmtPct(m.treasuries.yr10.changePercent)));
+    if (m.treasuries.yr30) rows.push(kvRow('30Y Treasury', `${fmtNum(m.treasuries.yr30.price, 3)}%`, fmtPct(m.treasuries.yr30.changePercent)));
+    if (m.treasuries.yr5?.price != null && m.treasuries.yr10?.price != null) {
+      const spread = m.treasuries.yr10.price - m.treasuries.yr5.price;
+      rows.push(kvRow('10Y-5Y Spread', `${fmtNum(spread, 3)}%`, spread < 0 ? 'inverted' : 'normal'));
+    }
+  }
+  // Commodities
+  if (m.commodities) {
+    if (m.commodities.gold)   rows.push(kvRow('Gold (oz)',  `$${fmtNum(m.commodities.gold.price, 2)}`,   fmtPct(m.commodities.gold.changePercent)));
+    if (m.commodities.silver) rows.push(kvRow('Silver (oz)', `$${fmtNum(m.commodities.silver.price, 2)}`, fmtPct(m.commodities.silver.changePercent)));
+    if (m.commodities.oil)    rows.push(kvRow('WTI Crude',  `$${fmtNum(m.commodities.oil.price, 2)}`,    fmtPct(m.commodities.oil.changePercent)));
+  }
+  // Crypto and sentiment
+  if (m.crypto) {
+    if (m.crypto.bitcoin)  rows.push(kvRow('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`,  fmtPct(m.crypto.bitcoin.usd_24h_change)));
+    if (m.crypto.ethereum) rows.push(kvRow('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`, fmtPct(m.crypto.ethereum.usd_24h_change)));
+    if (m.crypto.monero)   rows.push(kvRow('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`,   fmtPct(m.crypto.monero.usd_24h_change)));
+  }
+  if (m.sentiment) {
+    rows.push(kvRow('Fear & Greed', fmtNum(m.sentiment.value, 0), m.sentiment.classification || ''));
+  }
+  // FX
   if (m.fx) {
     if (m.fx.rates?.EUR) rows.push(kvRow('USD / EUR', fmtNum(m.fx.rates.EUR, 4)));
     if (m.fx.rates?.GBP) rows.push(kvRow('USD / GBP', fmtNum(m.fx.rates.GBP, 4)));
     if (m.fx.rates?.JPY) rows.push(kvRow('USD / JPY', fmtNum(m.fx.rates.JPY, 2)));
     if (m.fx.rates?.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
   }
-  return sec('Markets', 'CoinGecko, Frankfurter', rows.join(''));
+  const sources = [
+    (m.stocks || m.commodities || m.treasuries) && 'Yahoo Finance',
+    m.crypto && 'CoinGecko',
+    m.sentiment && 'alternative.me',
+    m.fx && 'Frankfurter',
+  ].filter(Boolean).join(', ');
+  return sec('Markets', sources, rows.join(''));
 }
 
 function fmtCultLine(item) {
-  if (!item) return '--';
+  if (!item) return '';
   if (item.artistName) return `${item.name}  /  ${item.artistName}`;
   return item.name;
 }
@@ -2038,14 +2989,25 @@ function fmtCultLine(item) {
 function sectionCultural(d) {
   const c = d.cultural;
   if (!c || Object.keys(c).length === 0) return sec('Cultural Pulse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
-  const rows = [
-    kvRow('Top Song', fmtCultLine(c.song)),
-    kvRow('Top Album', fmtCultLine(c.album)),
-    kvRow('Top Movie', fmtCultLine(c.movie)),
-    kvRow('Top Podcast', fmtCultLine(c.podcast)),
-    kvRow('Top Book', fmtCultLine(c.book)),
-  ].join('');
-  return sec('Cultural Pulse', 'Apple Charts', rows, { single: true });
+  // Render only fields actually present (so the section never shows a "Top X --" placeholder row)
+  // The movie row gets the gross as a secondary value when available
+  const candidates = [
+    ['Top Song',    c.song,    null],
+    ['Top Album',   c.album,   null],
+    ['Top Movie',   c.movie,   c.movie?.gross || null],
+    ['Top App',     c.app,     null],
+    ['Top Podcast', c.podcast, null],
+    ['Top Book',    c.book,    null],
+  ];
+  const rows = candidates
+    .filter(([, v]) => v != null)
+    .map(([k, v, aux]) => kvRow(k, fmtCultLine(v), aux || ''))
+    .join('');
+  // Dynamic source line: name only the providers actually contributing data
+  const appleKeys = ['song', 'album', 'app', 'podcast', 'book'];
+  const hasApple = appleKeys.some((k) => c[k]);
+  const sources = [hasApple && 'Apple Charts', c.movie && 'Wikipedia'].filter(Boolean).join(', ');
+  return sec('Cultural Pulse', sources, rows, { single: true });
 }
 
 function sectionDiscourse(d) {
@@ -2074,7 +3036,7 @@ function sectionDiscourse(d) {
 
 function sectionCurio(d) {
   const c = d.curio;
-  if (!c || (!c.apod && !c.xkcd)) {
+  if (!c || (!c.apod && !c.xkcd && !c.arxiv && !c.github)) {
     return sec('Curio', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   }
   const items = [];
@@ -2086,7 +3048,17 @@ function sectionCurio(d) {
   if (c.xkcd) {
     items.push(`<div class="item"><span class="yr">XKCD</span><b>#${c.xkcd.num} / ${escapeHtml(c.xkcd.title || '')}</b>${c.xkcd.alt ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px;font-style:italic">"${escapeHtml(c.xkcd.alt)}"</div>` : ''}</div>`);
   }
-  return sec('Curio', 'NASA, xkcd', items.join(''), { prose: true });
+  if (c.arxiv) {
+    const cat = c.arxiv.category ? ` <span style="color:var(--ink-faint);font-size:11px">[${escapeHtml(c.arxiv.category)}]</span>` : '';
+    items.push(`<div class="item"><span class="yr">arXiv</span><b>${escapeHtml(c.arxiv.title || '')}</b>${cat}${c.arxiv.summary ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(c.arxiv.summary)}</div>` : ''}</div>`);
+  }
+  if (c.github) {
+    const lang = c.github.language ? ` <span style="color:var(--ink-faint);font-size:11px">[${escapeHtml(c.github.language)}]</span>` : '';
+    const stars = c.github.stars != null ? ` <span style="color:var(--ink-faint);font-size:11px">★ ${fmtNum(c.github.stars, 0)}</span>` : '';
+    items.push(`<div class="item"><span class="yr">GitHub</span><b>${escapeHtml(c.github.name || '')}</b>${lang}${stars}${c.github.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(c.github.description)}</div>` : ''}</div>`);
+  }
+  const sources = [c.apod && 'NASA', c.xkcd && 'xkcd', c.arxiv && 'arXiv', c.github && 'GitHub'].filter(Boolean).join(', ');
+  return sec('Curio', sources, items.join(''), { prose: true });
 }
 
 function sectionOnThisDay(d) {
@@ -2138,14 +3110,21 @@ function buildTextExport(entry) {
     out += line('Temperature', `${fmtNum(w.temperature_2m, 1)} C  /  ${fmtNum(w.temperature_2m * 9/5 + 32, 1)} F`);
     out += line('Feels Like', `${fmtNum(w.apparent_temperature, 1)} C`);
     out += line('Humidity', `${fmtNum(w.relative_humidity_2m)} %`);
+    if (w.dew_point_2m != null) out += line('Dewpoint', `${fmtNum(w.dew_point_2m, 1)} C  /  ${fmtNum(w.dew_point_2m * 9/5 + 32, 1)} F`);
     out += line('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`);
     out += line('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`);
     if (w.wind_gusts_10m) out += line('Gusts', `${fmtNum(w.wind_gusts_10m, 1)} km/h`);
     out += line('Cloud Cover', `${fmtNum(w.cloud_cover)} %`);
     out += line('Precipitation', `${fmtNum(w.precipitation, 1)} mm`);
     if (w.visibility) out += line('Visibility', `${fmtNum(w.visibility/1000, 1)} km`);
-    if (daily?.uv_index_max?.[0] != null) out += line('UV Index (peak)', `${fmtNum(daily.uv_index_max[0], 1)} (${uvCategory(daily.uv_index_max[0])})`);
+    if (w.uv_index != null) out += line('UV Index (now)', `${fmtNum(w.uv_index, 1)} (${uvCategory(w.uv_index)})`);
+    else if (daily?.uv_index_max?.[0] != null) out += line('UV Index (peak)', `${fmtNum(daily.uv_index_max[0], 1)} (${uvCategory(daily.uv_index_max[0])})`);
     if (aq?.us_aqi != null) out += line('AQI (US)', `${fmtNum(aq.us_aqi)} (${aqiCategory(aq.us_aqi)})`);
+    const co2 = d.climate?.co2;
+    if (co2) {
+      const yoyDelta = co2.yearAgo ? ` (+${fmtNum(co2.ppm - co2.yearAgo, 2)} yr/yr)` : '';
+      out += line('CO2 (Mauna Loa)', `${fmtNum(co2.ppm, 2)} ppm${yoyDelta}`);
+    }
     // pollen (when present)
     if (aq) {
       const polEntries = [
@@ -2170,9 +3149,28 @@ function buildTextExport(entry) {
     out += line('Moon Phase', c.moon.name);
     out += line('Illumination', `${fmtNum(c.moon.illumination * 100, 1)} %`);
     out += line('Moon Age', `${fmtNum(c.moon.age, 1)} days`);
-    if (daily) {
+    const st = c.sunTimes;
+    if (st) {
+      const t = (iso) => iso ? iso.slice(11, 16) : '';
+      out += line('Sunrise', t(st.sunrise));
+      out += line('Sunset', t(st.sunset));
+      out += line('Civil Twilight', `${t(st.civilTwilightBegin)} / ${t(st.civilTwilightEnd)}`);
+      out += line('Astro Twilight', `${t(st.astronomicalTwilightBegin)} / ${t(st.astronomicalTwilightEnd)}`);
+      if (st.dayLengthSeconds) {
+        const m = Math.round(st.dayLengthSeconds / 60);
+        out += line('Day Length', `${Math.floor(m/60)}h ${m%60}m`);
+      }
+    } else if (daily) {
       out += line('Sunrise', daily.sunrise?.[0]?.slice(11, 16) || '');
       out += line('Sunset', daily.sunset?.[0]?.slice(11, 16) || '');
+    }
+    if (c.events?.activeMeteorShowers?.length) {
+      const ms = c.events.activeMeteorShowers.map((s) => s.atPeak ? `${s.name} (peaking, ZHR ${s.zhr})` : s.name).join(', ');
+      out += line('Meteor Showers', ms);
+    }
+    if (c.events?.nextEclipse) {
+      const e = c.events.nextEclipse;
+      out += line('Next Eclipse', `${e.type}, ${e.daysAway} ${e.daysAway === 1 ? 'day' : 'days'} (${e.region})`);
     }
     out += line('Julian Day', fmtNum(c.julianDay, 4));
     if (c.nextSolar) {
@@ -2187,6 +3185,10 @@ function buildTextExport(entry) {
     if (sw?.solarWind) {
       out += line('Solar Wind', `${fmtNum(sw.solarWind.speed)} km/s`);
       out += line('Plasma Density', `${fmtNum(sw.solarWind.density, 2)} p/cm3`);
+    }
+    if (sw?.aurora && sw.aurora.probability != null) {
+      const lbl = sw.aurora.probability >= 60 ? 'very likely' : sw.aurora.probability >= 30 ? 'possible' : sw.aurora.probability >= 10 ? 'low' : 'unlikely';
+      out += line('Aurora at Loc', `${fmtNum(sw.aurora.probability, 0)} % (${lbl})`);
     }
     if (iss) {
       out += line('ISS Position', `${fmtNum(iss.latitude, 2)}, ${fmtNum(iss.longitude, 2)} at ${fmtNum(iss.altitude, 1)} km`);
@@ -2257,9 +3259,25 @@ function buildTextExport(entry) {
 
   if (m) {
     out += `${RULE}\nMARKETS\n${RULE2}\n`;
+    const fmtPct = (p) => p == null ? '' : ` (${p >= 0 ? '+' : ''}${p.toFixed(2)}%)`;
+    if (m.stocks?.dji)    out += line('Dow Jones',  `${fmtNum(m.stocks.dji.price, 0)}${fmtPct(m.stocks.dji.changePercent)}`);
+    if (m.stocks?.sp500)  out += line('S&P 500',    `${fmtNum(m.stocks.sp500.price, 1)}${fmtPct(m.stocks.sp500.changePercent)}`);
+    if (m.stocks?.nasdaq) out += line('NASDAQ',     `${fmtNum(m.stocks.nasdaq.price, 1)}${fmtPct(m.stocks.nasdaq.changePercent)}`);
+    if (m.stocks?.vix)    out += line('VIX',        `${fmtNum(m.stocks.vix.price, 2)}${fmtPct(m.stocks.vix.changePercent)}`);
+    if (m.treasuries?.yr5)  out += line('5Y Treasury',  `${fmtNum(m.treasuries.yr5.price, 3)}%${fmtPct(m.treasuries.yr5.changePercent)}`);
+    if (m.treasuries?.yr10) out += line('10Y Treasury', `${fmtNum(m.treasuries.yr10.price, 3)}%${fmtPct(m.treasuries.yr10.changePercent)}`);
+    if (m.treasuries?.yr30) out += line('30Y Treasury', `${fmtNum(m.treasuries.yr30.price, 3)}%${fmtPct(m.treasuries.yr30.changePercent)}`);
+    if (m.treasuries?.yr5?.price != null && m.treasuries?.yr10?.price != null) {
+      const spread = m.treasuries.yr10.price - m.treasuries.yr5.price;
+      out += line('10Y-5Y Spread', `${fmtNum(spread, 3)}% (${spread < 0 ? 'inverted' : 'normal'})`);
+    }
+    if (m.commodities?.gold)   out += line('Gold (oz)',   `$${fmtNum(m.commodities.gold.price, 2)}${fmtPct(m.commodities.gold.changePercent)}`);
+    if (m.commodities?.silver) out += line('Silver (oz)', `$${fmtNum(m.commodities.silver.price, 2)}${fmtPct(m.commodities.silver.changePercent)}`);
+    if (m.commodities?.oil)    out += line('WTI Crude',   `$${fmtNum(m.commodities.oil.price, 2)}${fmtPct(m.commodities.oil.changePercent)}`);
     if (m.crypto?.bitcoin) out += line('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`);
     if (m.crypto?.ethereum) out += line('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`);
     if (m.crypto?.monero) out += line('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`);
+    if (m.sentiment) out += line('Fear & Greed', `${m.sentiment.value} (${m.sentiment.classification || ''})`);
     if (m.fx?.rates?.EUR) out += line('USD / EUR', fmtNum(m.fx.rates.EUR, 4));
     if (m.fx?.rates?.GBP) out += line('USD / GBP', fmtNum(m.fx.rates.GBP, 4));
     if (m.fx?.rates?.JPY) out += line('USD / JPY', fmtNum(m.fx.rates.JPY, 2));
@@ -2272,7 +3290,8 @@ function buildTextExport(entry) {
     const c1 = (it) => it ? (it.artistName ? `${it.name} / ${it.artistName}` : it.name) : '';
     if (cult.song) out += line('Top Song', c1(cult.song));
     if (cult.album) out += line('Top Album', c1(cult.album));
-    if (cult.movie) out += line('Top Movie', c1(cult.movie));
+    if (cult.movie) out += line('Top Movie', cult.movie.gross ? `${cult.movie.name}  (${cult.movie.gross})` : cult.movie.name);
+    if (cult.app) out += line('Top App', c1(cult.app));
     if (cult.podcast) out += line('Top Podcast', c1(cult.podcast));
     if (cult.book) out += line('Top Book', c1(cult.book));
     out += '\n';
@@ -2300,7 +3319,7 @@ function buildTextExport(entry) {
   }
 
   const cu = d.curio;
-  if (cu && (cu.apod || cu.xkcd)) {
+  if (cu && (cu.apod || cu.xkcd || cu.arxiv || cu.github)) {
     out += `${RULE}\nCURIO\n${RULE2}\n`;
     if (cu.apod) {
       out += line('NASA APOD', cu.apod.title || '');
@@ -2314,6 +3333,17 @@ function buildTextExport(entry) {
       out += line('xkcd', `#${cu.xkcd.num} / ${cu.xkcd.title || ''}`);
       if (cu.xkcd.alt) out += line('  alt', `"${cu.xkcd.alt}"`);
     }
+    if (cu.arxiv) {
+      out += line('arXiv', cu.arxiv.title || '');
+      if (cu.arxiv.category) out += line('  category', cu.arxiv.category);
+      if (cu.arxiv.summary) out += `  ${cu.arxiv.summary}\n`;
+    }
+    if (cu.github) {
+      const stars = cu.github.stars != null ? ` (★ ${fmtNum(cu.github.stars, 0)})` : '';
+      const lang = cu.github.language ? ` [${cu.github.language}]` : '';
+      out += line('GitHub', `${cu.github.name}${stars}${lang}`);
+      if (cu.github.description) out += `  ${cu.github.description}\n`;
+    }
     out += '\n';
   }
 
@@ -2325,8 +3355,67 @@ function buildTextExport(entry) {
     out += '\n';
   }
 
+  // internal state (mood / energy / focus)
+  if (d.internal && (d.internal.mood != null || d.internal.energy != null || d.internal.focus != null)) {
+    out += `${RULE}\nINTERNAL STATE\n${RULE2}\n`;
+    if (d.internal.mood != null)   out += line('Mood',   `${d.internal.mood} / 10`);
+    if (d.internal.energy != null) out += line('Energy', `${d.internal.energy} / 10`);
+    if (d.internal.focus != null)  out += line('Focus',  `${d.internal.focus} / 10`);
+    out += '\n';
+  }
+
+  // body / health
+  if (d.body) {
+    const b = d.body;
+    out += `${RULE}\nBODY / HEALTH\n${RULE2}\n`;
+    if (b.heartRate != null)         out += line('Heart Rate',     `${b.heartRate} bpm`);
+    if (b.bloodPressure && (b.bloodPressure.systolic != null || b.bloodPressure.diastolic != null)) {
+      const sys = b.bloodPressure.systolic  != null ? b.bloodPressure.systolic  : '--';
+      const dia = b.bloodPressure.diastolic != null ? b.bloodPressure.diastolic : '--';
+      out += line('Blood Pressure', `${sys} / ${dia} mmHg`);
+    }
+    if (b.bloodOxygen != null)       out += line('Blood Oxygen',   `${b.bloodOxygen} %`);
+    if (b.bloodGlucose != null)      out += line('Blood Glucose',  `${b.bloodGlucose} mg/dL  /  ${(b.bloodGlucose / 18.0182).toFixed(2)} mmol/L`);
+    if (b.bodyTemperatureF != null) {
+      const c = (b.bodyTemperatureF - 32) * 5 / 9;
+      out += line('Body Temperature', `${fmtNum(b.bodyTemperatureF, 1)} F  /  ${fmtNum(c, 1)} C`);
+    }
+    if (b.weightLb != null) {
+      const kg = b.weightLb * 0.453592;
+      out += line('Weight',          `${fmtNum(b.weightLb, 1)} lb  /  ${fmtNum(kg, 1)} kg`);
+    }
+    if (b.sleepHours != null)        out += line('Sleep',           `${fmtNum(b.sleepHours, 2)} hr`);
+    if (b.steps != null)             out += line('Steps',           `${b.steps.toLocaleString()}`);
+    if (b.hrv != null)               out += line('HRV',             `${b.hrv} ms`);
+    if (b.notes)                     out += line('Notes',           b.notes);
+    out += '\n';
+  }
+
+  // palette of the day
+  if (d.palette) {
+    out += `${RULE}\nPALETTE OF THE DAY\n${RULE2}\n`;
+    out += line('Sky',     d.palette.sky);
+    out += line('Horizon', d.palette.horizon);
+    out += line('Cloud',   d.palette.cloud);
+    out += line('Accent',  d.palette.accent);
+    if (d.palette.derivedFrom?.phase) out += line('  derived', `phase=${d.palette.derivedFrom.phase}, cloud=${fmtNum(d.palette.derivedFrom.cloudCover, 0)}%, sun_alt=${fmtNum(d.palette.derivedFrom.sunAltitude, 1)} deg`);
+    out += '\n';
+  }
+
+  // capture method
+  if (d.meta?.client?.platform) {
+    out += `${RULE}\nMETA\n${RULE2}\n`;
+    out += line('Captured on', d.meta.client.platform);
+    if (d.meta.client.viewport) out += line('Viewport', d.meta.client.viewport);
+    if (d.meta.client.language) out += line('Language', d.meta.client.language);
+    out += '\n';
+  }
+
   out += `${RULE}\nOBSERVATION\n${RULE2}\n\n`;
   out += (entry.text || '').trim() + '\n\n';
+  if (d.tags?.length) {
+    out += `Tags  /  ${d.tags.map((t) => '#' + t).join(' ')}\n\n`;
+  }
   out += RULE + '\n';
   out += `Milepost / Field Instrument 003 / Green Shoe Garage\n`;
   return out;
@@ -2387,9 +3476,360 @@ function renderArchive() {
   }).join('');
 }
 
+/* ---------- color palette of the day ---------- */
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const toHex = (v) => Math.round(255 * f(v)).toString(16).padStart(2, '0');
+  return `#${toHex(0)}${toHex(8)}${toHex(4)}`;
+}
+
+function computePalette(d) {
+  const w = d.weather?.current;
+  const c = d.celestial;
+  if (!w && !c) return null;
+
+  const cloud = w?.cloud_cover ?? 50;
+  const sunAlt = c?.sun?.altitude ?? 30;
+  const precip = w?.precipitation ?? 0;
+
+  // Phase classification by sun altitude
+  let phase;
+  if (sunAlt > 30) phase = 'day';
+  else if (sunAlt > 6) phase = 'low-sun';
+  else if (sunAlt > -6) phase = 'twilight';
+  else phase = 'night';
+
+  const overcast = cloud > 70;
+  const clear = cloud < 25;
+
+  let sky, sunC, cloudC, accent;
+
+  if (phase === 'day') {
+    if (clear) {
+      sky = hslToHex(205, 70, 72); sunC = hslToHex(45, 95, 80);
+      cloudC = hslToHex(0, 0, 96); accent = hslToHex(35, 75, 50);
+    } else if (overcast) {
+      sky = hslToHex(215, 18, 72); sunC = hslToHex(50, 25, 75);
+      cloudC = hslToHex(220, 10, 58); accent = hslToHex(40, 30, 45);
+    } else {
+      sky = hslToHex(210, 50, 70); sunC = hslToHex(45, 70, 75);
+      cloudC = hslToHex(200, 8, 85); accent = hslToHex(35, 60, 50);
+    }
+  } else if (phase === 'low-sun') {
+    sky = hslToHex(25, 75, 60); sunC = hslToHex(15, 90, 60);
+    cloudC = overcast ? hslToHex(15, 30, 50) : hslToHex(30, 50, 75);
+    accent = hslToHex(330, 40, 50);
+  } else if (phase === 'twilight') {
+    sky = hslToHex(245, 35, 35); sunC = hslToHex(20, 60, 45);
+    cloudC = hslToHex(235, 20, 45); accent = hslToHex(280, 30, 40);
+  } else {
+    // night
+    sky = hslToHex(235, 45, 14); sunC = hslToHex(220, 25, 65);
+    cloudC = overcast ? hslToHex(235, 25, 25) : hslToHex(240, 30, 35);
+    accent = hslToHex(225, 60, 30);
+  }
+
+  return {
+    sky, horizon: sunC, cloud: cloudC, accent,
+    derivedFrom: { phase, sunAltitude: sunAlt, cloudCover: cloud, precipitation: precip },
+  };
+}
+
+function renderPalette(palette) {
+  const strip = $('paletteStrip');
+  if (!strip) return;
+  if (!palette) { strip.innerHTML = ''; return; }
+  const swatches = [
+    { name: 'sky',     hex: palette.sky },
+    { name: 'horizon', hex: palette.horizon },
+    { name: 'cloud',   hex: palette.cloud },
+    { name: 'accent',  hex: palette.accent },
+  ];
+  strip.innerHTML = swatches.map((s) =>
+    `<span class="swatch" style="background:${s.hex}" data-hex="${s.hex}" title="${s.name}: ${s.hex}"></span>`
+  ).join('');
+  strip.classList.add('with-labels');
+}
+
+/* ---------- stamp landing animation ---------- */
+function animateStamp() {
+  const stamp = document.querySelector('.stamp');
+  if (!stamp || !stamp.animate) return;
+  stamp.animate([
+    { transform: 'translateY(-300px) rotate(-45deg)', opacity: 0 },
+    { transform: 'translateY(8px) rotate(-3deg)',     opacity: 0.95, offset: 0.6 },
+    { transform: 'translateY(0)     rotate(-8deg)',   opacity: 0.85 },
+  ], { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' });
+}
+
+/* ---------- locomotive whistle (Web Audio) ---------- */
+function playWhistle() {
+  if (Settings.get('sound') !== 'on') return;
+  let ctx;
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+  catch (e) { return; }
+  const now = ctx.currentTime;
+  const duration = 1.8;
+
+  // G minor triad: G3, A#3, D4, distant steam-whistle resonance
+  const freqs = [196.00, 233.08, 293.66];
+
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+
+  // Faint delayed echo for the "distant" quality
+  const delay = ctx.createDelay();
+  delay.delayTime.value = 0.085;
+  const echo = ctx.createGain();
+  echo.gain.value = 0.18;
+  master.connect(delay);
+  delay.connect(echo);
+  echo.connect(ctx.destination);
+
+  freqs.forEach((freq) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    // Slow vibrato
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 4.5;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 2.5;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    const tone = ctx.createGain();
+    tone.gain.value = 0.14;
+    osc.connect(tone);
+    tone.connect(master);
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + duration);
+    lfo.stop(now + duration);
+  });
+
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.22, now + 0.16);
+  master.gain.setValueAtTime(0.22, now + 1.1);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  setTimeout(() => { try { ctx.close(); } catch (e) {} }, duration * 1000 + 200);
+}
+
+/* ---------- internal state sliders ---------- */
+function setupInternalState() {
+  const sliders = [
+    { input: $('moodSlider'), val: $('moodVal') },
+    { input: $('energySlider'), val: $('energyVal') },
+    { input: $('focusSlider'), val: $('focusVal') },
+  ];
+  sliders.forEach(({ input, val }) => {
+    input.addEventListener('input', () => {
+      input.dataset.set = '1';
+      val.textContent = input.value;
+      $('internalState').classList.add('set');
+      scheduleDraftSave();
+    });
+  });
+  $('clearInternal').addEventListener('click', () => {
+    sliders.forEach(({ input, val }) => {
+      input.value = '5';
+      delete input.dataset.set;
+      val.textContent = '--';
+    });
+    $('internalState').classList.remove('set');
+    scheduleDraftSave();
+  });
+}
+
+function readInternalState() {
+  const m = $('moodSlider');
+  const e = $('energySlider');
+  const f = $('focusSlider');
+  if (!m.dataset.set && !e.dataset.set && !f.dataset.set) return null;
+  return {
+    mood:   m.dataset.set ? parseInt(m.value, 10) : null,
+    energy: e.dataset.set ? parseInt(e.value, 10) : null,
+    focus:  f.dataset.set ? parseInt(f.value, 10) : null,
+    scale: '1-10',
+  };
+}
+
+/* ---------- tags ---------- */
+function setupTags() {
+  const input = $('tagsInput');
+  input.addEventListener('input', () => {
+    renderTagChips();
+    scheduleDraftSave();
+  });
+}
+
+function parseTags(text) {
+  if (!text) return [];
+  return [...new Set(
+    text.split(/[\s,]+/)
+      .map((t) => t.trim().replace(/^#+/, '').toLowerCase())
+      .filter((t) => t && /^[a-z0-9][a-z0-9_-]{0,31}$/i.test(t))
+  )];
+}
+
+function renderTagChips() {
+  const tags = parseTags($('tagsInput').value);
+  $('tagChips').innerHTML = tags.map((t) => `<span class="tag-chip">#${escapeHtml(t)}</span>`).join('');
+}
+
+function readTags() {
+  const tags = parseTags($('tagsInput').value);
+  return tags.length ? tags : null;
+}
+
+/* ---------- body / health reading ---------- */
+
+const BODY_FIELDS = [
+  { id: 'bodyHR',       key: 'heartRate' },
+  { id: 'bodySpO2',     key: 'bloodOxygen' },
+  { id: 'bodyGlucose',  key: 'bloodGlucose' },
+  { id: 'bodyTemp',     key: 'bodyTemperatureF' },
+  { id: 'bodyWeight',   key: 'weightLb' },
+  { id: 'bodySleep',    key: 'sleepHours' },
+  { id: 'bodySteps',    key: 'steps' },
+  { id: 'bodyHRV',      key: 'hrv' },
+];
+
+function setupBody() {
+  const inputs = [
+    ...BODY_FIELDS.map((f) => $(f.id)),
+    $('bodyBPsys'), $('bodyBPdia'), $('bodyNotes'),
+  ];
+  inputs.forEach((el) => {
+    el.addEventListener('input', () => {
+      updateBodyState();
+      scheduleDraftSave();
+    });
+  });
+  $('clearBody').addEventListener('click', () => {
+    inputs.forEach((el) => { el.value = ''; });
+    updateBodyState();
+    scheduleDraftSave();
+  });
+  updateBodyState();
+}
+
+function updateBodyState() {
+  const data = readBody();
+  const block = $('bodyState');
+  const status = $('bodyStatus');
+  if (data) {
+    const count = countBodyFields(data);
+    block.classList.add('has-data');
+    status.textContent = `${count} field${count === 1 ? '' : 's'} set`;
+    status.classList.add('set');
+  } else {
+    block.classList.remove('has-data');
+    status.textContent = '';
+    status.classList.remove('set');
+  }
+}
+
+function countBodyFields(b) {
+  if (!b) return 0;
+  let n = 0;
+  if (b.heartRate != null) n++;
+  if (b.bloodPressure?.systolic != null || b.bloodPressure?.diastolic != null) n++;
+  if (b.bloodOxygen != null) n++;
+  if (b.bloodGlucose != null) n++;
+  if (b.bodyTemperatureF != null) n++;
+  if (b.weightLb != null) n++;
+  if (b.sleepHours != null) n++;
+  if (b.steps != null) n++;
+  if (b.hrv != null) n++;
+  if (b.notes) n++;
+  return n;
+}
+
+function readBody() {
+  const numOrNull = (id, opts = {}) => {
+    const v = $(id).value.trim();
+    if (v === '') return null;
+    const n = opts.int ? parseInt(v, 10) : parseFloat(v);
+    if (!isFinite(n)) return null;
+    return n;
+  };
+  const out = {};
+  for (const f of BODY_FIELDS) {
+    const v = numOrNull(f.id, { int: ['heartRate','steps','hrv'].includes(f.key) });
+    if (v != null) out[f.key] = v;
+  }
+  const sys = numOrNull('bodyBPsys', { int: true });
+  const dia = numOrNull('bodyBPdia', { int: true });
+  if (sys != null || dia != null) out.bloodPressure = { systolic: sys, diastolic: dia };
+  const notes = $('bodyNotes').value.trim();
+  if (notes) out.notes = notes;
+  return Object.keys(out).length ? out : null;
+}
+
 /* ---------- wiring ---------- */
 
 initSettings();
+setupInternalState();
+setupTags();
+setupBody();
+
+// restore draft if present
+(function restoreDraft() {
+  const draft = loadDraft();
+  if (!draft) return;
+  if (draft.text) {
+    $('journalText').value = draft.text;
+  }
+  if (draft.tags) {
+    $('tagsInput').value = draft.tags;
+    renderTagChips();
+  }
+  const restoreSlider = (sliderId, valId, value, isSet) => {
+    if (!isSet) return;
+    const s = $(sliderId);
+    s.value = value || 5;
+    s.dataset.set = '1';
+    $(valId).textContent = s.value;
+  };
+  restoreSlider('moodSlider', 'moodVal', draft.mood, draft.moodSet);
+  restoreSlider('energySlider', 'energyVal', draft.energy, draft.energySet);
+  restoreSlider('focusSlider', 'focusVal', draft.focus, draft.focusSet);
+  if (draft.moodSet || draft.energySet || draft.focusSet) {
+    $('internalState').classList.add('set');
+  }
+  // body fields
+  if (draft.body && typeof draft.body === 'object') {
+    let bodyRestored = false;
+    const restoreInput = (id, val) => {
+      if (val == null || val === '') return;
+      $(id).value = val;
+      bodyRestored = true;
+    };
+    restoreInput('bodyHR',      draft.body.heartRate);
+    restoreInput('bodyBPsys',   draft.body.bpSys);
+    restoreInput('bodyBPdia',   draft.body.bpDia);
+    restoreInput('bodySpO2',    draft.body.bloodOxygen);
+    restoreInput('bodyGlucose', draft.body.bloodGlucose);
+    restoreInput('bodyTemp',    draft.body.bodyTemperatureF);
+    restoreInput('bodyWeight',  draft.body.weightLb);
+    restoreInput('bodySleep',   draft.body.sleepHours);
+    restoreInput('bodySteps',   draft.body.steps);
+    restoreInput('bodyHRV',     draft.body.hrv);
+    restoreInput('bodyNotes',   draft.body.notes);
+    if (bodyRestored) {
+      $('bodyState').open = true;
+      updateBodyState();
+    }
+  }
+  if (draft.text || draft.tags) {
+    flashStatus('Draft restored');
+  }
+})();
 
 $('capBtn').addEventListener('click', () => {
   // if there's an existing entry with text, archive it first
@@ -2414,24 +3854,83 @@ $('recapture').addEventListener('click', async () => {
   $('journalText').value = keepText;
 });
 
+/* ---------- draft auto-save (localStorage) ---------- */
+const DRAFT_KEY = 'milepost_draft';
+let draftSaveTimer = null;
+
+function saveDraft() {
+  try {
+    const draft = {
+      text: $('journalText').value || '',
+      tags: ($('tagsInput') && $('tagsInput').value) || '',
+      mood: ($('moodSlider') && $('moodSlider').value) || null,
+      energy: ($('energySlider') && $('energySlider').value) || null,
+      focus: ($('focusSlider') && $('focusSlider').value) || null,
+      moodSet: ($('moodSlider') && $('moodSlider').dataset.set === '1') || false,
+      energySet: ($('energySlider') && $('energySlider').dataset.set === '1') || false,
+      focusSet: ($('focusSlider') && $('focusSlider').dataset.set === '1') || false,
+      body: {
+        heartRate:        ($('bodyHR')      || {}).value || '',
+        bpSys:            ($('bodyBPsys')   || {}).value || '',
+        bpDia:            ($('bodyBPdia')   || {}).value || '',
+        bloodOxygen:      ($('bodySpO2')    || {}).value || '',
+        bloodGlucose:     ($('bodyGlucose') || {}).value || '',
+        bodyTemperatureF: ($('bodyTemp')    || {}).value || '',
+        weightLb:         ($('bodyWeight')  || {}).value || '',
+        sleepHours:       ($('bodySleep')   || {}).value || '',
+        steps:            ($('bodySteps')   || {}).value || '',
+        hrv:              ($('bodyHRV')     || {}).value || '',
+        notes:            ($('bodyNotes')   || {}).value || '',
+      },
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch (e) { /* localStorage might be sandboxed; silently ignore */ }
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+}
+
+function scheduleDraftSave() {
+  if (draftSaveTimer) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(saveDraft, 400);
+}
+
 $('journalText').addEventListener('input', (e) => {
   if (STATE.current) STATE.current.text = e.target.value;
+  scheduleDraftSave();
 });
 
 $('saveTxt').addEventListener('click', () => {
   if (!STATE.current) return;
   STATE.current.text = $('journalText').value;
+  STATE.current.data.tags = readTags();
+  STATE.current.data.internal = readInternalState();
+  STATE.current.data.body = readBody();
   const txt = buildTextExport(STATE.current);
   downloadFile(`${filenameStem(STATE.current)}.txt`, txt, 'text/plain;charset=utf-8');
+  clearDraft();
 });
 
 $('saveJson').addEventListener('click', () => {
   if (!STATE.current) return;
   STATE.current.text = $('journalText').value;
+  STATE.current.data.tags = readTags();
+  STATE.current.data.internal = readInternalState();
+  STATE.current.data.body = readBody();
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.2',
+    version: '0.0.8',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
@@ -2441,11 +3940,15 @@ $('saveJson').addEventListener('click', () => {
     },
   };
   downloadFile(`${filenameStem(STATE.current)}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  clearDraft();
 });
 
 $('copyTxt').addEventListener('click', async () => {
   if (!STATE.current) return;
   STATE.current.text = $('journalText').value;
+  STATE.current.data.tags = readTags();
+  STATE.current.data.internal = readInternalState();
+  STATE.current.data.body = readBody();
   const txt = buildTextExport(STATE.current);
   try {
     await navigator.clipboard.writeText(txt);

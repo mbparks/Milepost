@@ -171,6 +171,20 @@ body { padding: 24px 16px 48px; }
   color: var(--ink);
   letter-spacing: 0.16em;
 }
+.head .badge .cross-link {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.head .badge .cross-link a {
+  color: var(--flag);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(192, 67, 26, 0.35);
+  padding-bottom: 1px;
+}
+.head .badge .cross-link a:hover {
+  border-bottom-color: var(--flag);
+}
 
 /* buttons */
 .btn {
@@ -493,6 +507,201 @@ body { padding: 24px 16px 48px; }
 .observation.empty-obs {
   color: var(--ink-faint);
   font-style: italic;
+}
+
+/* tags on entry detail */
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 22px;
+}
+.entry-tags-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin-right: 4px;
+}
+.tag-chip-link {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  background: var(--stamp);
+  color: var(--paper);
+  border: none;
+  border-radius: 2px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.tag-chip-link:hover { background: var(--ink); }
+
+/* palette of the day */
+.entry-palette {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 10px 14px;
+  border: 1px solid rgba(20,15,10,0.18);
+  background: rgba(255,255,255,0.25);
+}
+.entry-palette-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.entry-palette .palette-phase {
+  color: var(--ink-soft);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  margin-left: 6px;
+}
+.entry-palette-strip {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  height: 22px;
+}
+.entry-palette-strip .swatch {
+  flex: 1;
+  border: 1px solid rgba(20,15,10,0.2);
+}
+
+/* internal state at capture */
+.entry-internal {
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.30);
+}
+.entry-internal-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.entry-internal .is-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 48px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.entry-internal .is-row:last-child { margin-bottom: 0; }
+.entry-internal .is-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.entry-internal .is-bar {
+  height: 6px;
+  background: rgba(20,15,10,0.10);
+  border: 1px solid rgba(20,15,10,0.15);
+  position: relative;
+}
+.entry-internal .is-fill {
+  display: block;
+  height: 100%;
+  background: var(--flag);
+}
+.entry-internal .is-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+
+/* body notes readout (inside Body / Health section) */
+.body-notes-readout {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--flag);
+  background: rgba(192,67,26,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.body-notes-readout .bn-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.body-notes-readout .bn-text {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+/* tag filter chips in sidebar */
+.tag-filter-strip {
+  padding: 0 14px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  border-bottom: 1px solid var(--rule);
+}
+.tag-filter-strip:empty { display: none; }
+.tag-filter-chip {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  padding: 3px 7px 2px;
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: lowercase;
+  font-weight: 600;
+}
+.tag-filter-chip .tag-count {
+  color: var(--ink-faint);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.tag-filter-chip:hover {
+  background: rgba(31,58,82,0.06);
+  border-color: var(--ink-soft);
+}
+.tag-filter-chip.active {
+  background: var(--stamp);
+  color: var(--paper);
+  border-color: var(--stamp);
+}
+.tag-filter-chip.active .tag-count { color: rgba(236,227,207,0.7); }
+
+/* meta capture-device line */
+.entry-meta-line {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: center;
 }
 
 /* sections (reused from main app, adapted) */
@@ -937,6 +1146,8 @@ body { padding: 24px 16px 48px; }
       <div class="badge">
         <strong>GSG / MMXXVI</strong>
         Green Shoe Garage
+        <div class="cross-link"><a href="milepost.html">New Entry &rarr;</a></div>
+        <div class="cross-link"><a href="milepost-status.html">Run Diagnostic &rarr;</a></div>
       </div>
     </div>
   </header>
@@ -991,8 +1202,9 @@ body { padding: 24px 16px 48px; }
           <span id="entryCount">0</span>
         </div>
         <div class="search-row">
-          <input type="search" id="searchBox" placeholder="Search observations, locations, conditions..." />
+          <input type="search" id="searchBox" placeholder="Search observations, locations, conditions, tags..." />
         </div>
+        <div class="tag-filter-strip" id="tagFilterStrip"></div>
         <div class="entry-list" id="entryListEl"></div>
       </aside>
       <article class="detail" id="detailPanel">
@@ -1007,7 +1219,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.1</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.8</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1029,7 +1241,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.1
+   MILEPOST READER  /  v0.0.8
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1039,6 +1251,7 @@ const STATE = {
   filtered: [],
   selectedId: null,
   searchTerm: '',
+  activeTag: null,     // null = no tag filter, or a tag string
   errors: [],          // parsing errors
   viewMode: 'list',    // 'list' | 'map'
 };
@@ -1248,6 +1461,7 @@ function clearAll() {
   STATE.entries = [];
   STATE.selectedId = null;
   STATE.searchTerm = '';
+  STATE.activeTag = null;
   STATE.errors = [];
   $('searchBox').value = '';
   render();
@@ -1257,28 +1471,77 @@ function clearAll() {
 
 function applyFilter() {
   const q = STATE.searchTerm.toLowerCase().trim();
-  if (!q) {
-    STATE.filtered = STATE.entries.slice();
-    return;
+  const tag = STATE.activeTag;
+  let pool = STATE.entries.slice();
+
+  // Tag filter (exclusive: only entries containing this tag)
+  if (tag) {
+    pool = pool.filter((e) => {
+      const tags = e.data.entry.snapshot?.tags || [];
+      return Array.isArray(tags) && tags.includes(tag);
+    });
   }
-  STATE.filtered = STATE.entries.filter((e) => {
-    const d = e.data.entry;
-    const s = d.snapshot || {};
-    const hay = [
-      d.observation || '',
-      d.serial || '',
-      s.location?.place || '',
-      WMO[s.weather?.current?.weather_code] || '',
-      s.celestial?.sunSign || '',
-      s.celestial?.moon?.name || '',
-      s.cultural?.song?.name || '',
-      s.cultural?.movie?.name || '',
-      s.cultural?.book?.name || '',
-      s.discourse?.wiki?.mostread?.title || '',
-      s.discourse?.hackerNews?.title || '',
-      e.filename,
-    ].join(' ').toLowerCase();
-    return hay.includes(q);
+
+  // Text search across many fields including tags
+  if (q) {
+    pool = pool.filter((e) => {
+      const d = e.data.entry;
+      const s = d.snapshot || {};
+      const hay = [
+        d.observation || '',
+        d.serial || '',
+        s.location?.place || '',
+        WMO[s.weather?.current?.weather_code] || '',
+        s.celestial?.sunSign || '',
+        s.celestial?.moon?.name || '',
+        s.cultural?.song?.name || '',
+        s.cultural?.movie?.name || '',
+        s.cultural?.book?.name || '',
+        s.discourse?.wiki?.mostread?.title || '',
+        s.discourse?.hackerNews?.title || '',
+        (s.tags || []).map((t) => '#' + t).join(' '),
+        e.filename,
+      ].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  STATE.filtered = pool;
+}
+
+function collectAllTags() {
+  // Returns Map<tag, count> across all loaded entries
+  const counts = new Map();
+  for (const e of STATE.entries) {
+    const tags = e.data.entry.snapshot?.tags || [];
+    if (!Array.isArray(tags)) continue;
+    for (const t of tags) {
+      counts.set(t, (counts.get(t) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function renderTagFilter() {
+  const strip = $('tagFilterStrip');
+  if (!strip) return;
+  const counts = collectAllTags();
+  if (counts.size === 0) { strip.innerHTML = ''; return; }
+  // Sort by count desc, then alpha
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const all = `<button class="tag-filter-chip${STATE.activeTag == null ? ' active' : ''}" data-tag="">all <span class="tag-count">${STATE.entries.length}</span></button>`;
+  const chips = sorted.map(([t, n]) =>
+    `<button class="tag-filter-chip${STATE.activeTag === t ? ' active' : ''}" data-tag="${escapeHtml(t)}">#${escapeHtml(t)} <span class="tag-count">${n}</span></button>`
+  ).join('');
+  strip.innerHTML = all + chips;
+  strip.querySelectorAll('.tag-filter-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.tag;
+      STATE.activeTag = t === '' ? null : t;
+      applyFilter();
+      renderTagFilter();
+      renderList();
+    });
   });
 }
 
@@ -1348,7 +1611,14 @@ function renderList() {
     ? STATE.entries.length
     : `${STATE.filtered.length} / ${STATE.entries.length}`;
   if (!STATE.filtered.length) {
-    el.innerHTML = `<div class="list-empty">${STATE.searchTerm ? 'No matches.' : 'No entries loaded.'}</div>`;
+    const msg = STATE.searchTerm && STATE.activeTag
+      ? `No entries match search and tag #${STATE.activeTag}.`
+      : STATE.searchTerm
+        ? 'No matches.'
+        : STATE.activeTag
+          ? `No entries tagged #${STATE.activeTag}.`
+          : 'No entries loaded.';
+    el.innerHTML = `<div class="list-empty">${escapeHtml(msg)}</div>`;
     return;
   }
   el.innerHTML = STATE.filtered.map((e) => {
@@ -1426,6 +1696,58 @@ function renderDetail() {
     ${obs ? escapeHtml(obs) : 'No observation recorded with this entry.'}
   </div>`;
 
+  // tags row (right after observation)
+  if (Array.isArray(s.tags) && s.tags.length) {
+    html += `<div class="entry-tags fade-in">
+      <span class="entry-tags-label">Tags</span>
+      ${s.tags.map((t) => `<button class="tag-chip-link" data-jump-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('')}
+    </div>`;
+  }
+
+  // palette of the day (small swatch row above context map)
+  if (s.palette) {
+    const pal = s.palette;
+    const swatches = [
+      { name: 'sky',     hex: pal.sky },
+      { name: 'horizon', hex: pal.horizon },
+      { name: 'cloud',   hex: pal.cloud },
+      { name: 'accent',  hex: pal.accent },
+    ].filter((sw) => sw.hex);
+    if (swatches.length) {
+      const phaseLabel = pal.derivedFrom?.phase ? ` <span class="palette-phase">${escapeHtml(pal.derivedFrom.phase)}</span>` : '';
+      html += `<div class="entry-palette fade-in">
+        <span class="entry-palette-label">Palette of the day${phaseLabel}</span>
+        <span class="entry-palette-strip">
+          ${swatches.map((sw) => `<span class="swatch" style="background:${escapeHtml(sw.hex)}" title="${escapeHtml(sw.name)}: ${escapeHtml(sw.hex)}" data-hex="${escapeHtml(sw.hex)}"></span>`).join('')}
+        </span>
+      </div>`;
+    }
+  }
+
+  // internal state (mood / energy / focus)
+  if (s.internal && (s.internal.mood != null || s.internal.energy != null || s.internal.focus != null)) {
+    const bar = (label, val) => {
+      if (val == null) return '';
+      const pct = Math.max(0, Math.min(100, val * 10));
+      return `<div class="is-row">
+        <span class="is-label">${label}</span>
+        <span class="is-bar"><span class="is-fill" style="width:${pct}%"></span></span>
+        <span class="is-val">${val}/10</span>
+      </div>`;
+    };
+    html += `<div class="entry-internal fade-in">
+      <div class="entry-internal-label">Internal state at capture</div>
+      ${bar('Mood',   s.internal.mood)}
+      ${bar('Energy', s.internal.energy)}
+      ${bar('Focus',  s.internal.focus)}
+    </div>`;
+  }
+
+  // body / health
+  if (s.body) {
+    html += renderSectionBody(s);
+  }
+
   // context map (when location is available)
   if (s.location?.latitude != null) {
     html += `<div class="context-map-section fade-in">
@@ -1451,9 +1773,12 @@ function renderDetail() {
   html += renderSectionOnThisDay(s);
 
   // actions
+  const metaClient = s.meta?.client?.platform;
+  const metaLine = metaClient ? `<span class="entry-meta-line">captured on ${escapeHtml(metaClient)}</span>` : '';
   html += `<div class="detail-actions">
     <button class="btn small" id="actViewRaw">View Raw JSON</button>
     <button class="btn small ghost" id="actPrint">Print</button>
+    ${metaLine}
     <span style="margin-left:auto;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-faint);align-self:center">
       Source: ${escapeHtml(entry.filename)}
     </span>
@@ -1463,6 +1788,20 @@ function renderDetail() {
 
   $('actViewRaw').addEventListener('click', () => showRawJson(entry));
   $('actPrint').addEventListener('click', () => window.print());
+
+  // wire tag-chip jumps: click a tag chip on an entry, jump to that tag filter
+  panel.querySelectorAll('[data-jump-tag]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.jumpTag;
+      STATE.activeTag = t;
+      // exit map mode if active so the filtered list shows
+      if (STATE.viewMode === 'map') STATE.viewMode = 'list';
+      applyFilter();
+      renderTagFilter();
+      renderList();
+      render();
+    });
+  });
 
   // initialize the context map (after the container is in the DOM)
   if (s.location?.latitude != null) {
@@ -1486,48 +1825,163 @@ function kvRow(k, v, qual) {
   return `<div class="kv"><span class="k">${escapeHtml(k)}</span><span class="v${muted ? ' muted' : ''}">${escapeHtml(safe(v))}${q}</span></div>`;
 }
 
+// Clinical category labels (rough, US ranges) for color/qualifier in the kv row.
+// Returns "" (no qualifier) for typical/normal values, descriptive labels otherwise.
+function bodyCategory(field, val, second) {
+  if (val == null) return '';
+  switch (field) {
+    case 'heartRate':
+      if (val < 40) return 'very low';
+      if (val < 60) return 'low (athlete?)';
+      if (val <= 100) return 'normal';
+      if (val <= 120) return 'elevated';
+      return 'very high';
+    case 'bp': {
+      // val = sys, second = dia
+      const sys = val, dia = second;
+      if (sys == null && dia == null) return '';
+      if ((sys != null && sys < 90) || (dia != null && dia < 60)) return 'low';
+      if ((sys != null && sys >= 180) || (dia != null && dia >= 120)) return 'crisis range';
+      if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) return 'stage 2 HTN';
+      if ((sys != null && sys >= 130) || (dia != null && dia >= 80)) return 'stage 1 HTN';
+      if ((sys != null && sys >= 120)) return 'elevated';
+      return 'normal';
+    }
+    case 'spo2':
+      if (val < 90) return 'hypoxia';
+      if (val < 95) return 'low';
+      return 'normal';
+    case 'glucose':
+      if (val < 70) return 'hypoglycemic';
+      if (val < 100) return 'normal (fasting)';
+      if (val < 126) return 'pre-diabetic (fasting)';
+      if (val < 200) return 'elevated';
+      return 'very high';
+    case 'tempF':
+      if (val < 95) return 'hypothermic';
+      if (val < 97.0) return 'low';
+      if (val <= 99.0) return 'normal';
+      if (val <= 100.4) return 'mild fever';
+      if (val <= 103) return 'fever';
+      return 'high fever';
+    case 'hrv':
+      if (val < 20) return 'very low';
+      if (val < 40) return 'low';
+      if (val < 70) return 'moderate';
+      if (val < 100) return 'good';
+      return 'high';
+    case 'sleep':
+      if (val < 5) return 'insufficient';
+      if (val < 7) return 'short';
+      if (val <= 9) return 'normal';
+      return 'long';
+    default:
+      return '';
+  }
+}
+
+function renderSectionBody(s) {
+  const b = s.body;
+  if (!b) return '';
+  const rows = [];
+  if (b.heartRate != null) {
+    rows.push(kvRow('Heart Rate', `${b.heartRate} bpm`, bodyCategory('heartRate', b.heartRate)));
+  }
+  if (b.bloodPressure && (b.bloodPressure.systolic != null || b.bloodPressure.diastolic != null)) {
+    const sys = b.bloodPressure.systolic;
+    const dia = b.bloodPressure.diastolic;
+    const display = `${sys != null ? sys : '--'} / ${dia != null ? dia : '--'} mmHg`;
+    rows.push(kvRow('Blood Pressure', display, bodyCategory('bp', sys, dia)));
+  }
+  if (b.bloodOxygen != null) {
+    rows.push(kvRow('Blood Oxygen', `${b.bloodOxygen}%`, bodyCategory('spo2', b.bloodOxygen)));
+  }
+  if (b.bloodGlucose != null) {
+    const mmol = (b.bloodGlucose / 18.0182).toFixed(2);
+    rows.push(kvRow('Blood Glucose', `${b.bloodGlucose} mg/dL / ${mmol} mmol/L`, bodyCategory('glucose', b.bloodGlucose)));
+  }
+  if (b.bodyTemperatureF != null) {
+    const c = (b.bodyTemperatureF - 32) * 5 / 9;
+    rows.push(kvRow('Body Temperature', `${fmtNum(b.bodyTemperatureF, 1)}°F / ${fmtNum(c, 1)}°C`, bodyCategory('tempF', b.bodyTemperatureF)));
+  }
+  if (b.weightLb != null) {
+    const kg = b.weightLb * 0.453592;
+    rows.push(kvRow('Weight', `${fmtNum(b.weightLb, 1)} lb / ${fmtNum(kg, 1)} kg`));
+  }
+  if (b.sleepHours != null) {
+    rows.push(kvRow('Sleep (last night)', `${fmtNum(b.sleepHours, 2)} hr`, bodyCategory('sleep', b.sleepHours)));
+  }
+  if (b.steps != null) {
+    rows.push(kvRow('Steps (today)', `${b.steps.toLocaleString()}`));
+  }
+  if (b.hrv != null) {
+    rows.push(kvRow('HRV', `${b.hrv} ms`, bodyCategory('hrv', b.hrv)));
+  }
+  let inner = rows.join('');
+  if (b.notes) {
+    inner += `<div class="body-notes-readout"><span class="bn-label">Notes</span><span class="bn-text">${escapeHtml(b.notes)}</span></div>`;
+  }
+  return sec('Body / Health', 'self-reported', inner);
+}
+
 function renderSectionAtmospheric(s) {
   const w = s.weather?.current;
   const daily = s.weather?.daily;
   const aq = s.airQuality?.current;
+  const co2 = s.climate?.co2;
   if (!w) return sec('Atmospheric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const rows = [
     kvRow('Conditions', WMO[w.weather_code] || '--'),
     kvRow('Temperature', `${fmtNum(w.temperature_2m, 1)}°C / ${fmtNum(w.temperature_2m * 9/5 + 32, 1)}°F`),
     kvRow('Feels Like', `${fmtNum(w.apparent_temperature, 1)}°C`),
     kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
+    w.dew_point_2m != null ? kvRow('Dewpoint', `${fmtNum(w.dew_point_2m, 1)}°C / ${fmtNum(w.dew_point_2m * 9/5 + 32, 1)}°F`) : '',
     kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
     kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
     kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
     kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
     kvRow('Precipitation', `${fmtNum(w.precipitation, 1)} mm`),
     kvRow('Visibility', w.visibility ? `${fmtNum(w.visibility/1000, 1)} km` : '--'),
-    kvRow('UV Index (peak)', daily ? `${fmtNum(daily.uv_index_max?.[0], 1)}` : '--', daily ? uvCategory(daily.uv_index_max?.[0]) : ''),
+    kvRow('UV Index (now)', w.uv_index != null ? fmtNum(w.uv_index, 1) : (daily ? `${fmtNum(daily.uv_index_max?.[0], 1)} peak` : '--'), w.uv_index != null ? uvCategory(w.uv_index) : (daily ? uvCategory(daily.uv_index_max?.[0]) : '')),
     kvRow('AQI (US)', aq ? fmtNum(aq.us_aqi) : '--', aq ? aqiCategory(aq.us_aqi) : ''),
-  ];
+    co2 ? kvRow('CO\u2082 (Mauna Loa)', `${fmtNum(co2.ppm, 2)} ppm`, co2.yearAgo ? `+${fmtNum(co2.ppm - co2.yearAgo, 2)} yr/yr` : '') : '',
+  ].filter(Boolean);
   if (aq) {
     const pol = { 'Alder': aq.alder_pollen, 'Birch': aq.birch_pollen, 'Grass': aq.grass_pollen, 'Mugwort': aq.mugwort_pollen, 'Olive': aq.olive_pollen, 'Ragweed': aq.ragweed_pollen };
     Object.entries(pol).forEach(([n, v]) => {
       if (v != null && !isNaN(v)) rows.push(kvRow(`${n} Pollen`, `${fmtNum(v, 1)} g/m³`, pollenCategory(v)));
     });
   }
-  return sec('Atmospheric', 'Open-Meteo', rows.join(''));
+  const sources = ['Open-Meteo', co2 && 'NOAA GML'].filter(Boolean).join(', ');
+  return sec('Atmospheric', sources, rows.join(''));
 }
 
 function renderSectionCelestial(s) {
   const c = s.celestial;
   if (!c) return sec('Celestial', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const daily = s.weather?.daily;
-  const sr = daily?.sunrise?.[0]?.slice(11, 16);
-  const ss = daily?.sunset?.[0]?.slice(11, 16);
+  const st = c.sunTimes;
+  const fmtTime = (iso) => iso ? iso.slice(11, 16) : null;
+  const sr = st ? fmtTime(st.sunrise) : (daily?.sunrise?.[0]?.slice(11, 16));
+  const ss = st ? fmtTime(st.sunset) : (daily?.sunset?.[0]?.slice(11, 16));
   let dayLen = '--';
-  if (sr && ss) {
+  if (st?.dayLengthSeconds) {
+    const m = Math.round(st.dayLengthSeconds / 60);
+    dayLen = `${Math.floor(m/60)}h ${m%60}m`;
+  } else if (sr && ss) {
     const [srh, srm] = sr.split(':').map(Number);
     const [ssh, ssm] = ss.split(':').map(Number);
     let mins = (ssh * 60 + ssm) - (srh * 60 + srm);
     if (mins < 0) mins += 24 * 60;
     dayLen = `${Math.floor(mins/60)}h ${mins%60}m`;
   }
+  const ev = c.events;
+  const activeShowers = ev?.activeMeteorShowers || [];
+  const showerLabel = activeShowers.length
+    ? activeShowers.map((s) => s.atPeak ? `${s.name} (peaking, ZHR ${s.zhr})` : s.name).join(', ')
+    : 'none active';
+  const ecl = ev?.nextEclipse;
+  const eclipseLabel = ecl ? `${ecl.type}, ${ecl.daysAway} ${ecl.daysAway === 1 ? 'day' : 'days'} away` : '--';
   const rows = [
     kvRow('Sun Sign', c.sunSign),
     kvRow('Sun Altitude', c.sun ? `${fmtNum(c.sun.altitude, 1)}°` : '--'),
@@ -1537,27 +1991,38 @@ function renderSectionCelestial(s) {
     kvRow('Moon Age', c.moon ? `${fmtNum(c.moon.age, 1)} days` : '--'),
     kvRow('Sunrise', sr || '--'),
     kvRow('Sunset', ss || '--'),
+    st ? kvRow('Civil Twilight', `${fmtTime(st.civilTwilightBegin)} / ${fmtTime(st.civilTwilightEnd)}`) : '',
+    st ? kvRow('Astro Twilight', `${fmtTime(st.astronomicalTwilightBegin)} / ${fmtTime(st.astronomicalTwilightEnd)}`) : '',
     kvRow('Day Length', dayLen),
-    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
+    ev ? kvRow('Meteor Showers', showerLabel) : '',
+    ev ? kvRow('Next Eclipse', eclipseLabel) : '',
     c.nextSolar ? kvRow('Next Solar Event', `${c.nextSolar.name}  /  ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`) : '',
+    kvRow('Julian Day', fmtNum(c.julianDay, 4)),
   ].filter(Boolean).join('');
-  return sec('Celestial', 'computed', rows);
+  const sources = ['computed', st && 'sunrise-sunset.org', c.solarDisk && 'NASA SDO'].filter(Boolean).join(', ');
+  return sec('Celestial', sources, rows);
 }
 
 function renderSectionSpaceWeather(s) {
   const sw = s.spaceWeather, iss = s.iss;
   if (!sw && !iss) return sec('Space Weather / Orbital', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const aurora = sw?.aurora;
+  const auroraLabel = aurora && aurora.probability != null
+    ? (aurora.probability >= 60 ? 'very likely' : aurora.probability >= 30 ? 'possible' : aurora.probability >= 10 ? 'low' : 'unlikely')
+    : '';
   const rows = [
     kvRow('Kp Index', sw?.kp ? fmtNum(sw.kp.kp, 2) : '--', sw?.kp ? kpCategory(sw.kp.kp) : ''),
     kvRow('Solar Wind Speed', sw?.solarWind ? `${fmtNum(sw.solarWind.speed)} km/s` : '--'),
     kvRow('Plasma Density', sw?.solarWind ? `${fmtNum(sw.solarWind.density, 2)} p/cm³` : '--'),
     kvRow('Plasma Temp', sw?.solarWind ? `${fmtNum(sw.solarWind.temperature)} K` : '--'),
+    aurora ? kvRow('Aurora at Location', `${fmtNum(aurora.probability, 0)}%`, auroraLabel) : '',
     kvRow('ISS Latitude', iss ? `${fmtNum(iss.latitude, 2)}°` : '--'),
     kvRow('ISS Longitude', iss ? `${fmtNum(iss.longitude, 2)}°` : '--'),
     kvRow('ISS Altitude', iss ? `${fmtNum(iss.altitude, 1)} km` : '--'),
     kvRow('ISS Velocity', iss ? `${fmtNum(iss.velocity)} km/h` : '--'),
-  ].join('');
-  return sec('Space Weather / Orbital', 'NOAA SWPC, WhereTheISS.at', rows);
+  ].filter(Boolean).join('');
+  const sources = ['NOAA SWPC', aurora && 'OVATION', 'WhereTheISS.at'].filter(Boolean).join(', ');
+  return sec('Space Weather / Orbital', sources, rows);
 }
 
 function renderSectionTelluric(s) {
@@ -1641,13 +2106,38 @@ function renderSectionBiosphere(s) {
 
 function renderSectionMarkets(s) {
   const m = s.markets;
-  if (!m || (!m.crypto && !m.fx)) return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  if (!m || (!m.crypto && !m.fx && !m.stocks && !m.commodities && !m.treasuries && !m.sentiment)) {
+    return sec('Markets', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  }
   const rows = [];
   const fmtPct = (p) => p == null ? '' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
+  if (m.stocks) {
+    if (m.stocks.dji)    rows.push(kvRow('Dow Jones',  fmtNum(m.stocks.dji.price, 0),    fmtPct(m.stocks.dji.changePercent)));
+    if (m.stocks.sp500)  rows.push(kvRow('S&P 500',    fmtNum(m.stocks.sp500.price, 1),  fmtPct(m.stocks.sp500.changePercent)));
+    if (m.stocks.nasdaq) rows.push(kvRow('NASDAQ',     fmtNum(m.stocks.nasdaq.price, 1), fmtPct(m.stocks.nasdaq.changePercent)));
+    if (m.stocks.vix)    rows.push(kvRow('VIX',        fmtNum(m.stocks.vix.price, 2),    fmtPct(m.stocks.vix.changePercent)));
+  }
+  if (m.treasuries) {
+    if (m.treasuries.yr5)  rows.push(kvRow('5Y Treasury',  `${fmtNum(m.treasuries.yr5.price, 3)}%`,  fmtPct(m.treasuries.yr5.changePercent)));
+    if (m.treasuries.yr10) rows.push(kvRow('10Y Treasury', `${fmtNum(m.treasuries.yr10.price, 3)}%`, fmtPct(m.treasuries.yr10.changePercent)));
+    if (m.treasuries.yr30) rows.push(kvRow('30Y Treasury', `${fmtNum(m.treasuries.yr30.price, 3)}%`, fmtPct(m.treasuries.yr30.changePercent)));
+    if (m.treasuries.yr5?.price != null && m.treasuries.yr10?.price != null) {
+      const spread = m.treasuries.yr10.price - m.treasuries.yr5.price;
+      rows.push(kvRow('10Y-5Y Spread', `${fmtNum(spread, 3)}%`, spread < 0 ? 'inverted' : 'normal'));
+    }
+  }
+  if (m.commodities) {
+    if (m.commodities.gold)   rows.push(kvRow('Gold (oz)',   `$${fmtNum(m.commodities.gold.price, 2)}`,   fmtPct(m.commodities.gold.changePercent)));
+    if (m.commodities.silver) rows.push(kvRow('Silver (oz)', `$${fmtNum(m.commodities.silver.price, 2)}`, fmtPct(m.commodities.silver.changePercent)));
+    if (m.commodities.oil)    rows.push(kvRow('WTI Crude',   `$${fmtNum(m.commodities.oil.price, 2)}`,    fmtPct(m.commodities.oil.changePercent)));
+  }
   if (m.crypto) {
     if (m.crypto.bitcoin) rows.push(kvRow('BTC / USD', `$${fmtNum(m.crypto.bitcoin.usd, 0)}`, fmtPct(m.crypto.bitcoin.usd_24h_change)));
     if (m.crypto.ethereum) rows.push(kvRow('ETH / USD', `$${fmtNum(m.crypto.ethereum.usd, 0)}`, fmtPct(m.crypto.ethereum.usd_24h_change)));
     if (m.crypto.monero) rows.push(kvRow('XMR / USD', `$${fmtNum(m.crypto.monero.usd, 0)}`, fmtPct(m.crypto.monero.usd_24h_change)));
+  }
+  if (m.sentiment) {
+    rows.push(kvRow('Fear & Greed', fmtNum(m.sentiment.value, 0), m.sentiment.classification || ''));
   }
   if (m.fx?.rates) {
     if (m.fx.rates.EUR) rows.push(kvRow('USD / EUR', fmtNum(m.fx.rates.EUR, 4)));
@@ -1655,21 +2145,37 @@ function renderSectionMarkets(s) {
     if (m.fx.rates.JPY) rows.push(kvRow('USD / JPY', fmtNum(m.fx.rates.JPY, 2)));
     if (m.fx.rates.CAD) rows.push(kvRow('USD / CAD', fmtNum(m.fx.rates.CAD, 4)));
   }
-  return sec('Markets', 'CoinGecko, Frankfurter', rows.join(''));
+  const sources = [
+    (m.stocks || m.commodities || m.treasuries) && 'Yahoo Finance',
+    m.crypto && 'CoinGecko',
+    m.sentiment && 'alternative.me',
+    m.fx && 'Frankfurter',
+  ].filter(Boolean).join(', ');
+  return sec('Markets', sources, rows.join(''));
 }
 
 function renderSectionCultural(s) {
   const c = s.cultural;
   if (!c || !Object.keys(c).length) return sec('Cultural Pulse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
-  const line = (it) => it ? (it.artistName ? `${it.name}  /  ${it.artistName}` : it.name) : '--';
-  const rows = [
-    kvRow('Top Song', line(c.song)),
-    kvRow('Top Album', line(c.album)),
-    kvRow('Top Movie', line(c.movie)),
-    kvRow('Top Podcast', line(c.podcast)),
-    kvRow('Top Book', line(c.book)),
-  ].join('');
-  return sec('Cultural Pulse', 'Apple Charts', rows, { single: true });
+  const line = (it) => it ? (it.artistName ? `${it.name}  /  ${it.artistName}` : it.name) : '';
+  // Render only fields actually present; movie shows box-office gross as a secondary value
+  const candidates = [
+    ['Top Song',    c.song,    null],
+    ['Top Album',   c.album,   null],
+    ['Top Movie',   c.movie,   c.movie?.gross || null],
+    ['Top App',     c.app,     null],
+    ['Top Podcast', c.podcast, null],
+    ['Top Book',    c.book,    null],
+  ];
+  const rows = candidates
+    .filter(([, v]) => v != null)
+    .map(([k, v, aux]) => kvRow(k, line(v), aux || ''))
+    .join('');
+  // Dynamic source attribution
+  const appleKeys = ['song', 'album', 'app', 'podcast', 'book'];
+  const hasApple = appleKeys.some((k) => c[k]);
+  const sources = [hasApple && 'Apple Charts', c.movie && 'Wikipedia'].filter(Boolean).join(', ');
+  return sec('Cultural Pulse', sources, rows, { single: true });
 }
 
 function renderSectionDiscourse(s) {
@@ -1696,7 +2202,9 @@ function renderSectionDiscourse(s) {
 
 function renderSectionCurio(s) {
   const c = s.curio;
-  if (!c || (!c.apod && !c.xkcd)) return sec('Curio', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  if (!c || (!c.apod && !c.xkcd && !c.arxiv && !c.github)) {
+    return sec('Curio', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  }
   const items = [];
   if (c.apod) {
     const expl = c.apod.explanation ? c.apod.explanation.slice(0, 240) + (c.apod.explanation.length > 240 ? '...' : '') : '';
@@ -1706,7 +2214,17 @@ function renderSectionCurio(s) {
   if (c.xkcd) {
     items.push(`<div class="item"><span class="yr">XKCD</span><b>#${c.xkcd.num} / ${escapeHtml(c.xkcd.title || '')}</b>${c.xkcd.alt ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px;font-style:italic">"${escapeHtml(c.xkcd.alt)}"</div>` : ''}</div>`);
   }
-  return sec('Curio', 'NASA, xkcd', items.join(''), { prose: true });
+  if (c.arxiv) {
+    const cat = c.arxiv.category ? ` <span style="color:var(--ink-faint);font-size:11px">[${escapeHtml(c.arxiv.category)}]</span>` : '';
+    items.push(`<div class="item"><span class="yr">arXiv</span><b>${escapeHtml(c.arxiv.title || '')}</b>${cat}${c.arxiv.summary ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(c.arxiv.summary)}</div>` : ''}</div>`);
+  }
+  if (c.github) {
+    const lang = c.github.language ? ` <span style="color:var(--ink-faint);font-size:11px">[${escapeHtml(c.github.language)}]</span>` : '';
+    const stars = c.github.stars != null ? ` <span style="color:var(--ink-faint);font-size:11px">★ ${fmtNum(c.github.stars, 0)}</span>` : '';
+    items.push(`<div class="item"><span class="yr">GitHub</span><b>${escapeHtml(c.github.name || '')}</b>${lang}${stars}${c.github.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(c.github.description)}</div>` : ''}</div>`);
+  }
+  const sources = [c.apod && 'NASA', c.xkcd && 'xkcd', c.arxiv && 'arXiv', c.github && 'GitHub'].filter(Boolean).join(', ');
+  return sec('Curio', sources, items.join(''), { prose: true });
 }
 
 function renderSectionOnThisDay(s) {
@@ -1998,6 +2516,7 @@ function render() {
   $('archiveView').hidden = false;
   $('clearBtn').hidden = false;
   renderStats();
+  renderTagFilter();
   renderList();
   // ensure correct view-mode containers are shown
   if (STATE.viewMode === 'map') {
