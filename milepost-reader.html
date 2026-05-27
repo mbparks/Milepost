@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
 <style>
 :root {
   --paper: #ece3cf;
@@ -687,6 +689,230 @@ body { padding: 24px 16px 48px; }
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* view switcher */
+.view-switch {
+  display: flex;
+  gap: 0;
+  margin-bottom: 18px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+  align-items: stretch;
+}
+.view-switch-tab {
+  flex: 0 0 auto;
+  padding: 9px 22px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.view-switch-tab:last-child { border-right: none; }
+.view-switch-tab:hover { background: rgba(0,0,0,0.04); color: var(--ink); }
+.view-switch-tab.active { background: var(--ink); color: var(--paper); }
+.view-switch-meta {
+  flex: 1;
+  text-align: right;
+  align-self: center;
+  padding: 0 14px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* archive map view */
+.archive-map-view {
+  margin-bottom: 22px;
+}
+.archive-map-wrapper {
+  position: relative;
+  height: 560px;
+  border: 1px solid var(--ink);
+  background: var(--paper-edge);
+  overflow: hidden;
+}
+.archive-map-wrapper.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-style: italic;
+  font-family: var(--serif);
+  font-size: 14px;
+}
+#archiveMap { width: 100%; height: 100%; }
+
+/* per-entry context map */
+.context-map-section {
+  margin: 0 0 18px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,0.22);
+}
+.context-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.context-map-head .sec-meta {
+  color: var(--paper-deep);
+  opacity: 0.7;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+.context-map-body { position: relative; }
+.context-map-frame {
+  height: 320px;
+  width: 100%;
+  background: var(--paper-edge);
+}
+.context-map-legend {
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.lgnd-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lgnd-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.lgnd-swatch svg { width: 100%; height: 100%; display: block; }
+
+/* leaflet overrides to match paper aesthetic */
+.leaflet-container {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper-edge);
+}
+.leaflet-tile-pane {
+  filter: sepia(0.45) saturate(0.65) brightness(0.97) contrast(1.04);
+}
+.leaflet-control-attribution {
+  background: rgba(236,227,207,0.85) !important;
+  color: var(--ink-faint) !important;
+  font-size: 9px !important;
+  font-family: var(--mono);
+  padding: 2px 6px !important;
+  border-left: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+}
+.leaflet-control-attribution a {
+  color: var(--ink-soft) !important;
+}
+.leaflet-control-zoom a {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--ink) !important;
+  font-family: var(--mono) !important;
+  font-weight: 700 !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--paper) !important;
+  border: 1.5px solid var(--ink) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+}
+.leaflet-popup-tip {
+  background: var(--paper) !important;
+  border: 1.5px solid var(--ink) !important;
+  border-radius: 0 !important;
+}
+.leaflet-popup-content {
+  font-family: var(--mono);
+  font-size: 11px;
+  margin: 10px 14px !important;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.leaflet-popup-close-button {
+  color: var(--ink-faint) !important;
+  font-size: 18px !important;
+  padding: 2px 6px !important;
+}
+
+/* leaflet milepost marker */
+.mp-leaflet-marker { background: transparent !important; border: none !important; }
+.mp-leaflet-marker .mini-mp { width: 28px; height: 40px; display: block; }
+.mp-leaflet-marker.large .mini-mp { width: 36px; height: 52px; }
+
+/* leaflet context icons */
+.ctx-marker { background: transparent !important; border: none !important; }
+.ctx-marker svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+
+/* popup content */
+.mp-popup-ser {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--ink);
+}
+.mp-popup-when {
+  font-size: 9px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.mp-popup-loc {
+  font-size: 10px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+.mp-popup-obs {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.4;
+  max-width: 240px;
+}
+.mp-popup-btn {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+.mp-popup-btn:hover { background: var(--flag); border-color: var(--flag); }
 </style>
 </head>
 <body>
@@ -743,7 +969,22 @@ body { padding: 24px 16px 48px; }
   <!-- loaded view -->
   <section id="archiveView" hidden>
     <div class="stats-strip" id="statsStrip"></div>
-    <div class="archive-layout">
+
+    <div class="view-switch">
+      <button class="view-switch-tab active" data-view="list" id="tabList">List</button>
+      <button class="view-switch-tab" data-view="map" id="tabMap">Map</button>
+      <div class="view-switch-meta" id="viewSwitchMeta"></div>
+    </div>
+
+    <!-- archive map view (full-width map) -->
+    <div class="archive-map-view" id="archiveMapView" hidden>
+      <div class="archive-map-wrapper" id="archiveMapWrapper">
+        <div id="archiveMap"></div>
+      </div>
+    </div>
+
+    <!-- list view (sidebar + detail) -->
+    <div class="archive-layout" id="archiveLayout">
       <aside class="sidebar">
         <div class="sidebar-head">
           <span>Entries</span>
@@ -758,6 +999,11 @@ body { padding: 24px 16px 48px; }
         <div class="detail-empty">Select a milepost to read its capture.</div>
       </article>
     </div>
+
+    <!-- map-mode detail panel (below the map) -->
+    <article class="detail" id="detailPanelMap" hidden>
+      <div class="detail-empty">Click a milepost on the map to read its capture.</div>
+    </article>
   </section>
 
   <footer class="foot">
@@ -794,6 +1040,7 @@ const STATE = {
   selectedId: null,
   searchTerm: '',
   errors: [],          // parsing errors
+  viewMode: 'list',    // 'list' | 'map'
 };
 
 /* ---------- utility ---------- */
@@ -1139,9 +1386,16 @@ function getSelectedEntry() {
 
 function renderDetail() {
   const entry = getSelectedEntry();
-  const panel = $('detailPanel');
+  const panel = STATE.viewMode === 'map' ? $('detailPanelMap') : $('detailPanel');
+  // ensure the other panel doesn't keep stale content
+  const otherPanel = STATE.viewMode === 'map' ? $('detailPanel') : $('detailPanelMap');
+  if (otherPanel) otherPanel.innerHTML = STATE.viewMode === 'map'
+    ? '<div class="detail-empty">Select a milepost to read its capture.</div>'
+    : '<div class="detail-empty">Click a milepost on the map to read its capture.</div>';
   if (!entry) {
-    panel.innerHTML = `<div class="detail-empty">Select a milepost to read its capture.</div>`;
+    panel.innerHTML = STATE.viewMode === 'map'
+      ? `<div class="detail-empty">Click a milepost on the map to read its capture.</div>`
+      : `<div class="detail-empty">Select a milepost to read its capture.</div>`;
     return;
   }
   const e = entry.data.entry;
@@ -1172,6 +1426,17 @@ function renderDetail() {
     ${obs ? escapeHtml(obs) : 'No observation recorded with this entry.'}
   </div>`;
 
+  // context map (when location is available)
+  if (s.location?.latitude != null) {
+    html += `<div class="context-map-section fade-in">
+      <div class="context-map-head"><span>Context Map</span><span class="sec-meta">capture point and nearby events</span></div>
+      <div class="context-map-body">
+        <div class="context-map-frame" id="contextMap"></div>
+        <div class="context-map-legend">${renderContextLegend(s)}</div>
+      </div>
+    </div>`;
+  }
+
   // data sections
   html += renderSectionAtmospheric(s);
   html += renderSectionCelestial(s);
@@ -1198,6 +1463,13 @@ function renderDetail() {
 
   $('actViewRaw').addEventListener('click', () => showRawJson(entry));
   $('actPrint').addEventListener('click', () => window.print());
+
+  // initialize the context map (after the container is in the DOM)
+  if (s.location?.latitude != null) {
+    renderContextMap(entry);
+  } else {
+    if (contextMap) { contextMap.remove(); contextMap = null; }
+  }
 }
 
 /* ---------- individual section renderers (read-only adaptations) ---------- */
@@ -1455,7 +1727,265 @@ function hideRawJson() {
   $('rawModal').classList.remove('visible');
 }
 
-/* ---------- main render ---------- */
+/* ---------- maps (Leaflet) ---------- */
+
+const MAP_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const MAP_ATTRIBUTION = '&copy; OpenStreetMap &middot; &copy; CARTO';
+const MAP_SUBDOMAINS = 'abcd';
+const DEFAULT_CENTER = [39.65, -78.76]; // Mountain Maryland fallback
+
+let archiveMap = null;
+let contextMap = null;
+let archiveMapMarkers = [];
+
+/* SVG icons for context markers */
+const CTX_ICONS = {
+  quake: '<svg viewBox="0 0 18 18" width="18" height="18"><circle cx="9" cy="9" r="6" fill="none" stroke="#c0431a" stroke-width="2.2"/><circle cx="9" cy="9" r="2.4" fill="#c0431a"/></svg>',
+  fire:  '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M 9 2 L 16 15 L 2 15 Z" fill="#d97520" stroke="#1a1611" stroke-width="1"/></svg>',
+  stream:'<svg viewBox="0 0 18 18" width="18" height="18"><circle cx="9" cy="9" r="6.5" fill="#2c5f7d" stroke="#1a1611" stroke-width="1"/><path d="M 4.5 9 Q 6.75 6.75 9 9 Q 11.25 11.25 13.5 9" fill="none" stroke="#fff" stroke-width="1.4"/></svg>',
+  tide:  '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="2.5" width="13" height="13" fill="#3a85a0" stroke="#1a1611" stroke-width="1"/><path d="M 4 11 Q 6 9 8 11 Q 10 13 12 11 Q 13.5 9 14.5 11" fill="none" stroke="#fff" stroke-width="1.2"/></svg>',
+  bird:  '<svg viewBox="0 0 18 18" width="18" height="18"><circle cx="9" cy="9" r="6.5" fill="#6b8e4e" stroke="#1a1611" stroke-width="1"/><path d="M 5 9 L 9 6 L 13 9 L 9 12 Z" fill="#fff"/></svg>',
+};
+
+function ensureLeaflet() {
+  return typeof L !== 'undefined' && L.map;
+}
+
+function mileMarkerLeafletIcon(id) {
+  const svg = mileMarkerSvg(id, { small: true });
+  return L.divIcon({
+    html: svg,
+    className: 'mp-leaflet-marker',
+    iconSize: [28, 40],
+    iconAnchor: [14, 38],
+    popupAnchor: [0, -36],
+  });
+}
+
+function ctxMarkerIcon(type) {
+  return L.divIcon({
+    html: CTX_ICONS[type] || '',
+    className: 'ctx-marker',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10],
+  });
+}
+
+function buildPopupForEntry(entry) {
+  const e = entry.data.entry;
+  const s = e.snapshot || {};
+  const obs = (e.observation || '').trim();
+  const obsExcerpt = obs ? obs.slice(0, 120) + (obs.length > 120 ? '...' : '') : '';
+  return `<div>
+    <div class="mp-popup-ser">${escapeHtml(e.serial || `№${pad(entry.id, 3)}`)}</div>
+    <div class="mp-popup-when">${escapeHtml(formatListTime(e.capturedAt))}</div>
+    ${s.location?.place ? `<div class="mp-popup-loc">${escapeHtml(s.location.place)}</div>` : ''}
+    ${obsExcerpt ? `<div class="mp-popup-obs">${escapeHtml(obsExcerpt)}</div>` : ''}
+    <button class="mp-popup-btn" data-entry-key="${escapeHtml(entryKey(entry))}">Read entry &rarr;</button>
+  </div>`;
+}
+
+function renderArchiveMap() {
+  if (!ensureLeaflet()) {
+    // Leaflet loads async; try again shortly
+    setTimeout(renderArchiveMap, 200);
+    return;
+  }
+  const container = $('archiveMap');
+  if (!archiveMap) {
+    archiveMap = L.map(container, {
+      attributionControl: true,
+      zoomControl: true,
+      worldCopyJump: true,
+    });
+    L.tileLayer(MAP_TILE_URL, {
+      attribution: MAP_ATTRIBUTION,
+      subdomains: MAP_SUBDOMAINS,
+      maxZoom: 18,
+    }).addTo(archiveMap);
+    archiveMap.on('popupopen', (e) => {
+      const el = e.popup.getElement();
+      const btn = el?.querySelector('.mp-popup-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          STATE.selectedId = btn.dataset.entryKey;
+          setViewMode('list');
+        });
+      }
+    });
+  }
+  // clear old markers
+  archiveMapMarkers.forEach((m) => m.remove());
+  archiveMapMarkers = [];
+  // plot every entry that has coords
+  const points = [];
+  STATE.entries.forEach((entry) => {
+    const loc = entry.data.entry.snapshot?.location;
+    if (loc?.latitude == null || loc?.longitude == null) return;
+    const marker = L.marker([loc.latitude, loc.longitude], {
+      icon: mileMarkerLeafletIcon(entry.id),
+      title: entry.data.entry.serial || `№${pad(entry.id, 3)}`,
+    });
+    marker.bindPopup(buildPopupForEntry(entry));
+    marker.addTo(archiveMap);
+    archiveMapMarkers.push(marker);
+    points.push([loc.latitude, loc.longitude]);
+  });
+  // frame the data
+  if (points.length === 0) {
+    archiveMap.setView(DEFAULT_CENTER, 4);
+  } else if (points.length === 1) {
+    archiveMap.setView(points[0], 9);
+  } else {
+    archiveMap.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
+  }
+  // invalidate after layout settles (container may have just become visible)
+  setTimeout(() => archiveMap && archiveMap.invalidateSize(), 80);
+}
+
+function renderContextMap(entry) {
+  if (!ensureLeaflet()) {
+    setTimeout(() => renderContextMap(entry), 200);
+    return;
+  }
+  const container = $('contextMap');
+  if (!container) return;
+  const s = entry.data.entry.snapshot;
+  const loc = s?.location;
+  if (loc?.latitude == null) return;
+
+  // rebuild fresh each time
+  if (contextMap) {
+    contextMap.remove();
+    contextMap = null;
+  }
+  contextMap = L.map(container, {
+    attributionControl: true,
+    zoomControl: true,
+    scrollWheelZoom: false,
+  });
+  L.tileLayer(MAP_TILE_URL, {
+    attribution: MAP_ATTRIBUTION,
+    subdomains: MAP_SUBDOMAINS,
+    maxZoom: 18,
+  }).addTo(contextMap);
+
+  const all = [];
+
+  // capture point (large milepost glyph)
+  const captureMarker = L.marker([loc.latitude, loc.longitude], {
+    icon: mileMarkerLeafletIcon(entry.id),
+  }).addTo(contextMap);
+  captureMarker.bindTooltip(escapeHtml(entry.data.entry.serial || `№${pad(entry.id, 3)}`), { direction: 'top', offset: [0, -34] });
+  all.push([loc.latitude, loc.longitude]);
+
+  // earthquakes
+  (s.earthquakes?.nearby || []).forEach((q) => {
+    if (!q.coords) return;
+    const [qLat, qLon] = q.coords;
+    const m = L.marker([qLat, qLon], { icon: ctxMarkerIcon('quake') }).addTo(contextMap);
+    const ago = q.time ? `${humanTime(q.time)} ago` : '';
+    m.bindPopup(`<b>M${q.mag?.toFixed(1) || '?'}</b> ${escapeHtml(q.place || '')}${ago ? `<br/>${ago}` : ''}${q.depth != null ? `<br/>${q.depth.toFixed(1)} km deep` : ''}`);
+    all.push([qLat, qLon]);
+  });
+
+  // wildfires - collect closest + highIntensity (deduped)
+  const fires = [];
+  if (s.wildfires?.closest?.lat != null) fires.push(s.wildfires.closest);
+  (s.wildfires?.highIntensity || []).forEach((f) => {
+    if (f.lat != null && !fires.some((e) => e.lat === f.lat && e.lon === f.lon)) fires.push(f);
+  });
+  fires.forEach((f) => {
+    const m = L.marker([f.lat, f.lon], { icon: ctxMarkerIcon('fire') }).addTo(contextMap);
+    m.bindPopup(`<b>Wildfire</b><br/>${f.frp != null ? `${f.frp.toFixed(1)} MW` : ''}${f.confidence ? `<br/>conf: ${escapeHtml(String(f.confidence))}` : ''}${f.date ? `<br/>${escapeHtml(f.date)}` : ''}`);
+    all.push([f.lat, f.lon]);
+  });
+
+  // stream gauge
+  if (s.hydrosphere?.stream?.lat != null) {
+    const g = s.hydrosphere.stream;
+    const m = L.marker([g.lat, g.lon], { icon: ctxMarkerIcon('stream') }).addTo(contextMap);
+    m.bindPopup(`<b>${escapeHtml(g.name || 'Stream gauge')}</b>${g.discharge != null ? `<br/>${fmtNum(g.discharge, 1)} ft&sup3;/s` : ''}${g.gageHeight != null ? `<br/>${fmtNum(g.gageHeight, 2)} ft gauge ht` : ''}`);
+    all.push([g.lat, g.lon]);
+  }
+
+  // tide station (v0.0.2+ entries have lat/lon)
+  if (s.hydrosphere?.tide?.lat != null) {
+    const t = s.hydrosphere.tide;
+    const m = L.marker([t.lat, t.lon], { icon: ctxMarkerIcon('tide') }).addTo(contextMap);
+    m.bindPopup(`<b>${escapeHtml(t.station || t.nearestStation || 'Tide station')}</b>${t.level != null ? `<br/>${fmtNum(t.level, 2)} ft MLLW` : ''}${t.inland ? '<br/>(inland; nearest station)' : ''}`);
+    all.push([t.lat, t.lon]);
+  }
+
+  // bird notable sightings (v0.0.2+ entries have lat/lng)
+  (s.biosphere?.notable || []).forEach((b) => {
+    if (b.lat == null || b.lng == null) return;
+    const m = L.marker([b.lat, b.lng], { icon: ctxMarkerIcon('bird') }).addTo(contextMap);
+    m.bindPopup(`<b>${escapeHtml(b.comName || 'Notable bird')}</b>${b.sciName ? `<br/><i>${escapeHtml(b.sciName)}</i>` : ''}${b.locName ? `<br/>${escapeHtml(b.locName)}` : ''}${b.howMany ? `<br/>count: ${b.howMany}` : ''}`);
+    all.push([b.lat, b.lng]);
+  });
+
+  // frame
+  if (all.length === 1) {
+    contextMap.setView(all[0], 10);
+  } else {
+    contextMap.fitBounds(L.latLngBounds(all), { padding: [24, 24], maxZoom: 11 });
+  }
+
+  setTimeout(() => contextMap && contextMap.invalidateSize(), 80);
+}
+
+function renderContextLegend(s) {
+  const items = [
+    { type: 'capture', label: 'Capture', shown: true },
+  ];
+  items.push({ type: 'quake', label: 'Quakes', shown: !!(s.earthquakes?.nearby?.length) });
+  const hasFires = (s.wildfires?.closest?.lat != null) || (s.wildfires?.highIntensity?.length);
+  items.push({ type: 'fire', label: 'Fires', shown: hasFires });
+  items.push({ type: 'stream', label: 'Stream gauge', shown: s.hydrosphere?.stream?.lat != null });
+  items.push({ type: 'tide', label: 'Tide station', shown: s.hydrosphere?.tide?.lat != null });
+  items.push({ type: 'bird', label: 'Notable birds', shown: (s.biosphere?.notable || []).some((b) => b.lat != null) });
+  return items.filter((i) => i.shown).map((i) => {
+    if (i.type === 'capture') {
+      return `<span class="lgnd-item">
+        <svg viewBox="0 0 56 80" width="14" height="20" style="display:inline-block;vertical-align:middle">
+          <path d="M 5 6 Q 5 2 9 2 L 43 2 Q 47 2 47 6 L 47 73 L 5 73 Z" fill="var(--paper)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+          <line x1="10" y1="29" x2="42" y2="29" stroke="var(--ink)" stroke-width="1"/>
+          <text x="26" y="22" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="17" fill="var(--ink)">M</text>
+        </svg>${i.label}
+      </span>`;
+    }
+    return `<span class="lgnd-item"><span class="lgnd-swatch">${CTX_ICONS[i.type]}</span>${i.label}</span>`;
+  }).join('');
+}
+
+/* ---------- view switching ---------- */
+
+function setViewMode(mode) {
+  STATE.viewMode = mode;
+  document.querySelectorAll('.view-switch-tab').forEach((t) => {
+    t.classList.toggle('active', t.dataset.view === mode);
+  });
+  const meta = $('viewSwitchMeta');
+  if (mode === 'list') {
+    $('archiveLayout').hidden = false;
+    $('archiveMapView').hidden = true;
+    $('detailPanelMap').hidden = true;
+    meta.textContent = '';
+    // re-render to put detail in the list-mode panel
+    renderDetail();
+  } else {
+    $('archiveLayout').hidden = true;
+    $('archiveMapView').hidden = false;
+    $('detailPanelMap').hidden = false;
+    const withCoords = STATE.entries.filter((e) => e.data.entry.snapshot?.location?.latitude != null).length;
+    meta.textContent = `${withCoords} of ${STATE.entries.length} entries have coordinates`;
+    renderArchiveMap();
+    renderDetail();
+  }
+}
+
 
 function render() {
   if (STATE.entries.length === 0) {
@@ -1469,6 +1999,20 @@ function render() {
   $('clearBtn').hidden = false;
   renderStats();
   renderList();
+  // ensure correct view-mode containers are shown
+  if (STATE.viewMode === 'map') {
+    $('archiveLayout').hidden = true;
+    $('archiveMapView').hidden = false;
+    $('detailPanelMap').hidden = false;
+    const withCoords = STATE.entries.filter((e) => e.data.entry.snapshot?.location?.latitude != null).length;
+    $('viewSwitchMeta').textContent = `${withCoords} of ${STATE.entries.length} entries have coordinates`;
+    renderArchiveMap();
+  } else {
+    $('archiveLayout').hidden = false;
+    $('archiveMapView').hidden = true;
+    $('detailPanelMap').hidden = true;
+    $('viewSwitchMeta').textContent = '';
+  }
   renderDetail();
 }
 
@@ -1535,6 +2079,10 @@ $('openFolderBtn2').addEventListener('click', openFolder);
 $('openFilesBtn').addEventListener('click', openFiles);
 $('openFilesBtn2').addEventListener('click', openFiles);
 $('clearBtn').addEventListener('click', clearAll);
+
+document.querySelectorAll('.view-switch-tab').forEach((tab) => {
+  tab.addEventListener('click', () => setViewMode(tab.dataset.view));
+});
 
 $('filePicker').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);

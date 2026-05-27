@@ -4,7 +4,7 @@
 
 A single-file web instrument that takes an environmental fix of the world at the moment of an entry and binds that snapshot to a written observation. Each entry becomes a milepost: a fixed marker along the route you are walking through time.
 
-Version 0.0.1 / Green Shoe Garage / Mountain Maryland
+Version 0.0.2 / Green Shoe Garage / Mountain Maryland
 
 ---
 
@@ -75,14 +75,24 @@ Keys are stored in browser localStorage when available, with an in-memory fallba
 
 ## The Reader
 
-`milepost-reader.html` is a companion viewer for the JSON files you have saved. It loads files from your machine and renders them in the same field-instrument aesthetic, with:
+`milepost-reader.html` is a companion viewer for the JSON files you have saved. It loads files from your machine and renders them in the same field-instrument aesthetic, with two view modes.
+
+### List view (default)
 
 - A searchable sidebar list of all loaded entries, each marked with its own mini milepost glyph
 - A reading-focused detail panel that puts the observation above the data sections (since by the time you are reading an entry, the observation is what you came back for)
+- A per-entry context map between observation and data: a small map centered on the capture point with markers for the nearby quakes, fires, stream gauge, tide station, and notable bird sightings the instrument logged. Legend at the foot of the map identifies each marker type.
 - An aggregate stats strip across the top: entry count, span in days, distinct locations, total words written, average temperature, total species seen
 - Search across observations, locations, weather conditions, cultural picks, news headlines, and filenames
 - Arrow-key navigation between entries
-- A "View Raw JSON" inspector and a print-friendly stylesheet
+
+### Map view
+
+A full-width archive map plots every entry that has coordinates as a milepost glyph dropped on the map. Click any marker to open a popup with the entry's serial, capture time, location, and a brief excerpt of the observation; click "Read entry" in the popup to jump back to the list view with that entry selected. The map view also shows the same detail panel below the map, populated with whatever entry is currently selected. The view meta shows `N of M entries have coordinates` so you can tell at a glance if any entries are missing location data.
+
+Both maps use CartoDB Positron tiles routed through a sepia/desaturation filter to nudge them toward the manila palette of the rest of the instrument. Attribution and controls are restyled to match.
+
+### Loading files
 
 There are three ways to load files into the reader:
 
@@ -90,7 +100,13 @@ There are three ways to load files into the reader:
 2. **Open Files** uses the standard file picker. Works everywhere. Select one or many JSON files.
 3. **Drag and drop** files or a folder onto the page. Recursive directory drop is supported in most browsers.
 
-The reader does no network requests except to load typography. Loaded entries live only in memory; there is no upload, no telemetry, no caching beyond the current page session. Clearing the page or hitting the **Clear** button discards the loaded archive without touching any files on disk.
+The reader loads typography from Google Fonts and the Leaflet map library plus CartoDB tiles from CDN. Entries themselves never leave your machine; there is no upload, no telemetry, no caching beyond the current page session. Clearing the page or hitting the **Clear** button discards the loaded archive without touching any files on disk.
+
+### Per-entry actions
+
+- **View Raw JSON** opens a modal with the full structured payload, useful when you want to verify exactly what was captured
+- **Print** uses a stylesheet that hides the sidebar, map controls, and chrome, leaving a clean single-page render of the entry suitable for paper
+- **Clear** wipes the loaded archive from memory without touching disk
 
 ## Privacy
 
@@ -143,6 +159,14 @@ This is v0.0.1. Likely future additions include retroactive instrument names for
 Typography: JetBrains Mono and Newsreader (both via Google Fonts).
 
 Astronomical algorithms after Jean Meeus, "Astronomical Algorithms."
+
+Mapping: Leaflet (BSD-2-Clause) over CartoDB Positron tiles (CC BY 3.0) and OpenStreetMap data (ODbL).
+
+## Changelog
+
+**v0.0.2** added coordinate persistence for NOAA tide stations and notable eBird observations so the reader can plot them on the per-entry context map. Existing v0.0.1 entries still load; they simply lack those map markers. The viewer's full feature set was introduced in this version (per-entry context map, archive overview map with view switcher).
+
+**v0.0.1** initial release. Capture instrument with fifteen data sources, JSON and TXT export, reader companion with list view.
 
 ## License
 
