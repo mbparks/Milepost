@@ -1218,7 +1218,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8.1</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.8.2</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -2064,10 +2064,101 @@ async function getTopMovie() {
   return null;
 }
 
+/* ---------- Wikipedia fallbacks for top song and top album ----------
+   Apple's marketing tools RSS endpoints occasionally fail for browser-origin
+   requests (network blocking, regional issues, file:// origin, etc.). When
+   that happens, Wikipedia's Billboard chart articles serve as a reasonable
+   fallback for songs and albums since they update weekly with the current
+   #1 entry. We use the same row-walk parsing pattern as the movie parser:
+   split on |- delimiters, then scan each row's cells for a quoted song
+   title (or italic album title) followed by an artist wikilink. */
+async function getTopChartFromWikipedia(year, kind) {
+  const titleMap = {
+    song:  `List_of_Billboard_Hot_100_number_ones_of_${year}`,
+    album: `List_of_Billboard_200_number_ones_of_${year}`,
+  };
+  const title = titleMap[kind];
+  if (!title) throw new Error(`unknown chart kind ${kind}`);
+  const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*&redirects=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.info || 'parse error');
+  const wikitext = j.parse?.wikitext?.['*'];
+  if (!wikitext) throw new Error('no wikitext');
+
+  // Truncate before any "References", "Notes", or trailing meta sections
+  const cutoffIdx = wikitext.search(/==\s*(References|Notes|See also|External links)/i);
+  const tableText = cutoffIdx > 0 ? wikitext.slice(0, cutoffIdx) : wikitext;
+
+  // Song names appear in straight quotes around a wikilink: "[[Song Name]]"
+  // Album names appear italic-wrapped: ''[[Album Name]]''
+  // Artist names appear as plain wikilinks: [[Artist Name]]
+  const nameRe = kind === 'song'
+    ? /"\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]"/
+    : /''\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]''/;
+  // Artist wikilink: skip prefixed (File:, Image:, Category:) and quoted (song name) matches
+  const artistRe = /(?<!["'])\[\[([^\]\|\n:]+?)(?:\|([^\]\n]+?))?\]\](?!["'])/;
+
+  const rows = tableText.split(/\n\|-+\s*\n?/);
+  let latest = null;
+  for (const row of rows) {
+    const cells = row.split(/\s*\|\|\s*|\n\s*\|\s+/);
+    let name = null, artist = null;
+    for (const cell of cells) {
+      if (!name) {
+        const m = cell.match(nameRe);
+        if (m) { name = (m[2] || m[1]).trim(); continue; }
+      } else if (!artist) {
+        const m = cell.match(artistRe);
+        if (m) artist = (m[2] || m[1]).trim();
+      }
+      if (name && artist) break;
+    }
+    if (name && artist) latest = { name, artist };
+  }
+  if (!latest) return null;
+  return {
+    name: latest.name,
+    artistName: latest.artist,
+    releaseDate: null,
+    kind,
+    url: `https://en.wikipedia.org/wiki/${title}`,
+    sourceLabel: 'Wikipedia (Billboard)',
+    genres: [],
+  };
+}
+
+async function getTopSong() {
+  const year = new Date().getUTCFullYear();
+  try {
+    const r = await getTopChartFromWikipedia(year, 'song');
+    if (r) return r;
+  } catch (e) { console.warn(`[Milepost] cultural/song wp ${year}: ${e.message}`); }
+  try {
+    const r = await getTopChartFromWikipedia(year - 1, 'song');
+    if (r) return r;
+  } catch (e) { console.warn(`[Milepost] cultural/song wp ${year - 1}: ${e.message}`); }
+  return null;
+}
+
+async function getTopAlbum() {
+  const year = new Date().getUTCFullYear();
+  try {
+    const r = await getTopChartFromWikipedia(year, 'album');
+    if (r) return r;
+  } catch (e) { console.warn(`[Milepost] cultural/album wp ${year}: ${e.message}`); }
+  try {
+    const r = await getTopChartFromWikipedia(year - 1, 'album');
+    if (r) return r;
+  } catch (e) { console.warn(`[Milepost] cultural/album wp ${year - 1}: ${e.message}`); }
+  return null;
+}
+
 async function getCultural() {
   const out = {};
   const tasks = [
-    // Apple Marketing Tools RSS feeds
+    // Apple Marketing Tools RSS feeds (primary for all 5 chart types)
     ...Object.entries(APPLE_FEEDS).map(async ([key, url]) => {
       try {
         const r = await fetch(url);
@@ -2093,7 +2184,7 @@ async function getCultural() {
         console.warn(`[Milepost] cultural/${key}: ${e.message}`);
       }
     }),
-    // Wikipedia: current US box office #1
+    // Wikipedia: current US box office #1 (Apple has no movie feed anymore)
     (async () => {
       try {
         const movie = await getTopMovie();
@@ -2104,6 +2195,28 @@ async function getCultural() {
     })(),
   ];
   await Promise.all(tasks);
+
+  // Wikipedia fallback for song and album if Apple's feeds didn't deliver.
+  // Runs sequentially after the primary fetches so we don't waste a request
+  // when Apple succeeded. The other Apple-only fields (app, podcast, book)
+  // have no equivalent CORS-friendly fallback and are left null on failure.
+  if (!out.song) {
+    try {
+      const song = await getTopSong();
+      if (song) out.song = song;
+    } catch (e) {
+      console.warn(`[Milepost] cultural/song fallback: ${e.message}`);
+    }
+  }
+  if (!out.album) {
+    try {
+      const album = await getTopAlbum();
+      if (album) out.album = album;
+    } catch (e) {
+      console.warn(`[Milepost] cultural/album fallback: ${e.message}`);
+    }
+  }
+
   return out;
 }
 
@@ -4032,7 +4145,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.8.1',
+    version: '0.0.8.2',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

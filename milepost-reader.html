@@ -470,6 +470,42 @@ body { padding: 24px 16px 48px; }
   font-size: 12px;
 }
 
+/* data-presence banner: shows which user-input sections were captured */
+.data-presence {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  background: rgba(31,58,82,0.04);
+  border: 1px solid var(--rule);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.data-presence .dp-label {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin-right: 4px;
+}
+.data-presence .dp-pill {
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.data-presence .dp-pill.on {
+  background: var(--flag);
+  color: var(--paper);
+}
+.data-presence .dp-pill.off {
+  background: transparent;
+  color: var(--ink-faint);
+  border: 1px dashed rgba(20,15,10,0.20);
+}
+
 /* observation block - emphasized typography */
 .observation {
   margin: 0 0 28px;
@@ -1219,7 +1255,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.8</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.8.2</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1241,7 +1277,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.8
+   MILEPOST READER  /  v0.0.8.2
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1688,6 +1724,23 @@ function renderDetail() {
       <span>${t != null ? `${fmtNum(t, 1)}°C / ${fmtNum(t * 9/5 + 32, 0)}°F` : '--'}</span>
     </div>
   </div>`;
+
+  // Data-presence banner: list which user-input sections were captured with this entry.
+  // Helps confirm at a glance whether mood, body, tags, palette, etc. were filled in
+  // during capture. Sections with data are shown solid; sections without are muted.
+  // The banner only renders when at least one user-input section was filled.
+  const presence = [
+    { key: 'tags',     label: 'Tags',     has: Array.isArray(s.tags) && s.tags.length > 0 },
+    { key: 'palette',  label: 'Palette',  has: !!s.palette },
+    { key: 'mood',     label: 'Mood',     has: !!(s.internal && (s.internal.mood != null || s.internal.energy != null || s.internal.focus != null)) },
+    { key: 'body',     label: 'Body',     has: !!s.body },
+  ];
+  if (presence.some((p) => p.has)) {
+    html += `<div class="data-presence fade-in">
+      <span class="dp-label">Captured with this entry:</span>
+      ${presence.map((p) => `<span class="dp-pill ${p.has ? 'on' : 'off'}">${p.has ? '\u2713 ' : '\u00D7 '}${p.label}</span>`).join('')}
+    </div>`;
+  }
 
   // observation block (prominent)
   const obs = (e.observation || '').trim();
