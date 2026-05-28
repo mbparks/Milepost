@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.24</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.25</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -495,7 +495,7 @@ const SOURCES = [
     //
     // Because this is a FALLBACK that only matters when the primary is also
     // broken, an unreachable corsproxy.io is not a real failure for users
-    // with a working primary proxy. v0.0.24 returns __skip on failure so it
+    // with a working primary proxy. v0.0.25 returns __skip on failure so it
     // doesn't count against the all-green target.
     const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
     try {
@@ -527,12 +527,12 @@ const SOURCES = [
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
     // Route through probeFetch so we use the configured proxy chain if direct
     // fails. ipapi.co is the location fallback when browser geo is denied
-    // or unavailable; matches the capture-side path in v0.0.24.
+    // or unavailable; matches the capture-side path in v0.0.25.
     //
     // ipapi.co blocks Cloudflare Worker IP ranges with HTTP 403 as part of
     // their anti-abuse policy (common for free geolocation APIs). When all
     // paths fail and browser geo is the user's primary, this fallback
-    // doesn't actually impact captures, so v0.0.24 returns __skip rather
+    // doesn't actually impact captures, so v0.0.25 returns __skip rather
     // than failing the probe.
     try {
       const { response: r, path } = await probeFetch('https://ipapi.co/json/');
@@ -629,16 +629,67 @@ const SOURCES = [
     const rows = text.split('\n').filter(Boolean).length - 1;
     return `${Math.max(0, rows)} thermal anomalies globally`;
   }},
+  { category: 'Telluric', name: 'Drought Monitor', domain: 'droughtmonitor.unl.edu', run: async () => {
+    // Two-step: FCC API resolves lat/lon to county FIPS, then UNL USDM
+    // returns drought severity percentages for that county.
+    const fcc = await probeFetch(`https://geo.fcc.gov/api/census/area?lat=${TEST_LAT}&lon=${TEST_LON}&format=json`);
+    const fj = await fcc.response.json();
+    const r0 = fj.results && fj.results[0];
+    if (!r0 || !r0.county_fips) return { __skip: 'test lat/lon not in a US county' };
+    const today = new Date();
+    const start = new Date(today.getTime() - 14 * 86400000);
+    const fmt = (d) => `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    const url = `https://usdmdataservices.unl.edu/api/CountyStatistics/GetDroughtSeverityStatisticsByAreaPercent?aoi=${r0.county_fips}&startdate=${fmt(start)}&enddate=${fmt(today)}&statisticsType=2`;
+    const { response: r, path } = await probeFetch(url, { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (!Array.isArray(j) || j.length === 0) return `${r0.county_name}, ${r0.state_code}: no data (via ${path})`;
+    const latest = j[j.length - 1];
+    const d4 = parseFloat(latest.D4) || 0;
+    const d3 = parseFloat(latest.D3) || 0;
+    const d2 = parseFloat(latest.D2) || 0;
+    const d1 = parseFloat(latest.D1) || 0;
+    const d0 = parseFloat(latest.D0) || 0;
+    let cls = 'None';
+    if (d4 > 25) cls = 'D4 Exceptional';
+    else if (d3 > 25) cls = 'D3 Extreme';
+    else if (d2 > 25) cls = 'D2 Severe';
+    else if (d1 > 25) cls = 'D1 Moderate';
+    else if (d0 > 25) cls = 'D0 Abnormally Dry';
+    return `${r0.county_name}, ${r0.state_code}: ${cls} (via ${path})`;
+  }},
+
+  // ---------- Atmospheric extras ----------
+  { category: 'Atmospheric', name: 'Pressure Trend', domain: 'api.open-meteo.com', run: async () => {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${TEST_LAT}&longitude=${TEST_LON}&hourly=pressure_msl&past_hours=4&forecast_hours=1&timezone=auto`;
+    const r = await probeFetchWithTimeout(url, 8000);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const series = j?.hourly?.pressure_msl;
+    if (!Array.isArray(series) || series.length < 4) throw new Error('insufficient series');
+    const latest = series[series.length - 1];
+    const prior = series[series.length - 4];
+    const delta = latest - prior;
+    return `Δ3h = ${delta >= 0 ? '+' : ''}${delta.toFixed(2)} hPa (${latest.toFixed(1)} hPa current)`;
+  }},
+  { category: 'Atmospheric', name: 'Aviation METAR', domain: 'aviationweather.gov', run: async () => {
+    const d = 1.5;
+    const bbox = `${(TEST_LAT-d).toFixed(2)},${(TEST_LON-d).toFixed(2)},${(TEST_LAT+d).toFixed(2)},${(TEST_LON+d).toFixed(2)}`;
+    const url = `https://aviationweather.gov/api/data/metar?bbox=${bbox}&format=json&taf=false&hours=2`;
+    const { response: r, path } = await probeFetch(url);
+    const arr = await r.json();
+    if (!Array.isArray(arr) || arr.length === 0) throw new Error('no METARs in bbox');
+    return `${arr.length} stations in ±${d}° box, nearest = ${arr[0].icaoId} (${arr[0].fltCat || '?'}) (via ${path})`;
+  }},
 
   // ---------- Hydrosphere ----------
   { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
-    // v0.0.24 matches the probe's bbox and parameter set to the capture's
+    // v0.0.25 matches the probe's bbox and parameter set to the capture's
     // first-attempt query in getStreamflow(). Previously the probe used a
     // larger bbox (0.5deg half-width = 1deg side) than the capture's first
     // try (0.3deg half-width = 0.6deg side), and queried only 00060 instead
     // of 00060,00065. The larger bbox hit more USGS sites and ran slower,
     // sometimes timing out the probe while the capture (using a smaller box)
-    // succeeded. Mike confirmed this in v0.0.24: capture pulled Wills Creek
+    // succeeded. Mike confirmed this in v0.0.25: capture pulled Wills Creek
     // discharge and gauge-height fine while the probe was failing at 8s.
     const d = 0.3;
     const bbox = `${(TEST_LON-d).toFixed(4)},${(TEST_LAT-d).toFixed(4)},${(TEST_LON+d).toFixed(4)},${(TEST_LAT+d).toFixed(4)}`;
@@ -738,7 +789,7 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Two-phase probe matching the capture-side behavior in v0.0.24:
+    // Two-phase probe matching the capture-side behavior in v0.0.25:
     //   Phase 1: short direct attempts on 6 instances to sample whether direct
     //            works at all from this network.
     //   Phase 2: if all direct fail, try the configured proxy on the first 2
@@ -792,7 +843,7 @@ const SOURCES = [
     // community instances that come and go regularly; even with a working
     // proxy, the instances themselves are often down or refusing requests.
     // Since YouTube trending is a "nice to have" rather than a critical
-    // signal, v0.0.24 marks this as skipped rather than failed when all
+    // signal, v0.0.25 marks this as skipped rather than failed when all
     // paths exhaust. The capture-side fetcher does the same: if it can't
     // reach any instance, it simply omits youtube from the cultural block.
     return { __skip: `Piped/Invidious instance ecosystem unreachable. Sampled errors: ${errors.slice(0, 3).join('; ')}. Captures will omit youtube when this happens.` };
@@ -816,6 +867,27 @@ const SOURCES = [
     if (!wt) throw new Error('no wikitext');
     const sections = (wt.match(/^;[^\n]+/gm) || []).length;
     return `${sections} section${sections === 1 ? '' : 's'} for today`;
+  }},
+  { category: 'Discourse', name: 'Quote of the Day (Wikiquote)', domain: 'en.wikiquote.org', run: async () => {
+    const d = new Date();
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const pageTitle = `Wikiquote:Quote_of_the_day/${monthNames[d.getMonth()]}_${d.getDate()},_${d.getFullYear()}`;
+    const r = await fetch(`https://en.wikiquote.org/w/api.php?format=json&action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext&origin=*`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.info || 'no page');
+    const wt = j.parse?.wikitext?.['*'];
+    if (!wt || wt.length < 10) throw new Error('empty wikitext');
+    // Strip templates and brackets to extract the first quote-like content
+    const cleaned = wt
+      .replace(/\{\{[^|}]*\|/g, '')
+      .replace(/\}\}/g, '')
+      .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')
+      .replace(/''+/g, '')
+      .trim();
+    const parts = cleaned.split('|').map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 0) throw new Error('no parseable quote');
+    return `"${parts[0].slice(0, 80)}${parts[0].length > 80 ? '...' : ''}"`;
   }},
   { category: 'Discourse', name: 'Hacker News', domain: 'hacker-news.firebaseio.com', run: async () => {
     const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
@@ -981,7 +1053,7 @@ async function runOne(src) {
 
 // Limit concurrent probes so slow upstreams (USGS NWIS, ISS) don't fight 30+
 // other requests for the browser's per-origin HTTP/2 connection budget. In
-// v0.0.24 and earlier, Promise.allSettled fired all 36 probes at once and
+// v0.0.25 and earlier, Promise.allSettled fired all 36 probes at once and
 // browser connection limits queued the slow ones until they hit per-fetch
 // timeouts; e.g. Stream Gauges was timing out at 12s while Mike's captures
 // (one request at a time) succeeded fine. With concurrency capped at 6, USGS
@@ -1056,7 +1128,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.24',
+    milepost_status_version: 'v0.0.25',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,

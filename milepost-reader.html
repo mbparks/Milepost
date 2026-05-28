@@ -1285,7 +1285,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.24</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.25</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1307,7 +1307,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.24
+   MILEPOST READER  /  v0.0.25
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1630,7 +1630,7 @@ function computeStats() {
     if (s.location?.place) {
       places.add(s.location.place);
     } else if (s.location?.latitude != null && s.location?.longitude != null) {
-      // Pre-v0.0.24 captures stored place: null because the reverse-geocoding
+      // Pre-v0.0.25 captures stored place: null because the reverse-geocoding
       // endpoint was broken. Fall back to rounded coordinates so these entries
       // still register as distinct locations in the stats banner.
       places.add(`${s.location.latitude.toFixed(2)},${s.location.longitude.toFixed(2)}`);
@@ -1880,7 +1880,7 @@ function renderDetail() {
   $('actPrint').addEventListener('click', () => {
     // Browsers use document.title as the default filename when the user picks
     // "Save as PDF" from the print dialog. By default this is "MILEPOST Reader"
-    // for every entry. v0.0.24 swaps the title to the entry's filename stem
+    // for every entry. v0.0.25 swaps the title to the entry's filename stem
     // for the duration of the print, then restores it. Result: the suggested
     // PDF filename matches the TXT/JSON pattern (milepost_YYYYMMDD-HHMM_NNN.pdf)
     // rather than being a generic page name.
@@ -2038,6 +2038,8 @@ function renderSectionAtmospheric(s) {
   const daily = s.weather?.daily;
   const aq = s.airQuality?.current;
   const co2 = s.climate?.co2;
+  const pt = s.pressureTrend;
+  const metar = s.metar;
   if (!w) return sec('Atmospheric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const rows = [
     kvRow('Conditions', WMO[w.weather_code] || '--'),
@@ -2046,6 +2048,7 @@ function renderSectionAtmospheric(s) {
     kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
     w.dew_point_2m != null ? kvRow('Dewpoint', `${fmtNum(w.dew_point_2m, 1)}°C / ${fmtNum(w.dew_point_2m * 9/5 + 32, 1)}°F`) : '',
     kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
+    pt ? kvRow('Pressure Trend (3h)', `${pt.delta3h_hPa >= 0 ? '+' : ''}${fmtNum(pt.delta3h_hPa, 2)} hPa, ${pt.label}`) : '',
     kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
     kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
     kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
@@ -2061,7 +2064,12 @@ function renderSectionAtmospheric(s) {
       if (v != null && !isNaN(v)) rows.push(kvRow(`${n} Pollen`, `${fmtNum(v, 1)} g/m³`, pollenCategory(v)));
     });
   }
-  const sources = ['Open-Meteo', co2 && 'NOAA GML'].filter(Boolean).join(', ');
+  if (metar) {
+    rows.push(kvRow('Nearest METAR', `${metar.icao} (${fmtNum(metar.distanceKm, 1)} km)`));
+    if (metar.flight_category) rows.push(kvRow('Flight Category', metar.flight_category));
+    if (metar.raw) rows.push(kvRow('METAR Raw', metar.raw));
+  }
+  const sources = ['Open-Meteo', co2 && 'NOAA GML', metar && 'aviationweather.gov'].filter(Boolean).join(', ');
   return sec('Atmospheric', sources, rows.join(''));
 }
 
@@ -2091,6 +2099,10 @@ function renderSectionCelestial(s) {
     : 'none active';
   const ecl = ev?.nextEclipse;
   const eclipseLabel = ecl ? `${ecl.type}, ${ecl.daysAway} ${ecl.daysAway === 1 ? 'day' : 'days'} away` : '--';
+  const visibleNow = (c.visiblePlanets || []).filter((p) => p.visible_now);
+  const planetsLabel = visibleNow.length
+    ? visibleNow.map((p) => `${p.name} ${fmtNum(p.altitude, 0)}° ${p.compass}`).join(' / ')
+    : 'none above horizon';
   const rows = [
     kvRow('Sun Sign', c.sunSign),
     kvRow('Sun Altitude', c.sun ? `${fmtNum(c.sun.altitude, 1)}°` : '--'),
@@ -2098,11 +2110,14 @@ function renderSectionCelestial(s) {
     kvRow('Moon Phase', c.moon?.name),
     kvRow('Moon Illumination', c.moon ? `${fmtNum(c.moon.illumination * 100, 1)}%` : '--'),
     kvRow('Moon Age', c.moon ? `${fmtNum(c.moon.age, 1)} days` : '--'),
+    c.moon?.moonrise ? kvRow('Moonrise', fmtTime(c.moon.moonrise)) : '',
+    c.moon?.moonset ? kvRow('Moonset', fmtTime(c.moon.moonset)) : '',
     kvRow('Sunrise', sr || '--'),
     kvRow('Sunset', ss || '--'),
     st ? kvRow('Civil Twilight', `${fmtTime(st.civilTwilightBegin)} / ${fmtTime(st.civilTwilightEnd)}`) : '',
     st ? kvRow('Astro Twilight', `${fmtTime(st.astronomicalTwilightBegin)} / ${fmtTime(st.astronomicalTwilightEnd)}`) : '',
     kvRow('Day Length', dayLen),
+    (c.visiblePlanets && c.visiblePlanets.length) ? kvRow('Visible Planets', planetsLabel) : '',
     ev ? kvRow('Meteor Showers', showerLabel) : '',
     ev ? kvRow('Next Eclipse', eclipseLabel) : '',
     c.nextSolar ? kvRow('Next Solar Event', `${c.nextSolar.name}  /  ${c.nextSolar.days} ${c.nextSolar.days === 1 ? 'day' : 'days'}`) : '',
@@ -2135,8 +2150,8 @@ function renderSectionSpaceWeather(s) {
 }
 
 function renderSectionTelluric(s) {
-  const eq = s.earthquakes, fires = s.wildfires;
-  if (!eq && !fires) return sec('Telluric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const eq = s.earthquakes, fires = s.wildfires, drought = s.drought, park = s.nearestPark;
+  if (!eq && !fires && !drought && !park) return sec('Telluric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   let rows = '';
   if (eq) {
     if (eq.nearby?.length) {
@@ -2162,9 +2177,29 @@ function renderSectionTelluric(s) {
         rows += kvRow('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km`);
         rows += kvRow('Fire Radiative Pwr', `${fmtNum(fires.closest.frp, 1)} MW`);
       }
+      // v0.0.25 detailed nearest-fire signal
+      if (fires.nearest && fires.nearest.distanceKm != null) {
+        rows += kvRow('Nearest Fire (region)', `${fmtNum(fires.nearest.distanceKm, 1)} km ${fires.nearest.compass}`);
+        if (fires.nearest.frp != null) rows += kvRow('Nearest Fire Power', `${fmtNum(fires.nearest.frp, 1)} MW radiative`);
+      }
     }
   }
-  return sec('Telluric', 'USGS, NASA FIRMS', rows || '<div class="kv"><span class="v muted">unavailable</span></div>');
+  if (drought) {
+    if (drought.classification && drought.classification !== 'Not in US') {
+      const label = drought.label ? `${drought.classification} (${drought.label})` : drought.classification;
+      rows += kvRow('Drought Status', label);
+      if (drought.county && drought.state) rows += kvRow('Drought County', `${drought.county}, ${drought.state}`);
+    } else if (drought.classification === 'Not in US') {
+      // skip; drought monitor is US-only
+    }
+  }
+  if (park) {
+    const kind = park.kind === 'NP' ? 'National Park' : 'National Forest';
+    rows += kvRow(`Nearest ${kind}`, `${park.name}`);
+    rows += kvRow('Park Distance', `${fmtNum(park.distanceKm, 1)} km ${park.compass}`);
+  }
+  const sources = ['USGS', fires && 'NASA FIRMS', drought && 'USDM/UNL', park && 'NPS/USFS'].filter(Boolean).join(', ');
+  return sec('Telluric', sources, rows || '<div class="kv"><span class="v muted">unavailable</span></div>');
 }
 
 function renderSectionHydrosphere(s) {
@@ -2296,33 +2331,39 @@ function renderSectionCultural(s) {
 
 function renderSectionDiscourse(s) {
   const x = s.discourse;
-  if (!x || (!x.wiki && !x.hackerNews && !x.reddit && !x.currentEvents)) return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
+  const q = s.quoteOfDay;
+  const hasAny = (x && (x.wiki || x.hackerNews || x.reddit || x.currentEvents)) || q;
+  if (!hasAny) return sec('Discourse', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const items = [];
-  if (x.currentEvents?.items?.length) {
+  if (x?.currentEvents?.items?.length) {
     const ce = x.currentEvents;
     const sub = ce.items.map((it) => `<div class="ce-item"><span class="ce-cat">${escapeHtml(it.category)}</span><span class="ce-text">${escapeHtml(it.headline)}</span></div>`).join('');
     items.push(`<div class="item"><span class="yr">NEWS</span><b>Today's news</b>  <span style="color:var(--ink-faint);font-size:11px">(Wikipedia Current Events / ${escapeHtml(ce.date)})</span><div class="ce-list">${sub}</div></div>`);
   }
-  if (x.wiki?.mostread) {
+  if (q && q.quote) {
+    items.push(`<div class="item"><span class="yr">QOTD</span><b style="font-style:italic">&ldquo;${escapeHtml(q.quote)}&rdquo;</b>  <span style="color:var(--ink-faint);font-size:11px">(${escapeHtml(q.author || 'Unknown')} / Wikiquote)</span></div>`);
+  }
+  if (x?.wiki?.mostread) {
     const v = x.wiki.mostread.views ? `${fmtNum(x.wiki.mostread.views, 0)} views` : '';
     items.push(`<div class="item"><span class="yr">WIKI</span><b>${escapeHtml(x.wiki.mostread.title)}</b>${v ? `  <span style="color:var(--ink-faint);font-size:11px">(${v})</span>` : ''}${x.wiki.mostread.description ? `<div style="font-size:13px;color:var(--ink-soft);margin-top:2px">${escapeHtml(x.wiki.mostread.description)}</div>` : ''}</div>`);
   }
-  if (x.wiki?.news?.text) {
+  if (x?.wiki?.news?.text) {
     items.push(`<div class="item"><span class="yr">FEAT</span>${escapeHtml(x.wiki.news.text)}</div>`);
   }
-  if (x.hackerNews) {
+  if (x?.hackerNews) {
     const meta = `${x.hackerNews.score || 0} pts / ${x.hackerNews.descendants || 0} comments`;
     items.push(`<div class="item"><span class="yr">HN</span><b>${escapeHtml(x.hackerNews.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
   }
-  if (x.reddit) {
+  if (x?.reddit) {
     const meta = `r/${x.reddit.subreddit} / ${fmtNum(x.reddit.score, 0)} pts / ${fmtNum(x.reddit.comments, 0)} comments`;
     items.push(`<div class="item"><span class="yr">RDDT</span><b>${escapeHtml(x.reddit.title)}</b>  <span style="color:var(--ink-faint);font-size:11px">(${meta})</span></div>`);
   }
   const sources = [
-    x.currentEvents && 'Wikipedia CE',
-    (x.wiki?.mostread || x.wiki?.news) && 'Wikipedia',
-    x.hackerNews && 'HN',
-    x.reddit && 'Reddit',
+    x?.currentEvents && 'Wikipedia CE',
+    q && 'Wikiquote',
+    (x?.wiki?.mostread || x?.wiki?.news) && 'Wikipedia',
+    x?.hackerNews && 'HN',
+    x?.reddit && 'Reddit',
   ].filter(Boolean).join(', ');
   return sec('Discourse', sources, items.join(''), { prose: true });
 }

@@ -1244,7 +1244,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.24</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.25</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1363,7 +1363,7 @@ function initSettings() {
   $('exportSettings').addEventListener('click', () => {
     const payload = {
       format: 'milepost-settings',
-      version: '0.0.24',
+      version: '0.0.25',
       exported_at: new Date().toISOString(),
       note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
       settings: {
@@ -2180,6 +2180,552 @@ async function getStocks() {
     }
   }));
   return Object.keys(out).length ? out : null;
+}
+
+/* ============================================================
+   v0.0.25 additions: extended environmental and discourse signals
+   ============================================================ */
+
+// Drought Monitor classification for the user's county.
+// Two-step: FCC Census Block API resolves lat/lon to a 5-digit county FIPS,
+// then UNL's USDM REST service returns the percent-area in each drought
+// category for that county for the current week. We pick the most severe
+// category covering more than 25% of the county to summarize.
+async function getDroughtMonitor(lat, lon) {
+  if (lat == null || lon == null) return null;
+  // Step 1: lat/lon -> county FIPS
+  let fips = null;
+  let county = null;
+  let state = null;
+  try {
+    const fcc = await fetchScrape(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lon}&format=json`);
+    const fj = await fcc.json();
+    const r0 = fj.results && fj.results[0];
+    if (r0 && r0.county_fips) {
+      fips = r0.county_fips; // 5-digit string like "24001"
+      county = r0.county_name;
+      state = r0.state_code;
+    }
+  } catch (e) {
+    return { error: `FCC lookup failed: ${e.message}`, classification: null };
+  }
+  if (!fips) return { classification: 'Not in US', county: null, state: null };
+
+  // Step 2: ask USDM for this week's categories for the county
+  try {
+    const today = new Date();
+    const start = new Date(today.getTime() - 14 * 86400000); // window of 14 days catches Thursday update
+    const fmt = (d) => `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    const url = `https://usdmdataservices.unl.edu/api/CountyStatistics/GetDroughtSeverityStatisticsByAreaPercent` +
+      `?aoi=${fips}&startdate=${fmt(start)}&enddate=${fmt(today)}&statisticsType=2`;
+    const r = await fetchScrape(url, { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (!Array.isArray(j) || j.length === 0) return { classification: 'No data', county, state, fips };
+    const latest = j[j.length - 1];
+    // Pick most severe category > 25% of county. Categories descend D4 -> None.
+    const cats = [
+      ['D4', 'Exceptional Drought', parseFloat(latest.D4)],
+      ['D3', 'Extreme Drought',    parseFloat(latest.D3)],
+      ['D2', 'Severe Drought',     parseFloat(latest.D2)],
+      ['D1', 'Moderate Drought',   parseFloat(latest.D1)],
+      ['D0', 'Abnormally Dry',     parseFloat(latest.D0)],
+    ];
+    let chosen = ['None', 'No drought conditions', 100];
+    for (const c of cats) {
+      if (Number.isFinite(c[2]) && c[2] > 25) { chosen = c; break; }
+    }
+    return {
+      classification: chosen[0],
+      label: chosen[1],
+      county,
+      state,
+      fips,
+      validDate: latest.ValidStart || latest.ValidEnd || null,
+      pctD0: parseFloat(latest.D0) || 0,
+      pctD1: parseFloat(latest.D1) || 0,
+      pctD2: parseFloat(latest.D2) || 0,
+      pctD3: parseFloat(latest.D3) || 0,
+      pctD4: parseFloat(latest.D4) || 0,
+    };
+  } catch (e) {
+    return { error: `USDM lookup failed: ${e.message}`, classification: null, county, state, fips };
+  }
+}
+
+// Nearest National Park or National Forest. Uses a small embedded dataset
+// so no API key or network call needed for the location data itself; we
+// just compute haversine to each of the ~60 NPs plus ~155 NFs. The dataset
+// changes rarely (new designations come a few times a year) so static is fine.
+const NPS_NF_DATASET = [
+  // National Parks (subset; full list of 63 + key designations)
+  { name: 'Shenandoah National Park', kind: 'NP', lat: 38.5326, lon: -78.3496 },
+  { name: 'New River Gorge National Park', kind: 'NP', lat: 37.9393, lon: -81.0668 },
+  { name: 'Great Smoky Mountains National Park', kind: 'NP', lat: 35.6532, lon: -83.5070 },
+  { name: 'Acadia National Park', kind: 'NP', lat: 44.3386, lon: -68.2733 },
+  { name: 'Cuyahoga Valley National Park', kind: 'NP', lat: 41.2808, lon: -81.5678 },
+  { name: 'Mammoth Cave National Park', kind: 'NP', lat: 37.1862, lon: -86.1000 },
+  { name: 'Congaree National Park', kind: 'NP', lat: 33.7948, lon: -80.7820 },
+  { name: 'Indiana Dunes National Park', kind: 'NP', lat: 41.6533, lon: -87.0524 },
+  { name: 'Voyageurs National Park', kind: 'NP', lat: 48.5000, lon: -92.8833 },
+  { name: 'Isle Royale National Park', kind: 'NP', lat: 47.9959, lon: -88.9094 },
+  { name: 'Hot Springs National Park', kind: 'NP', lat: 34.5217, lon: -93.0424 },
+  { name: 'Everglades National Park', kind: 'NP', lat: 25.2866, lon: -80.8987 },
+  { name: 'Biscayne National Park', kind: 'NP', lat: 25.4824, lon: -80.2100 },
+  { name: 'Dry Tortugas National Park', kind: 'NP', lat: 24.6285, lon: -82.8732 },
+  { name: 'Yellowstone National Park', kind: 'NP', lat: 44.4280, lon: -110.5885 },
+  { name: 'Grand Teton National Park', kind: 'NP', lat: 43.7904, lon: -110.6818 },
+  { name: 'Glacier National Park', kind: 'NP', lat: 48.7596, lon: -113.7870 },
+  { name: 'Rocky Mountain National Park', kind: 'NP', lat: 40.3428, lon: -105.6836 },
+  { name: 'Black Canyon of the Gunnison National Park', kind: 'NP', lat: 38.5754, lon: -107.7416 },
+  { name: 'Great Sand Dunes National Park', kind: 'NP', lat: 37.7325, lon: -105.5125 },
+  { name: 'Mesa Verde National Park', kind: 'NP', lat: 37.2309, lon: -108.4618 },
+  { name: 'Theodore Roosevelt National Park', kind: 'NP', lat: 46.9790, lon: -103.5388 },
+  { name: 'Badlands National Park', kind: 'NP', lat: 43.8554, lon: -101.9777 },
+  { name: 'Wind Cave National Park', kind: 'NP', lat: 43.5724, lon: -103.4789 },
+  { name: 'Carlsbad Caverns National Park', kind: 'NP', lat: 32.1479, lon: -104.5567 },
+  { name: 'Guadalupe Mountains National Park', kind: 'NP', lat: 31.9231, lon: -104.8703 },
+  { name: 'Big Bend National Park', kind: 'NP', lat: 29.1275, lon: -103.2425 },
+  { name: 'White Sands National Park', kind: 'NP', lat: 32.7811, lon: -106.1717 },
+  { name: 'Saguaro National Park', kind: 'NP', lat: 32.2967, lon: -111.1665 },
+  { name: 'Petrified Forest National Park', kind: 'NP', lat: 34.9099, lon: -109.8068 },
+  { name: 'Grand Canyon National Park', kind: 'NP', lat: 36.0544, lon: -112.1401 },
+  { name: 'Zion National Park', kind: 'NP', lat: 37.2982, lon: -113.0263 },
+  { name: 'Bryce Canyon National Park', kind: 'NP', lat: 37.5930, lon: -112.1871 },
+  { name: 'Capitol Reef National Park', kind: 'NP', lat: 38.0877, lon: -111.1083 },
+  { name: 'Arches National Park', kind: 'NP', lat: 38.7331, lon: -109.5925 },
+  { name: 'Canyonlands National Park', kind: 'NP', lat: 38.3269, lon: -109.8783 },
+  { name: 'Great Basin National Park', kind: 'NP', lat: 38.9833, lon: -114.3000 },
+  { name: 'Death Valley National Park', kind: 'NP', lat: 36.5054, lon: -117.0794 },
+  { name: 'Joshua Tree National Park', kind: 'NP', lat: 33.8734, lon: -115.9010 },
+  { name: 'Channel Islands National Park', kind: 'NP', lat: 34.0069, lon: -119.7785 },
+  { name: 'Sequoia National Park', kind: 'NP', lat: 36.4864, lon: -118.5658 },
+  { name: 'Kings Canyon National Park', kind: 'NP', lat: 36.8879, lon: -118.5551 },
+  { name: 'Yosemite National Park', kind: 'NP', lat: 37.8651, lon: -119.5383 },
+  { name: 'Pinnacles National Park', kind: 'NP', lat: 36.4906, lon: -121.1825 },
+  { name: 'Lassen Volcanic National Park', kind: 'NP', lat: 40.4977, lon: -121.4207 },
+  { name: 'Redwood National Park', kind: 'NP', lat: 41.2132, lon: -124.0046 },
+  { name: 'Crater Lake National Park', kind: 'NP', lat: 42.8684, lon: -122.1685 },
+  { name: 'Mount Rainier National Park', kind: 'NP', lat: 46.8800, lon: -121.7269 },
+  { name: 'North Cascades National Park', kind: 'NP', lat: 48.7718, lon: -121.2985 },
+  { name: 'Olympic National Park', kind: 'NP', lat: 47.8021, lon: -123.6044 },
+  // National Forests (selected; mid-Atlantic + nearby focus given Mike's location, plus major Western ones)
+  { name: 'George Washington and Jefferson National Forest', kind: 'NF', lat: 38.0420, lon: -79.5500 },
+  { name: 'Monongahela National Forest', kind: 'NF', lat: 38.6500, lon: -79.7500 },
+  { name: 'Allegheny National Forest', kind: 'NF', lat: 41.7000, lon: -79.0000 },
+  { name: 'Cherokee National Forest', kind: 'NF', lat: 35.5000, lon: -83.5000 },
+  { name: 'Pisgah National Forest', kind: 'NF', lat: 35.7500, lon: -82.5500 },
+  { name: 'Nantahala National Forest', kind: 'NF', lat: 35.2000, lon: -83.4000 },
+  { name: 'Sumter National Forest', kind: 'NF', lat: 34.5000, lon: -82.5000 },
+  { name: 'Chattahoochee-Oconee National Forest', kind: 'NF', lat: 34.7500, lon: -83.7500 },
+  { name: 'Daniel Boone National Forest', kind: 'NF', lat: 37.0000, lon: -83.6000 },
+  { name: 'Wayne National Forest', kind: 'NF', lat: 39.2500, lon: -82.2500 },
+  { name: 'Hoosier National Forest', kind: 'NF', lat: 38.4000, lon: -86.4500 },
+  { name: 'Shawnee National Forest', kind: 'NF', lat: 37.5500, lon: -88.6500 },
+  { name: 'Mark Twain National Forest', kind: 'NF', lat: 37.0000, lon: -91.5000 },
+  { name: 'Ozark-St. Francis National Forest', kind: 'NF', lat: 35.7500, lon: -93.5000 },
+  { name: 'Ouachita National Forest', kind: 'NF', lat: 34.5000, lon: -93.8000 },
+  { name: 'Green Mountain National Forest', kind: 'NF', lat: 43.5000, lon: -73.0000 },
+  { name: 'White Mountain National Forest', kind: 'NF', lat: 44.2500, lon: -71.5000 },
+  { name: 'Finger Lakes National Forest', kind: 'NF', lat: 42.5500, lon: -76.8000 },
+  { name: 'Superior National Forest', kind: 'NF', lat: 47.9000, lon: -91.5000 },
+  { name: 'Chippewa National Forest', kind: 'NF', lat: 47.5500, lon: -94.0000 },
+  { name: 'Ottawa National Forest', kind: 'NF', lat: 46.5000, lon: -89.5000 },
+  { name: 'Hiawatha National Forest', kind: 'NF', lat: 46.0000, lon: -86.5000 },
+  { name: 'Huron-Manistee National Forest', kind: 'NF', lat: 44.5000, lon: -84.5000 },
+  { name: 'Bridger-Teton National Forest', kind: 'NF', lat: 43.5000, lon: -110.5000 },
+  { name: 'Custer Gallatin National Forest', kind: 'NF', lat: 45.7500, lon: -110.5000 },
+  { name: 'Shoshone National Forest', kind: 'NF', lat: 44.0000, lon: -109.5000 },
+  { name: 'Bighorn National Forest', kind: 'NF', lat: 44.5000, lon: -107.5000 },
+  { name: 'Medicine Bow-Routt National Forest', kind: 'NF', lat: 41.5000, lon: -106.5000 },
+  { name: 'Pike-San Isabel National Forest', kind: 'NF', lat: 38.5000, lon: -105.5000 },
+  { name: 'White River National Forest', kind: 'NF', lat: 39.7000, lon: -106.8000 },
+  { name: 'San Juan National Forest', kind: 'NF', lat: 37.5000, lon: -107.5000 },
+  { name: 'Coconino National Forest', kind: 'NF', lat: 35.0000, lon: -111.5000 },
+  { name: 'Tonto National Forest', kind: 'NF', lat: 34.0000, lon: -111.3000 },
+  { name: 'Coronado National Forest', kind: 'NF', lat: 32.0000, lon: -110.5000 },
+  { name: 'Gila National Forest', kind: 'NF', lat: 33.5000, lon: -108.5000 },
+  { name: 'Carson National Forest', kind: 'NF', lat: 36.5000, lon: -106.0000 },
+  { name: 'Santa Fe National Forest', kind: 'NF', lat: 35.7500, lon: -106.0000 },
+  { name: 'Inyo National Forest', kind: 'NF', lat: 37.5000, lon: -118.5000 },
+  { name: 'Sierra National Forest', kind: 'NF', lat: 37.3000, lon: -119.2000 },
+  { name: 'Stanislaus National Forest', kind: 'NF', lat: 38.3000, lon: -120.0000 },
+  { name: 'Tahoe National Forest', kind: 'NF', lat: 39.4000, lon: -120.6000 },
+  { name: 'Plumas National Forest', kind: 'NF', lat: 39.8000, lon: -121.0000 },
+  { name: 'Lassen National Forest', kind: 'NF', lat: 40.5000, lon: -121.3000 },
+  { name: 'Shasta-Trinity National Forest', kind: 'NF', lat: 41.0000, lon: -122.5000 },
+  { name: 'Klamath National Forest', kind: 'NF', lat: 41.8000, lon: -123.0000 },
+  { name: 'Six Rivers National Forest', kind: 'NF', lat: 41.5000, lon: -123.7500 },
+  { name: 'Mendocino National Forest', kind: 'NF', lat: 39.5000, lon: -122.8000 },
+  { name: 'Los Padres National Forest', kind: 'NF', lat: 35.0000, lon: -119.5000 },
+  { name: 'San Bernardino National Forest', kind: 'NF', lat: 34.1000, lon: -116.8000 },
+  { name: 'Angeles National Forest', kind: 'NF', lat: 34.3000, lon: -118.0000 },
+  { name: 'Cleveland National Forest', kind: 'NF', lat: 33.5000, lon: -116.7000 },
+  { name: 'Mt. Hood National Forest', kind: 'NF', lat: 45.3000, lon: -121.7000 },
+  { name: 'Willamette National Forest', kind: 'NF', lat: 44.0000, lon: -122.0000 },
+  { name: 'Deschutes National Forest', kind: 'NF', lat: 43.7000, lon: -121.5000 },
+  { name: 'Umpqua National Forest', kind: 'NF', lat: 43.2000, lon: -122.7000 },
+  { name: 'Rogue River-Siskiyou National Forest', kind: 'NF', lat: 42.5000, lon: -123.5000 },
+  { name: 'Fremont-Winema National Forest', kind: 'NF', lat: 42.7000, lon: -120.7000 },
+  { name: 'Malheur National Forest', kind: 'NF', lat: 44.0000, lon: -119.0000 },
+  { name: 'Ochoco National Forest', kind: 'NF', lat: 44.3000, lon: -120.0000 },
+  { name: 'Umatilla National Forest', kind: 'NF', lat: 45.7000, lon: -118.2000 },
+  { name: 'Wallowa-Whitman National Forest', kind: 'NF', lat: 45.0000, lon: -117.5000 },
+  { name: 'Olympic National Forest', kind: 'NF', lat: 47.6000, lon: -123.3000 },
+  { name: 'Mount Baker-Snoqualmie National Forest', kind: 'NF', lat: 48.0000, lon: -121.5000 },
+  { name: 'Okanogan-Wenatchee National Forest', kind: 'NF', lat: 48.0000, lon: -120.0000 },
+  { name: 'Gifford Pinchot National Forest', kind: 'NF', lat: 46.5000, lon: -121.6000 },
+  { name: 'Colville National Forest', kind: 'NF', lat: 48.5000, lon: -117.7000 },
+  { name: 'Boise National Forest', kind: 'NF', lat: 44.0000, lon: -115.5000 },
+  { name: 'Payette National Forest', kind: 'NF', lat: 45.0000, lon: -115.7000 },
+  { name: 'Salmon-Challis National Forest', kind: 'NF', lat: 44.5000, lon: -114.5000 },
+  { name: 'Sawtooth National Forest', kind: 'NF', lat: 43.7000, lon: -114.7000 },
+  { name: 'Caribou-Targhee National Forest', kind: 'NF', lat: 43.5000, lon: -111.5000 },
+  { name: 'Beaverhead-Deerlodge National Forest', kind: 'NF', lat: 45.7000, lon: -113.0000 },
+  { name: 'Bitterroot National Forest', kind: 'NF', lat: 46.0000, lon: -114.0000 },
+  { name: 'Lolo National Forest', kind: 'NF', lat: 47.0000, lon: -114.5000 },
+  { name: 'Kootenai National Forest', kind: 'NF', lat: 48.5000, lon: -115.5000 },
+  { name: 'Flathead National Forest', kind: 'NF', lat: 48.0000, lon: -114.0000 },
+  { name: 'Helena-Lewis and Clark National Forest', kind: 'NF', lat: 47.0000, lon: -110.5000 },
+];
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function bearingDeg(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => d * Math.PI / 180;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+function compassFromDeg(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+function getNearestPark(lat, lon) {
+  if (lat == null || lon == null) return null;
+  let nearest = null;
+  let minDist = Infinity;
+  for (const p of NPS_NF_DATASET) {
+    const d = haversineKm(lat, lon, p.lat, p.lon);
+    if (d < minDist) { minDist = d; nearest = p; }
+  }
+  if (!nearest) return null;
+  return {
+    name: nearest.name,
+    kind: nearest.kind, // 'NP' or 'NF'
+    distanceKm: minDist,
+    bearing: bearingDeg(lat, lon, nearest.lat, nearest.lon),
+    compass: compassFromDeg(bearingDeg(lat, lon, nearest.lat, nearest.lon)),
+    lat: nearest.lat,
+    lon: nearest.lon,
+  };
+}
+
+// Nearest METAR observation. aviationweather.gov serves recent METARs in a
+// bounding box; we query a ~2-degree box around the user, then pick whichever
+// station is closest by haversine.
+async function getNearestMETAR(lat, lon) {
+  if (lat == null || lon == null) return null;
+  const d = 1.5;
+  const bbox = `${(lat-d).toFixed(2)},${(lon-d).toFixed(2)},${(lat+d).toFixed(2)},${(lon+d).toFixed(2)}`;
+  const url = `https://aviationweather.gov/api/data/metar?bbox=${bbox}&format=json&taf=false&hours=2`;
+  const r = await fetchScrape(url);
+  const arr = await r.json();
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  let nearest = null;
+  let minDist = Infinity;
+  for (const m of arr) {
+    if (m.lat == null || m.lon == null) continue;
+    const dist = haversineKm(lat, lon, m.lat, m.lon);
+    if (dist < minDist) { minDist = dist; nearest = m; }
+  }
+  if (!nearest) return null;
+  return {
+    icao: nearest.icaoId,
+    name: nearest.name || nearest.icaoId,
+    raw: nearest.rawOb,
+    observedISO: nearest.reportTime,
+    distanceKm: minDist,
+    temp_c: nearest.temp,
+    dewpoint_c: nearest.dewp,
+    wind_dir_deg: nearest.wdir,
+    wind_speed_kt: nearest.wspd,
+    wind_gust_kt: nearest.wgst,
+    visibility_sm: nearest.visib,
+    altimeter_hpa: nearest.altim,
+    flight_category: nearest.fltCat, // VFR/MVFR/IFR/LIFR
+    cloud_cover: nearest.clouds,
+    weather: nearest.wxString,
+    stationLat: nearest.lat,
+    stationLon: nearest.lon,
+  };
+}
+
+// Nearest active wildfire from FIRMS data. v0.0.25 reduces the global thermal
+// anomaly count (already pulled by getWildfires) to a personal signal by
+// computing the distance to the nearest detection. Mike's existing wildfires
+// fetcher returns aggregate counts; this function refetches a tighter
+// regional slice and finds the closest point.
+async function getNearestWildfire(lat, lon, firmsKey) {
+  if (lat == null || lon == null || !firmsKey) return null;
+  // FIRMS area API: query within a bounding box for the last 1 day
+  // We use a 5-degree box (~550km) so we capture nearby fires even if they're not in the immediate area
+  const d = 5;
+  const bbox = `${(lon-d).toFixed(2)},${(lat-d).toFixed(2)},${(lon+d).toFixed(2)},${(lat+d).toFixed(2)}`;
+  // VIIRS_SNPP_NRT is the more sensitive satellite product
+  const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${firmsKey}/VIIRS_SNPP_NRT/${bbox}/1`;
+  const r = await fetchScrape(url);
+  const csv = await r.text();
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return { count: 0, nearest: null };
+  const header = lines[0].split(',');
+  const latIdx = header.indexOf('latitude');
+  const lonIdx = header.indexOf('longitude');
+  const briIdx = header.indexOf('bright_ti4');
+  const frpIdx = header.indexOf('frp');
+  const dateIdx = header.indexOf('acq_date');
+  const timeIdx = header.indexOf('acq_time');
+  let nearest = null;
+  let minDist = Infinity;
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(',');
+    const fLat = parseFloat(c[latIdx]);
+    const fLon = parseFloat(c[lonIdx]);
+    if (!Number.isFinite(fLat) || !Number.isFinite(fLon)) continue;
+    const dist = haversineKm(lat, lon, fLat, fLon);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = {
+        lat: fLat, lon: fLon,
+        brightness: parseFloat(c[briIdx]) || null,
+        frp: parseFloat(c[frpIdx]) || null,
+        acqDate: c[dateIdx],
+        acqTime: c[timeIdx],
+      };
+    }
+  }
+  if (!nearest) return { count: 0, nearest: null };
+  return {
+    count: lines.length - 1,
+    distanceKm: minDist,
+    bearing: bearingDeg(lat, lon, nearest.lat, nearest.lon),
+    compass: compassFromDeg(bearingDeg(lat, lon, nearest.lat, nearest.lon)),
+    fireLat: nearest.lat,
+    fireLon: nearest.lon,
+    brightness: nearest.brightness,
+    frp: nearest.frp,
+    acqDate: nearest.acqDate,
+    acqTime: nearest.acqTime,
+  };
+}
+
+// Wikiquote Quote of the Day. Wikiquote stores the daily quote at
+// Wikiquote:Quote of the day/MONTH DAY, YEAR (e.g. "May 27, 2026"). We fetch
+// the parsed HTML and extract the first blockquote-like passage and
+// attribution. The structure has been stable for years.
+async function getQuoteOfDay() {
+  const d = new Date();
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const pageTitle = `Wikiquote:Quote_of_the_day/${monthNames[d.getMonth()]}_${d.getDate()},_${d.getFullYear()}`;
+  const url = `https://en.wikiquote.org/w/api.php?format=json&action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext&origin=*`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (j.error || !j.parse) return null;
+  const wt = j.parse.wikitext['*'] || '';
+  // The wikitext typically looks like:
+  //   {{Cquote|Quote text here|...|''[[Author Name]]''}}
+  // or includes a |source= argument. Different templates over the years.
+  // Strategy: strip all template names and brackets, then pull the first
+  // meaningful text block plus the last line as attribution.
+  const cleaned = wt
+    .replace(/\{\{[^|}]*\|/g, '')   // open template, drop name
+    .replace(/\}\}/g, '')           // close
+    .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')  // unwrap wikilinks
+    .replace(/''+/g, '')            // strip bold/italic markers
+    .trim();
+  const parts = cleaned.split('|').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  const quote = parts[0];
+  // Author is usually the last short line, often prefixed with em-dash; we strip leading punctuation
+  const lastFew = parts.slice(-3);
+  let author = '';
+  for (const candidate of lastFew.reverse()) {
+    const c = candidate.replace(/^[\s\-\u2013\u2014~]+/, '').trim();
+    if (c && c.length < 80 && !/^\d+$/.test(c)) { author = c; break; }
+  }
+  return {
+    quote: quote.slice(0, 800),
+    author: author || 'Unknown',
+    sourceUrl: `https://en.wikiquote.org/wiki/${encodeURIComponent(pageTitle.replace(/_/g, ' '))}`,
+  };
+}
+
+// Pressure trend. Open-Meteo's forecast endpoint with past_hours=3 returns
+// recent hourly pressure_msl values; we compare the latest to three hours
+// ago to get a delta. Sailors and meteorologists watch pressure trend as a
+// primary forecasting signal: rising = improving conditions, falling = storm
+// approaching, sharp drop = significant weather change incoming.
+async function getPressureTrend(lat, lon) {
+  if (lat == null || lon == null) return null;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&hourly=pressure_msl&past_hours=4&forecast_hours=1&timezone=auto`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const series = j?.hourly?.pressure_msl;
+  if (!Array.isArray(series) || series.length < 4) return null;
+  // pick the latest non-null and the one ~3 hours before
+  let latest = null, latestIdx = -1;
+  for (let i = series.length - 1; i >= 0; i--) {
+    if (series[i] != null) { latest = series[i]; latestIdx = i; break; }
+  }
+  if (latest == null || latestIdx < 3) return null;
+  const prior = series[latestIdx - 3];
+  if (prior == null) return null;
+  const delta = latest - prior;
+  let label;
+  if (Math.abs(delta) < 0.5) label = 'steady';
+  else if (delta > 0 && delta < 1.5) label = 'rising slowly';
+  else if (delta >= 1.5) label = 'rising rapidly';
+  else if (delta < 0 && delta > -1.5) label = 'falling slowly';
+  else label = 'falling rapidly';
+  return {
+    current_hPa: latest,
+    prior3h_hPa: prior,
+    delta3h_hPa: delta,
+    label,
+  };
+}
+
+// Visible planets tonight. Computes approximate ecliptic positions of the
+// inner and outer planets from VSOP87 truncated series, then determines
+// which are above the user's horizon between sunset and midnight. The
+// algorithm here uses simplified mean elements; accurate enough to say "yes
+// Jupiter is up tonight" but not for ephemeris-grade work.
+function getVisiblePlanets(date, lat, lon) {
+  if (lat == null || lon == null) return null;
+  // Use the moment of local sunset + 2 hours as the "evening sky" check
+  const checkTime = new Date(date.getTime() + 0 * 3600000); // approximate as "now" for now
+  const J = julianDay(checkTime);
+  const T = (J - 2451545.0) / 36525; // Julian centuries since J2000
+  const sidereal = (18.697374558 + 24.06570982441908 * (J - 2451545.0)) % 24;
+  const lst_deg = (sidereal * 15 + lon + 360) % 360;
+  const planets = [
+    // name, magnitude_at_opposition, semi-major axis AU, eccentricity, inclination, mean longitude J2000, longitude of perihelion, longitude of ascending node, period yr
+    { name: 'Mercury', mag: -1.5, a: 0.387098, e: 0.205630, I: 7.005, L0: 252.250906, lp: 77.456119, On: 48.331, P: 0.241 },
+    { name: 'Venus',   mag: -4.4, a: 0.723332, e: 0.006772, I: 3.395, L0: 181.979801, lp: 131.602467, On: 76.680, P: 0.615 },
+    { name: 'Mars',    mag: -2.9, a: 1.523688, e: 0.093405, I: 1.850, L0: 355.433000, lp: 336.060234, On: 49.578, P: 1.881 },
+    { name: 'Jupiter', mag: -2.9, a: 5.202887, e: 0.048498, I: 1.303, L0: 34.351519, lp: 14.728479, On: 100.473, P: 11.86 },
+    { name: 'Saturn',  mag: 0.4,  a: 9.536676, e: 0.054150, I: 2.489, L0: 50.077444, lp: 92.598878, On: 113.662, P: 29.46 },
+  ];
+  const toRad = (deg) => deg * Math.PI / 180;
+  const visible = [];
+  const earth = { L0: 100.466449, lp: 102.937348, a: 1.000001, e: 0.016709, P: 1.000 };
+
+  // Earth heliocentric ecliptic position (simplified, low precision)
+  const daysSinceJ2000 = J - 2451545.0;
+  const earthL = ((earth.L0 + daysSinceJ2000 * 360 / (earth.P * 365.25)) % 360 + 360) % 360;
+  const earthM = ((earthL - earth.lp) % 360 + 360) % 360;
+  const earthV = earthM + (180 / Math.PI) * (2 * earth.e * Math.sin(toRad(earthM)) + 1.25 * earth.e * earth.e * Math.sin(toRad(2 * earthM)));
+  const earthR = earth.a * (1 - earth.e * earth.e) / (1 + earth.e * Math.cos(toRad(earthV)));
+  const earthLambda = (earth.lp + earthV) * Math.PI / 180;
+  const earthX = earthR * Math.cos(earthLambda);
+  const earthY = earthR * Math.sin(earthLambda);
+
+  for (const p of planets) {
+    const meanL = ((p.L0 + daysSinceJ2000 * 360 / (p.P * 365.25)) % 360 + 360) % 360;
+    const M = ((meanL - p.lp) % 360 + 360) % 360;
+    const V = M + (180 / Math.PI) * (2 * p.e * Math.sin(toRad(M)) + 1.25 * p.e * p.e * Math.sin(toRad(2 * M)));
+    const r = p.a * (1 - p.e * p.e) / (1 + p.e * Math.cos(toRad(V)));
+    const lambdaH = toRad(p.lp + V);
+    // Heliocentric ecliptic coords (ignoring inclination for low precision)
+    const xH = r * Math.cos(lambdaH);
+    const yH = r * Math.sin(lambdaH);
+    // Geocentric ecliptic
+    const xG = xH - earthX;
+    const yG = yH - earthY;
+    const geoLambda = (Math.atan2(yG, xG) * 180 / Math.PI + 360) % 360;
+    // Approximate equatorial RA from ecliptic longitude (treating beta=0)
+    const eps = toRad(23.439);
+    const ra = (Math.atan2(Math.sin(toRad(geoLambda)) * Math.cos(eps), Math.cos(toRad(geoLambda))) * 180 / Math.PI + 360) % 360;
+    const dec = Math.asin(Math.sin(eps) * Math.sin(toRad(geoLambda))) * 180 / Math.PI;
+    // Hour angle, altitude
+    const HA = ((lst_deg - ra + 540) % 360) - 180;
+    const alt = Math.asin(
+      Math.sin(toRad(lat)) * Math.sin(toRad(dec)) +
+      Math.cos(toRad(lat)) * Math.cos(toRad(dec)) * Math.cos(toRad(HA))
+    ) * 180 / Math.PI;
+    const az = (Math.atan2(
+      -Math.cos(toRad(dec)) * Math.sin(toRad(HA)),
+      Math.sin(toRad(dec)) * Math.cos(toRad(lat)) - Math.cos(toRad(dec)) * Math.sin(toRad(lat)) * Math.cos(toRad(HA))
+    ) * 180 / Math.PI + 360) % 360;
+    visible.push({
+      name: p.name,
+      altitude: alt,
+      azimuth: az,
+      compass: compassFromDeg(az),
+      ecliptic_lon: geoLambda,
+      magnitude: p.mag,
+      visible_now: alt > 0,
+    });
+  }
+  return visible;
+}
+
+// Moonrise and moonset extension. The existing moonPhase() gives age and
+// illumination but not the times. This computes them via the standard
+// "sunrise-style" search using the moon's lower-precision ecliptic position.
+function getMoonRiseSet(date, lat, lon) {
+  if (lat == null || lon == null) return null;
+  const toRad = (d) => d * Math.PI / 180;
+  const toDeg = (r) => r * 180 / Math.PI;
+  // Compute moon altitude at a given UTC moment
+  function moonAlt(utcMs) {
+    const J = utcMs / 86400000 + 2440587.5;
+    const T = (J - 2451545.0) / 36525;
+    const L = (218.3164477 + 481267.88123421 * T) % 360;
+    const D = (297.8501921 + 445267.1114034 * T) % 360;
+    const M = (357.5291092 + 35999.0502909 * T) % 360;
+    const Mp = (134.9633964 + 477198.8675055 * T) % 360;
+    const F = (93.272095 + 483202.0175233 * T) % 360;
+    // Simplified longitude with major periodic terms
+    const lambda = L + 6.289 * Math.sin(toRad(Mp)) - 1.274 * Math.sin(toRad(Mp - 2*D))
+                     + 0.658 * Math.sin(toRad(2*D)) - 0.186 * Math.sin(toRad(M));
+    const beta = 5.128 * Math.sin(toRad(F));
+    const eps = 23.439 - 0.0000004 * (J - 2451545);
+    const lambdaR = toRad(lambda);
+    const betaR = toRad(beta);
+    const epsR = toRad(eps);
+    const ra = Math.atan2(Math.sin(lambdaR) * Math.cos(epsR) - Math.tan(betaR) * Math.sin(epsR), Math.cos(lambdaR));
+    const dec = Math.asin(Math.sin(betaR) * Math.cos(epsR) + Math.cos(betaR) * Math.sin(epsR) * Math.sin(lambdaR));
+    const gmst = (18.697374558 + 24.06570982441908 * (J - 2451545.0)) % 24;
+    const lst = toRad(gmst * 15 + lon);
+    const ha = lst - ra;
+    const alt = Math.asin(Math.sin(toRad(lat)) * Math.sin(dec) + Math.cos(toRad(lat)) * Math.cos(dec) * Math.cos(ha));
+    return toDeg(alt);
+  }
+  // Scan 24 hours around the date in 10-minute increments to find rise and set
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const stepMs = 10 * 60 * 1000;
+  let prevAlt = moonAlt(start.getTime());
+  let rise = null, set = null;
+  for (let i = 1; i <= 144; i++) {
+    const t = start.getTime() + i * stepMs;
+    const a = moonAlt(t);
+    if (prevAlt < 0 && a >= 0 && !rise) rise = new Date(t);
+    if (prevAlt >= 0 && a < 0 && !set) set = new Date(t);
+    prevAlt = a;
+    if (rise && set) break;
+  }
+  return {
+    moonrise: rise ? rise.toISOString() : null,
+    moonset: set ? set.toISOString() : null,
+  };
 }
 
 async function getOnThisDay() {
@@ -3143,22 +3689,27 @@ async function getGitHubTrending() {
 /* ---------- capture pipeline ---------- */
 
 const SOURCES = [
-  { id: 'loc',    label: 'Location' },
-  { id: 'wx',     label: 'Atmospheric' },
-  { id: 'air',    label: 'Air Quality' },
-  { id: 'co2',    label: 'Climate / CO\u2082' },
-  { id: 'cel',    label: 'Celestial' },
-  { id: 'sw',     label: 'Space Weather' },
-  { id: 'iss',    label: 'Orbital' },
-  { id: 'eq',     label: 'Telluric / Quakes' },
-  { id: 'fire',   label: 'Telluric / Fires' },
-  { id: 'hydro',  label: 'Hydrosphere' },
-  { id: 'bio',    label: 'Biosphere' },
-  { id: 'mkt',    label: 'Markets' },
-  { id: 'cult',   label: 'Cultural Pulse' },
-  { id: 'disc',   label: 'Discourse' },
-  { id: 'curio',  label: 'Curio' },
-  { id: 'otd',    label: 'Historical' },
+  { id: 'loc',     label: 'Location' },
+  { id: 'wx',      label: 'Atmospheric' },
+  { id: 'ptrend',  label: 'Pressure Trend' },
+  { id: 'air',     label: 'Air Quality' },
+  { id: 'co2',     label: 'Climate / CO\u2082' },
+  { id: 'metar',   label: 'Aviation METAR' },
+  { id: 'cel',     label: 'Celestial' },
+  { id: 'sw',      label: 'Space Weather' },
+  { id: 'iss',     label: 'Orbital' },
+  { id: 'eq',      label: 'Telluric / Quakes' },
+  { id: 'fire',    label: 'Telluric / Fires' },
+  { id: 'drought', label: 'Drought Monitor' },
+  { id: 'hydro',   label: 'Hydrosphere' },
+  { id: 'bio',     label: 'Biosphere' },
+  { id: 'park',    label: 'Nearest Park' },
+  { id: 'mkt',     label: 'Markets' },
+  { id: 'cult',    label: 'Cultural Pulse' },
+  { id: 'disc',    label: 'Discourse' },
+  { id: 'quote',   label: 'Quote of Day' },
+  { id: 'curio',   label: 'Curio' },
+  { id: 'otd',     label: 'Historical' },
 ];
 
 function renderCapLog(state) {
@@ -3197,6 +3748,7 @@ async function captureAll() {
     },
     location: null,
     weather: null,
+    pressureTrend: null,
     airQuality: null,
     climate: null,
     celestial: null,
@@ -3204,11 +3756,15 @@ async function captureAll() {
     iss: null,
     earthquakes: null,
     wildfires: null,
+    drought: null,
     hydrosphere: null,
     biosphere: null,
+    nearestPark: null,
+    metar: null,
     markets: null,
     cultural: null,
     discourse: null,
+    quoteOfDay: null,
     curio: null,
     onThisDay: null,
     palette: null,
@@ -3243,8 +3799,13 @@ async function captureAll() {
       const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
         console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
       }) : null;
+      // v0.0.25: enrich moon with rise/set times; add visible planets list.
+      const moonBase = moonPhase(now);
+      const moonRS = lat != null ? getMoonRiseSet(now, lat, lon) : null;
+      const moon = moonRS ? Object.assign({}, moonBase, moonRS) : moonBase;
+      const planets = lat != null ? getVisiblePlanets(now, lat, lon) : null;
       data.celestial = {
-        moon: moonPhase(now),
+        moon,
         sun: sunPosition(now, lat, lon),
         sunSign: zodiac(now),
         julianDay: julianDay(now),
@@ -3252,6 +3813,7 @@ async function captureAll() {
         sunTimes,
         solarDisk: getSolarDisk(),
         events: getAstronomicalEvents(),
+        visiblePlanets: planets,
       };
     }],
     ['sw', async () => {
@@ -3281,6 +3843,52 @@ async function captureAll() {
     ['fire', async () => {
       data.wildfires = await getWildfires(lat, lon, firmsKey);
       if (data.wildfires?.needsKey) throw new Error('needsKey');
+      // v0.0.25: add nearest-fire signal if we have FIRMS key
+      if (firmsKey && lat != null) {
+        try {
+          data.wildfires.nearest = await getNearestWildfire(lat, lon, firmsKey);
+        } catch (e) {
+          console.warn(`[Milepost] fire/nearest: ${e.message}`);
+        }
+      }
+    }],
+    ['drought', async () => {
+      if (lat == null) return;
+      try {
+        data.drought = await getDroughtMonitor(lat, lon);
+      } catch (e) {
+        console.warn(`[Milepost] drought: ${e.message}`);
+        data.drought = null;
+      }
+    }],
+    ['park', async () => {
+      data.nearestPark = getNearestPark(lat, lon);
+    }],
+    ['metar', async () => {
+      if (lat == null) return;
+      try {
+        data.metar = await getNearestMETAR(lat, lon);
+      } catch (e) {
+        console.warn(`[Milepost] metar: ${e.message}`);
+        data.metar = null;
+      }
+    }],
+    ['ptrend', async () => {
+      if (lat == null) return;
+      try {
+        data.pressureTrend = await getPressureTrend(lat, lon);
+      } catch (e) {
+        console.warn(`[Milepost] pressureTrend: ${e.message}`);
+        data.pressureTrend = null;
+      }
+    }],
+    ['quote', async () => {
+      try {
+        data.quoteOfDay = await getQuoteOfDay();
+      } catch (e) {
+        console.warn(`[Milepost] quoteOfDay: ${e.message}`);
+        data.quoteOfDay = null;
+      }
     }],
     ['hydro', async () => {
       const [stream, tide] = await Promise.all([
@@ -4398,10 +5006,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.24 this was only set on the 'input' event, which requires a value
+   v0.0.25 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.24 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.25 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -4721,7 +5329,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.24',
+    version: '0.0.25',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
