@@ -1286,7 +1286,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.26</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.27</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1308,7 +1308,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.26
+   MILEPOST READER  /  v0.0.27
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1631,7 +1631,7 @@ function computeStats() {
     if (s.location?.place) {
       places.add(s.location.place);
     } else if (s.location?.latitude != null && s.location?.longitude != null) {
-      // Pre-v0.0.26 captures stored place: null because the reverse-geocoding
+      // Pre-v0.0.27 captures stored place: null because the reverse-geocoding
       // endpoint was broken. Fall back to rounded coordinates so these entries
       // still register as distinct locations in the stats banner.
       places.add(`${s.location.latitude.toFixed(2)},${s.location.longitude.toFixed(2)}`);
@@ -1881,7 +1881,7 @@ function renderDetail() {
   $('actPrint').addEventListener('click', () => {
     // Browsers use document.title as the default filename when the user picks
     // "Save as PDF" from the print dialog. By default this is "MILEPOST Reader"
-    // for every entry. v0.0.26 swaps the title to the entry's filename stem
+    // for every entry. v0.0.27 swaps the title to the entry's filename stem
     // for the duration of the print, then restores it. Result: the suggested
     // PDF filename matches the TXT/JSON pattern (milepost_YYYYMMDD-HHMM_NNN.pdf)
     // rather than being a generic page name.
@@ -2178,7 +2178,7 @@ function renderSectionTelluric(s) {
         rows += kvRow('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km`);
         rows += kvRow('Fire Radiative Pwr', `${fmtNum(fires.closest.frp, 1)} MW`);
       }
-      // v0.0.26 detailed nearest-fire signal
+      // v0.0.27 detailed nearest-fire signal
       if (fires.nearest && fires.nearest.distanceKm != null) {
         rows += kvRow('Nearest Fire (region)', `${fmtNum(fires.nearest.distanceKm, 1)} km ${fires.nearest.compass}`);
         if (fires.nearest.frp != null) rows += kvRow('Nearest Fire Power', `${fmtNum(fires.nearest.frp, 1)} MW radiative`);

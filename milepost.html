@@ -1245,7 +1245,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.26</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.27</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1364,7 +1364,7 @@ function initSettings() {
   $('exportSettings').addEventListener('click', () => {
     const payload = {
       format: 'milepost-settings',
-      version: '0.0.26',
+      version: '0.0.27',
       exported_at: new Date().toISOString(),
       note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
       settings: {
@@ -2184,7 +2184,7 @@ async function getStocks() {
 }
 
 /* ============================================================
-   v0.0.26 additions: extended environmental and discourse signals
+   v0.0.27 additions: extended environmental and discourse signals
    ============================================================ */
 
 // Drought Monitor classification for the user's county.
@@ -2213,40 +2213,45 @@ async function getDroughtMonitor(lat, lon) {
   if (!fips) return { classification: 'Not in US', county: null, state: null };
 
   // Step 2: ask USDM for this week's categories for the county
+  // v0.0.27: parse CSV directly. USDM ignores Accept: application/json (returns
+  // CSV regardless) so we parse the columns: MapDate, FIPS, County, State,
+  // None, D0, D1, D2, D3, D4, ValidStart, ValidEnd, StatisticFormatID.
   try {
     const today = new Date();
     const start = new Date(today.getTime() - 14 * 86400000); // window of 14 days catches Thursday update
     const fmt = (d) => `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
     const url = `https://usdmdataservices.unl.edu/api/CountyStatistics/GetDroughtSeverityStatisticsByAreaPercent` +
       `?aoi=${fips}&startdate=${fmt(start)}&enddate=${fmt(today)}&statisticsType=2`;
-    const r = await fetchScrape(url, { headers: { 'Accept': 'application/json' } });
-    const j = await r.json();
-    if (!Array.isArray(j) || j.length === 0) return { classification: 'No data', county, state, fips };
-    const latest = j[j.length - 1];
+    const r = await fetchScrape(url);
+    const csv = await r.text();
+    const lines = csv.trim().split('\n');
+    if (lines.length < 2) return { classification: 'No data', county, state, fips };
+    const headers = lines[0].split(',').map((h) => h.trim());
+    const idx = (name) => headers.indexOf(name);
+    const latestRow = lines[lines.length - 1].split(',');
+    const cell = (name) => parseFloat(latestRow[idx(name)]) || 0;
+    const d4 = cell('D4'), d3 = cell('D3'), d2 = cell('D2'), d1 = cell('D1'), d0 = cell('D0');
     // Pick most severe category > 25% of county. Categories descend D4 -> None.
     const cats = [
-      ['D4', 'Exceptional Drought', parseFloat(latest.D4)],
-      ['D3', 'Extreme Drought',    parseFloat(latest.D3)],
-      ['D2', 'Severe Drought',     parseFloat(latest.D2)],
-      ['D1', 'Moderate Drought',   parseFloat(latest.D1)],
-      ['D0', 'Abnormally Dry',     parseFloat(latest.D0)],
+      ['D4', 'Exceptional Drought', d4],
+      ['D3', 'Extreme Drought',    d3],
+      ['D2', 'Severe Drought',     d2],
+      ['D1', 'Moderate Drought',   d1],
+      ['D0', 'Abnormally Dry',     d0],
     ];
     let chosen = ['None', 'No drought conditions', 100];
     for (const c of cats) {
       if (Number.isFinite(c[2]) && c[2] > 25) { chosen = c; break; }
     }
+    const validIdx = idx('ValidEnd') !== -1 ? idx('ValidEnd') : idx('ValidStart');
     return {
       classification: chosen[0],
       label: chosen[1],
       county,
       state,
       fips,
-      validDate: latest.ValidStart || latest.ValidEnd || null,
-      pctD0: parseFloat(latest.D0) || 0,
-      pctD1: parseFloat(latest.D1) || 0,
-      pctD2: parseFloat(latest.D2) || 0,
-      pctD3: parseFloat(latest.D3) || 0,
-      pctD4: parseFloat(latest.D4) || 0,
+      validDate: validIdx !== -1 ? latestRow[validIdx] : null,
+      pctD0: d0, pctD1: d1, pctD2: d2, pctD3: d3, pctD4: d4,
     };
   } catch (e) {
     return { error: `USDM lookup failed: ${e.message}`, classification: null, county, state, fips };
@@ -2467,7 +2472,7 @@ async function getNearestMETAR(lat, lon) {
   };
 }
 
-// Nearest active wildfire from FIRMS data. v0.0.26 reduces the global thermal
+// Nearest active wildfire from FIRMS data. v0.0.27 reduces the global thermal
 // anomaly count (already pulled by getWildfires) to a personal signal by
 // computing the distance to the nearest detection. Mike's existing wildfires
 // fetcher returns aggregate counts; this function refetches a tighter
@@ -2538,30 +2543,75 @@ async function getQuoteOfDay() {
   const j = await r.json();
   if (j.error || !j.parse) return null;
   const wt = j.parse.wikitext['*'] || '';
-  // The wikitext typically looks like:
-  //   {{Cquote|Quote text here|...|''[[Author Name]]''}}
-  // or includes a |source= argument. Different templates over the years.
-  // Strategy: strip all template names and brackets, then pull the first
-  // meaningful text block plus the last line as attribution.
-  const cleaned = wt
-    .replace(/\{\{[^|}]*\|/g, '')   // open template, drop name
-    .replace(/\}\}/g, '')           // close
-    .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')  // unwrap wikilinks
-    .replace(/''+/g, '')            // strip bold/italic markers
-    .trim();
-  const parts = cleaned.split('|').map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return null;
-  const quote = parts[0];
-  // Author is usually the last short line, often prefixed with em-dash; we strip leading punctuation
-  const lastFew = parts.slice(-3);
-  let author = '';
-  for (const candidate of lastFew.reverse()) {
-    const c = candidate.replace(/^[\s\-\u2013\u2014~]+/, '').trim();
-    if (c && c.length < 80 && !/^\d+$/.test(c)) { author = c; break; }
+  // v0.0.27: smarter parser. The Wikiquote QOTD template has many named
+  // parameters (image1, caption, quote, author, source, date, etc.) and
+  // prior code was grabbing the first piped parameter, which often turned
+  // out to be the image filename. Now we:
+  //   1. Look for named parameter "quote = ..." (or "text =") first
+  //   2. If not found, scan parts and skip ones that look like metadata
+  //      (image filenames, dates, captions, very short strings)
+  //   3. Pick the longest remaining part as the quote
+  //   4. Author comes from named "author =" or "source =" or the last
+  //      short part that isn't metadata
+  function stripMarkup(s) {
+    return s
+      .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')
+      .replace(/'''([^']+)'''/g, '$1')
+      .replace(/''([^']+)''/g, '$1')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\{\{[^}]+\}\}/g, '')
+      .trim();
   }
+  function looksLikeMetadata(text) {
+    const t = text.trim();
+    if (t.length < 15) return true;
+    if (/^\s*image\d*\s*=/i.test(t)) return true;
+    if (/^\s*caption\s*=/i.test(t)) return true;
+    if (/^\s*date\s*=/i.test(t)) return true;
+    if (/^\s*width\s*=/i.test(t)) return true;
+    if (/^\s*size\s*=/i.test(t)) return true;
+    if (/^\s*ref\s*=/i.test(t)) return true;
+    if (/\.(jpg|jpeg|png|svg|gif|webp)\s*$/i.test(t)) return true;
+    if (/^\[\[File:/i.test(t)) return true;
+    return false;
+  }
+  function namedParam(text, name) {
+    const re = new RegExp(`(?:^|\\|)\\s*${name}\\s*=\\s*([^|}]+)`, 'i');
+    const m = text.match(re);
+    return m ? stripMarkup(m[1]) : null;
+  }
+
+  // 1. Try named parameters first
+  let quote = namedParam(wt, 'quote') || namedParam(wt, 'text');
+  let author = namedParam(wt, 'author') || namedParam(wt, 'source') || namedParam(wt, 'by');
+
+  // 2. Fallback: cleanup template wrapper and walk parts
+  if (!quote) {
+    const cleaned = wt
+      .replace(/\{\{[^|}]*\|/g, '')   // open template, drop name
+      .replace(/\}\}/g, '')           // close
+      .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')  // unwrap wikilinks
+      .replace(/''+/g, '')            // strip bold/italic markers
+      .trim();
+    const parts = cleaned.split('|').map((p) => p.trim()).filter(Boolean);
+    const usable = parts.filter((p) => !looksLikeMetadata(p));
+    if (usable.length === 0) return null;
+    // Pick the longest as the quote; the second longest is often the source
+    usable.sort((a, b) => b.length - a.length);
+    quote = usable[0];
+    if (!author && usable.length > 1) {
+      // Use a shorter usable part as author candidate
+      const candidates = usable.slice(1).filter((p) => p.length < 100);
+      if (candidates.length) author = candidates[0].replace(/^[\s\-\u2013\u2014~]+/, '').trim();
+    }
+  }
+
+  if (!quote) return null;
+  quote = stripMarkup(quote).slice(0, 800);
+  if (quote.length < 15) return null;
   return {
-    quote: quote.slice(0, 800),
-    author: author || 'Unknown',
+    quote,
+    author: (author || 'Unknown').slice(0, 200),
     sourceUrl: `https://en.wikiquote.org/wiki/${encodeURIComponent(pageTitle.replace(/_/g, ' '))}`,
   };
 }
@@ -3800,7 +3850,7 @@ async function captureAll() {
       const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
         console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
       }) : null;
-      // v0.0.26: enrich moon with rise/set times; add visible planets list.
+      // v0.0.27: enrich moon with rise/set times; add visible planets list.
       const moonBase = moonPhase(now);
       const moonRS = lat != null ? getMoonRiseSet(now, lat, lon) : null;
       const moon = moonRS ? Object.assign({}, moonBase, moonRS) : moonBase;
@@ -3844,7 +3894,7 @@ async function captureAll() {
     ['fire', async () => {
       data.wildfires = await getWildfires(lat, lon, firmsKey);
       if (data.wildfires?.needsKey) throw new Error('needsKey');
-      // v0.0.26: add nearest-fire signal if we have FIRMS key
+      // v0.0.27: add nearest-fire signal if we have FIRMS key
       if (firmsKey && lat != null) {
         try {
           data.wildfires.nearest = await getNearestWildfire(lat, lon, firmsKey);
@@ -5007,10 +5057,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.26 this was only set on the 'input' event, which requires a value
+   v0.0.27 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.26 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.27 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -5330,7 +5380,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.26',
+    version: '0.0.27',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
