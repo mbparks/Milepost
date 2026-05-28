@@ -373,7 +373,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.23</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.24</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -495,7 +495,7 @@ const SOURCES = [
     //
     // Because this is a FALLBACK that only matters when the primary is also
     // broken, an unreachable corsproxy.io is not a real failure for users
-    // with a working primary proxy. v0.0.23 returns __skip on failure so it
+    // with a working primary proxy. v0.0.24 returns __skip on failure so it
     // doesn't count against the all-green target.
     const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
     try {
@@ -527,12 +527,12 @@ const SOURCES = [
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
     // Route through probeFetch so we use the configured proxy chain if direct
     // fails. ipapi.co is the location fallback when browser geo is denied
-    // or unavailable; matches the capture-side path in v0.0.23.
+    // or unavailable; matches the capture-side path in v0.0.24.
     //
     // ipapi.co blocks Cloudflare Worker IP ranges with HTTP 403 as part of
     // their anti-abuse policy (common for free geolocation APIs). When all
     // paths fail and browser geo is the user's primary, this fallback
-    // doesn't actually impact captures, so v0.0.23 returns __skip rather
+    // doesn't actually impact captures, so v0.0.24 returns __skip rather
     // than failing the probe.
     try {
       const { response: r, path } = await probeFetch('https://ipapi.co/json/');
@@ -632,13 +632,13 @@ const SOURCES = [
 
   // ---------- Hydrosphere ----------
   { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
-    // v0.0.23 matches the probe's bbox and parameter set to the capture's
+    // v0.0.24 matches the probe's bbox and parameter set to the capture's
     // first-attempt query in getStreamflow(). Previously the probe used a
     // larger bbox (0.5deg half-width = 1deg side) than the capture's first
     // try (0.3deg half-width = 0.6deg side), and queried only 00060 instead
     // of 00060,00065. The larger bbox hit more USGS sites and ran slower,
     // sometimes timing out the probe while the capture (using a smaller box)
-    // succeeded. Mike confirmed this in v0.0.23: capture pulled Wills Creek
+    // succeeded. Mike confirmed this in v0.0.24: capture pulled Wills Creek
     // discharge and gauge-height fine while the probe was failing at 8s.
     const d = 0.3;
     const bbox = `${(TEST_LON-d).toFixed(4)},${(TEST_LAT-d).toFixed(4)},${(TEST_LON+d).toFixed(4)},${(TEST_LAT+d).toFixed(4)}`;
@@ -738,7 +738,7 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Two-phase probe matching the capture-side behavior in v0.0.23:
+    // Two-phase probe matching the capture-side behavior in v0.0.24:
     //   Phase 1: short direct attempts on 6 instances to sample whether direct
     //            works at all from this network.
     //   Phase 2: if all direct fail, try the configured proxy on the first 2
@@ -792,7 +792,7 @@ const SOURCES = [
     // community instances that come and go regularly; even with a working
     // proxy, the instances themselves are often down or refusing requests.
     // Since YouTube trending is a "nice to have" rather than a critical
-    // signal, v0.0.23 marks this as skipped rather than failed when all
+    // signal, v0.0.24 marks this as skipped rather than failed when all
     // paths exhaust. The capture-side fetcher does the same: if it can't
     // reach any instance, it simply omits youtube from the cultural block.
     return { __skip: `Piped/Invidious instance ecosystem unreachable. Sampled errors: ${errors.slice(0, 3).join('; ')}. Captures will omit youtube when this happens.` };
@@ -981,7 +981,7 @@ async function runOne(src) {
 
 // Limit concurrent probes so slow upstreams (USGS NWIS, ISS) don't fight 30+
 // other requests for the browser's per-origin HTTP/2 connection budget. In
-// v0.0.23 and earlier, Promise.allSettled fired all 36 probes at once and
+// v0.0.24 and earlier, Promise.allSettled fired all 36 probes at once and
 // browser connection limits queued the slow ones until they hit per-fetch
 // timeouts; e.g. Stream Gauges was timing out at 12s while Mike's captures
 // (one request at a time) succeeded fine. With concurrency capped at 6, USGS
@@ -1056,7 +1056,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.23',
+    milepost_status_version: 'v0.0.24',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,
