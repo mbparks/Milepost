@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<!--
+   MILEPOST ANALYZER  /  FIELD INSTRUMENT 003 COMPANION  /  Version 0.0.25
+   Trend and correlation finder across captured journal entries.
+
+   Drop a folder of milepost JSON exports. The analyzer extracts every numeric
+   and categorical signal from the captures, then computes correlations and
+   group-mean effects against the user's mood/energy/focus self-reports.
+   Findings surface as readable sentences ranked by effect size, not raw stats.
+
+   Like the Reader, this runs entirely client-side. Files dropped here never
+   leave the browser. The single-file design matches the other Field Instrument
+   003 surfaces and shares their visual language (manila paper, JetBrains
+   Mono / Newsreader serif, calibration-stamp typography).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MILEPOST Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #ece3cf;
+  --paper-deep: #e1d6bb;
+  --paper-edge: #d4c8aa;
+  --ink: #1a1611;
+  --ink-soft: #3a2f22;
+  --ink-faint: #6e5e44;
+  --rule: #8a7a5c;
+  --flag: #c0431a;
+  --flag-deep: #962f10;
+  --stamp: #1f3a52;
+  --good: #4a6b3a;
+  --warn: #b88410;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  font-family: var(--mono);
+  background: var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(110,94,68,0.05) 0, transparent 50%),
+    radial-gradient(circle at 80% 75%, rgba(110,94,68,0.05) 0, transparent 50%);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+}
+.page { max-width: 1200px; margin: 0 auto; padding: 24px 32px 80px; }
+
+/* ------- header ------- */
+.head {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
+  align-items: end;
+}
+.head .brand { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--ink-faint); }
+.head .title { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.12em; }
+.head .sub { font-family: var(--serif); font-style: italic; color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+.head .meta { text-align: right; font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; }
+.head .meta .kv { margin-top: 2px; }
+.head .meta .kv b { color: var(--ink); }
+.cross-links { display: flex; gap: 14px; margin-top: 6px; }
+.cross-links a { color: var(--ink-faint); font-size: 10px; letter-spacing: 0.1em; text-decoration: none; border-bottom: 1px dotted var(--ink-faint); }
+.cross-links a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ------- drop zone ------- */
+.dropzone {
+  border: 2px dashed var(--rule);
+  background: var(--paper-deep);
+  padding: 36px 24px;
+  text-align: center;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dropzone:hover, .dropzone.over {
+  background: var(--paper-edge);
+  border-color: var(--ink);
+}
+.dropzone h2 { font-family: var(--mono); font-size: 14px; letter-spacing: 0.1em; margin-bottom: 8px; }
+.dropzone p { font-family: var(--serif); font-style: italic; color: var(--ink-soft); font-size: 14px; }
+.dropzone .pickers { margin-top: 14px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn:hover { background: var(--ink-soft); color: var(--paper); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ------- section blocks ------- */
+.section {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  margin-bottom: 24px;
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.section-head .sources { font-size: 9px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 400; text-transform: none; }
+.section-body { padding: 16px 18px; }
+
+/* ------- summary cards ------- */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.card {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--stamp);
+  padding: 10px 12px;
+}
+.card .lab { font-size: 9px; letter-spacing: 0.14em; color: var(--ink-faint); text-transform: uppercase; }
+.card .val { font-family: var(--mono); font-size: 18px; font-weight: 700; margin-top: 3px; }
+.card .hint { font-size: 10px; color: var(--ink-soft); margin-top: 2px; font-style: italic; }
+
+/* ------- findings list ------- */
+.findings { list-style: none; padding: 0; }
+.finding {
+  border-bottom: 1px dotted var(--rule);
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: 60px 1fr 100px;
+  gap: 12px;
+  align-items: baseline;
+}
+.finding:last-child { border-bottom: none; }
+.finding .strength {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  text-align: center;
+}
+.finding .strength.strong { background: var(--flag); color: var(--paper); }
+.finding .strength.medium { background: var(--stamp); color: var(--paper); }
+.finding .strength.weak { background: var(--paper-edge); color: var(--ink-faint); }
+.finding .strength.veryweak { background: transparent; color: var(--ink-faint); border: 1px dashed var(--ink-faint); }
+.finding .text {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.finding .text b { font-weight: 600; }
+.finding .stat {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  text-align: right;
+}
+
+/* ------- categorical group table ------- */
+.cat-group { margin-bottom: 18px; }
+.cat-group h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 3px;
+}
+.cat-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.cat-table th, .cat-table td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px dotted var(--rule);
+}
+.cat-table th { font-weight: 700; color: var(--ink-faint); font-size: 10px; letter-spacing: 0.08em; }
+.cat-table .n { color: var(--ink-faint); font-size: 10px; }
+.cat-table .bar { display: inline-block; height: 4px; background: var(--stamp); vertical-align: middle; margin-left: 6px; }
+.cat-table .bar.warn { background: var(--flag); }
+
+/* ------- scatter explorer ------- */
+.explorer-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.explorer-controls label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.explorer-controls select {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+.scatter {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  padding: 8px;
+  position: relative;
+}
+.scatter svg { width: 100%; height: auto; display: block; }
+.scatter-info {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* ------- compound finder ------- */
+.compound-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.compound-result {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--flag);
+  padding: 12px;
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.compound-result b { font-weight: 600; }
+.compound-empty {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--rule);
+  padding: 12px;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-faint);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* ------- callouts ------- */
+.callout {
+  padding: 14px 16px;
+  background: var(--paper-deep);
+  border-left: 3px solid var(--warn);
+  font-family: var(--serif);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.callout.empty { border-left-color: var(--rule); color: var(--ink-faint); font-style: italic; }
+.callout b { font-weight: 600; color: var(--ink); }
+
+/* ------- about / methodology ------- */
+.about {
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  padding-right: 40px;
+}
+.about p { margin-bottom: 10px; }
+.about code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper-deep);
+  padding: 1px 5px;
+  border-radius: 1px;
+}
+.about ul { margin: 6px 0 12px 24px; }
+
+/* small screens */
+@media (max-width: 700px) {
+  .page { padding: 16px 14px 60px; }
+  .head { grid-template-columns: 1fr; }
+  .head .meta { text-align: left; }
+  .finding { grid-template-columns: 50px 1fr; }
+  .finding .stat { grid-column: 2; text-align: left; padding-top: 2px; }
+}
+
+/* calibration stamp (corner) */
+.stamp {
+  position: fixed;
+  bottom: 16px;
+  right: 18px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--stamp);
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  border: 1px solid var(--stamp);
+  padding: 5px 8px;
+  background: var(--paper);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.stamp b { font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <div>
+      <div class="brand">FIELD INSTRUMENT 003 / COMPANION</div>
+      <div class="title">MILEPOST ANALYZER</div>
+      <div class="sub">trend and correlation finder across captured entries</div>
+      <div class="cross-links">
+        <a href="..">New Entry &rarr;</a>
+        <a href="../reader">Open Reader &rarr;</a>
+        <a href="../status">Run Diagnostic &rarr;</a>
+      </div>
+    </div>
+    <div></div>
+    <div class="meta">
+      <div class="kv"><b>v0.0.26</b></div>
+      <div class="kv" id="entryCount">no entries</div>
+      <div class="kv" id="dateRange">--</div>
+    </div>
+  </header>
+
+  <!-- Drop zone -->
+  <div class="dropzone" id="dropzone">
+    <h2>DROP A FOLDER OF MILEPOST JSON FILES</h2>
+    <p>or pick files manually below</p>
+    <div class="pickers">
+      <button class="btn" id="pickFiles">Choose Files</button>
+      <button class="btn ghost" id="pickFolder">Choose Folder</button>
+    </div>
+    <input type="file" id="filePicker" multiple accept=".json,application/json" hidden>
+    <input type="file" id="folderPicker" webkitdirectory hidden>
+  </div>
+
+  <!-- Analysis output (populated after load) -->
+  <div id="analysis"></div>
+
+  <!-- About section, always visible -->
+  <div class="section">
+    <div class="section-head">
+      About this analyzer
+      <span class="sources">methodology / interpretation guide</span>
+    </div>
+    <div class="section-body">
+      <div class="about">
+        <p>The analyzer extracts every numeric and categorical signal from your captured JSONs and tests each against your mood, energy, and focus self-reports.</p>
+        <p><b>Numeric signals</b> (temperature, pressure, AQI, DJIA close, BTC price, Kp index, moon illumination, etc.) get a <code>Pearson correlation</code> against each of mood, energy, focus. A coefficient near +1 means the signal rises with your score; near -1 means it falls; near 0 means no linear relationship.</p>
+        <p><b>Categorical signals</b> (weather code, moon phase, drought classification, day of week, sun sign) get a <code>group means</code> analysis: average mood/energy/focus for entries in each category, with the within-category sample size shown.</p>
+        <p><b>Compound finder</b> (the "rainy days when DJIA &lt; 30,000" pattern) lets you specify up to two filter conditions and reports the average mood/energy/focus for the captures matching both, vs. the baseline across all captures.</p>
+        <p>Findings are ranked by absolute effect size weighted by sample size: a correlation of 0.8 over 6 entries is less trustworthy than 0.5 over 40 entries, and the ranker accounts for that.</p>
+        <p><b>Sample size matters.</b> With fewer than 10 captures, almost any correlation is noise; the analyzer shows warnings when sample size is small. With 30+ captures, real patterns start to emerge. With 100+, you can probably trust what you see.</p>
+        <p><b>Privacy:</b> all analysis runs in your browser. JSONs dropped here are read locally; nothing is uploaded.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stamp">FI&nbsp;003 / <b>ANALYZER</b> / V0.0.25</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+/* ============================================================
+   SIGNAL REGISTRY
+   ============================================================
+   Each entry describes how to extract one analyzable signal from a capture.
+   The path is a dotted accessor; missing values become null and are ignored.
+   numeric signals participate in correlation analysis; categorical signals
+   participate in group-mean analysis. Synthetic signals (day_of_week,
+   hour_of_day) are computed from the timestamp at extraction time.
+*/
+const SIGNALS = [
+  // Atmospheric
+  { id: 'temp_c',         label: 'Temperature (°C)',      kind: 'numeric', path: 'weather.current.temperature_2m' },
+  { id: 'apparent_temp',  label: 'Apparent Temp (°C)',    kind: 'numeric', path: 'weather.current.apparent_temperature' },
+  { id: 'humidity',       label: 'Humidity (%)',          kind: 'numeric', path: 'weather.current.relative_humidity_2m' },
+  { id: 'dewpoint',       label: 'Dewpoint (°C)',         kind: 'numeric', path: 'weather.current.dew_point_2m' },
+  { id: 'pressure',       label: 'Pressure (hPa)',        kind: 'numeric', path: 'weather.current.pressure_msl' },
+  { id: 'wind_speed',     label: 'Wind Speed (km/h)',     kind: 'numeric', path: 'weather.current.wind_speed_10m' },
+  { id: 'wind_gust',      label: 'Wind Gusts (km/h)',     kind: 'numeric', path: 'weather.current.wind_gusts_10m' },
+  { id: 'cloud_cover',    label: 'Cloud Cover (%)',       kind: 'numeric', path: 'weather.current.cloud_cover' },
+  { id: 'precip',         label: 'Precipitation (mm)',    kind: 'numeric', path: 'weather.current.precipitation' },
+  { id: 'visibility_m',   label: 'Visibility (m)',        kind: 'numeric', path: 'weather.current.visibility' },
+  { id: 'uv',             label: 'UV Index',              kind: 'numeric', path: 'weather.current.uv_index' },
+  { id: 'pressure_d3h',   label: 'Pressure Δ 3h (hPa)',   kind: 'numeric', path: 'pressureTrend.delta3h_hPa' },
+  // Air quality
+  { id: 'aqi',            label: 'AQI (US)',              kind: 'numeric', path: 'airQuality.current.us_aqi' },
+  { id: 'pm25',           label: 'PM2.5 (µg/m³)',         kind: 'numeric', path: 'airQuality.current.pm2_5' },
+  { id: 'pm10',           label: 'PM10 (µg/m³)',          kind: 'numeric', path: 'airQuality.current.pm10' },
+  { id: 'ozone',          label: 'Ozone (µg/m³)',         kind: 'numeric', path: 'airQuality.current.ozone' },
+  { id: 'pollen_grass',   label: 'Grass Pollen',          kind: 'numeric', path: 'airQuality.current.grass_pollen' },
+  // Climate
+  { id: 'co2',            label: 'CO\u2082 (ppm)',         kind: 'numeric', path: 'climate.co2.ppm' },
+  // Space weather
+  { id: 'kp',             label: 'Kp Index',              kind: 'numeric', path: 'spaceWeather.kp.kp' },
+  { id: 'solar_wind',     label: 'Solar Wind Speed',      kind: 'numeric', path: 'spaceWeather.solarWind.speed' },
+  { id: 'solar_density',  label: 'Solar Wind Density',    kind: 'numeric', path: 'spaceWeather.solarWind.density' },
+  // Markets
+  { id: 'djia',           label: 'DJIA Close',            kind: 'numeric', path: 'markets.djiaClose.closeValue' },
+  { id: 'sp500',          label: 'S&P 500',               kind: 'numeric', path: 'markets.stocks.sp500.price' },
+  { id: 'nasdaq',         label: 'NASDAQ',                kind: 'numeric', path: 'markets.stocks.nasdaq.price' },
+  { id: 'vix',            label: 'VIX',                   kind: 'numeric', path: 'markets.stocks.vix.price' },
+  { id: 'btc',            label: 'BTC (USD)',             kind: 'numeric', path: 'markets.crypto.btc_usd' },
+  { id: 'eth',            label: 'ETH (USD)',             kind: 'numeric', path: 'markets.crypto.eth_usd' },
+  { id: 'gold',           label: 'Gold',                  kind: 'numeric', path: 'markets.commodities.gold.price' },
+  { id: 'oil',            label: 'Oil (WTI)',             kind: 'numeric', path: 'markets.commodities.oil.price' },
+  { id: 'fear_greed',     label: 'Crypto Fear & Greed',   kind: 'numeric', path: 'markets.sentiment.fearGreed' },
+  // Celestial
+  { id: 'moon_illum',     label: 'Moon Illumination',     kind: 'numeric', path: 'celestial.moon.illumination' },
+  { id: 'moon_age',       label: 'Moon Age (days)',       kind: 'numeric', path: 'celestial.moon.age' },
+  { id: 'sun_alt',        label: 'Sun Altitude (°)',      kind: 'numeric', path: 'celestial.sun.altitude' },
+  { id: 'jd',             label: 'Julian Day',            kind: 'numeric', path: 'celestial.julianDay' },
+  // Body / personal
+  { id: 'hr',             label: 'Heart Rate',            kind: 'numeric', path: 'body.heartRate' },
+  { id: 'sleep_h',        label: 'Sleep Hours',           kind: 'numeric', path: 'body.sleepHours' },
+  { id: 'steps',          label: 'Steps',                 kind: 'numeric', path: 'body.steps' },
+  { id: 'hrv',            label: 'HRV',                   kind: 'numeric', path: 'body.hrv' },
+  { id: 'temp_body',      label: 'Body Temperature (°F)', kind: 'numeric', path: 'body.bodyTemperatureF' },
+  { id: 'weight',         label: 'Weight (lb)',           kind: 'numeric', path: 'body.weightLb' },
+  // Categorical
+  { id: 'weather_code',   label: 'Weather Conditions',    kind: 'categorical', path: 'weather.current.weather_code', formatter: 'wmo' },
+  { id: 'moon_phase',     label: 'Moon Phase',            kind: 'categorical', path: 'celestial.moon.name' },
+  { id: 'drought',        label: 'Drought Status',        kind: 'categorical', path: 'drought.classification' },
+  { id: 'sun_sign',       label: 'Sun Sign',              kind: 'categorical', path: 'celestial.sunSign' },
+  { id: 'flight_cat',     label: 'Flight Category',       kind: 'categorical', path: 'metar.flight_category' },
+  // Synthetic (computed at extract time)
+  { id: 'dow',            label: 'Day of Week',           kind: 'categorical', path: '__dow' },
+  { id: 'hour',           label: 'Hour of Day',           kind: 'numeric',     path: '__hour' },
+  { id: 'month',          label: 'Month',                 kind: 'categorical', path: '__month' },
+];
+
+const WMO = {
+  0: 'Clear', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+  45: 'Fog', 48: 'Rime Fog', 51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle',
+  56: 'Freezing Drizzle', 57: 'Freezing Drizzle', 61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain',
+  66: 'Freezing Rain', 67: 'Freezing Rain', 71: 'Light Snow', 73: 'Snow', 75: 'Heavy Snow',
+  77: 'Snow Grains', 80: 'Rain Showers', 81: 'Rain Showers', 82: 'Heavy Rain Showers',
+  85: 'Snow Showers', 86: 'Heavy Snow Showers', 95: 'Thunderstorm', 96: 'Thunderstorm w/ Hail', 99: 'Thunderstorm w/ Hail',
+};
+const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const DIMENSIONS = [
+  { id: 'mood',   label: 'Mood',   path: 'internal.mood' },
+  { id: 'energy', label: 'Energy', path: 'internal.energy' },
+  { id: 'focus',  label: 'Focus',  path: 'internal.focus' },
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const STATE = {
+  entries: [],     // normalized entries with extracted signals
+  signalValues: {},// signalId -> array of {value, mood, energy, focus, ts}
+  loading: false,
+};
+
+/* ============================================================
+   FILE LOADING
+   ============================================================ */
+function getPath(obj, path) {
+  if (!obj || !path) return null;
+  const parts = path.split('.');
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null) return null;
+    cur = cur[p];
+  }
+  return cur === undefined ? null : cur;
+}
+
+function extractEntry(json) {
+  // Accept either top-level capture {instrument:'MILEPOST', entry:{snapshot:...}}
+  // or just the snapshot itself.
+  let snap = null;
+  let capturedAt = null;
+  let observation = '';
+  let id = null;
+  if (json.instrument === 'MILEPOST' && json.entry) {
+    snap = json.entry.snapshot;
+    capturedAt = json.entry.capturedAt;
+    observation = json.entry.observation;
+    id = json.entry.id;
+  } else if (json.snapshot) {
+    snap = json.snapshot;
+    capturedAt = json.capturedAt;
+    observation = json.observation;
+    id = json.id;
+  } else if (json.timestamp && (json.weather || json.location)) {
+    // bare snapshot
+    snap = json;
+    capturedAt = json.timestamp;
+  } else {
+    return null; // can't recognize shape
+  }
+  if (!snap) return null;
+
+  // Synthesize computed fields used by SIGNAL registry
+  const dt = new Date(capturedAt || snap.timestamp || Date.now());
+  snap.__dow = DOW[dt.getDay()];
+  snap.__hour = dt.getHours() + dt.getMinutes() / 60;
+  snap.__month = MONTH_NAMES[dt.getMonth()];
+
+  // Pull mood/energy/focus
+  const mood   = getPath(snap, 'internal.mood');
+  const energy = getPath(snap, 'internal.energy');
+  const focus  = getPath(snap, 'internal.focus');
+
+  // Extract all signals
+  const signals = {};
+  for (const sig of SIGNALS) {
+    let v = getPath(snap, sig.path);
+    if (sig.formatter === 'wmo' && v != null) {
+      v = WMO[v] || `Code ${v}`;
+    }
+    signals[sig.id] = v;
+  }
+
+  return {
+    id,
+    timestamp: dt.toISOString(),
+    capturedAt: dt,
+    observation: observation || '',
+    mood, energy, focus,
+    signals,
+    raw: snap,
+  };
+}
+
+async function loadFiles(files) {
+  STATE.loading = true;
+  $('analysis').innerHTML = `<div class="callout"><b>Loading...</b> Reading ${files.length} file${files.length === 1 ? '' : 's'}.</div>`;
+  const entries = [];
+  for (const file of files) {
+    if (!file.name.endsWith('.json')) continue;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const e = extractEntry(json);
+      if (e) entries.push(e);
+    } catch (err) {
+      console.warn(`[Analyzer] failed to parse ${file.name}: ${err.message}`);
+    }
+  }
+  // De-dupe by timestamp (same entry might be in folder twice)
+  const seen = new Set();
+  STATE.entries = entries.filter((e) => {
+    const k = e.timestamp;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  // Sort by timestamp ascending
+  STATE.entries.sort((a, b) => a.capturedAt - b.capturedAt);
+
+  STATE.loading = false;
+  runAnalysis();
+  updateHeader();
+}
+
+function updateHeader() {
+  const n = STATE.entries.length;
+  $('entryCount').innerHTML = `<b>${n}</b> entries`;
+  if (n === 0) {
+    $('dateRange').textContent = '--';
+    return;
+  }
+  const first = STATE.entries[0].capturedAt;
+  const last = STATE.entries[STATE.entries.length - 1].capturedAt;
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('dateRange').textContent = `${fmt(first)} → ${fmt(last)}`;
+}
+
+/* ============================================================
+   STATISTICS
+   ============================================================ */
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return { r: null, n };
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+  for (let i = 0; i < n; i++) {
+    sx += xs[i]; sy += ys[i];
+    sxx += xs[i] * xs[i];
+    syy += ys[i] * ys[i];
+    sxy += xs[i] * ys[i];
+  }
+  const num = n * sxy - sx * sy;
+  const den = Math.sqrt((n * sxx - sx * sx) * (n * syy - sy * sy));
+  if (den === 0) return { r: null, n };
+  return { r: num / den, n };
+}
+
+function mean(arr) {
+  if (!arr.length) return null;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+function stdev(arr) {
+  if (arr.length < 2) return null;
+  const m = mean(arr);
+  const sq = arr.map((v) => (v - m) ** 2);
+  return Math.sqrt(sq.reduce((a, b) => a + b, 0) / (arr.length - 1));
+}
+
+// Effect-size-with-sample weighting: a correlation of 0.8 over 6 is less
+// trustworthy than 0.5 over 40, and we want to rank meaningful effects, not
+// random ones. We weight by sqrt(n-2) (related to the t-statistic).
+function weightedScore(r, n) {
+  if (r == null || n < 3) return 0;
+  return Math.abs(r) * Math.sqrt(n - 2);
+}
+
+/* ============================================================
+   ANALYSIS
+   ============================================================ */
+function runAnalysis() {
+  const n = STATE.entries.length;
+  const html = [];
+
+  // 0. Summary
+  html.push(renderSummary());
+
+  if (n === 0) {
+    html.push(`<div class="callout empty"><b>No entries loaded yet.</b> Drop a folder of Milepost JSON exports above, or pick files.</div>`);
+    $('analysis').innerHTML = html.join('');
+    return;
+  }
+
+  // Count usable entries (those with at least one of mood/energy/focus set)
+  const withInternal = STATE.entries.filter((e) => e.mood != null || e.energy != null || e.focus != null);
+
+  if (withInternal.length < 3) {
+    html.push(`<div class="callout"><b>Not enough internal-state data.</b> Only ${withInternal.length} of ${n} entries have mood, energy, or focus set. The analyzer needs at least 3 entries with internal-state self-reports to compute correlations. Capture more entries with the mood/energy/focus sliders set, then return here.</div>`);
+    $('analysis').innerHTML = html.join('');
+    return;
+  }
+
+  if (withInternal.length < 10) {
+    html.push(`<div class="callout"><b>Sample size warning.</b> Only ${withInternal.length} entries with internal-state data. Correlations from samples this small are mostly noise; treat any findings below as suggestive rather than conclusive. The analyzer becomes useful with 30+ entries.</div>`);
+  }
+
+  // 1. Top numeric correlations
+  html.push(renderNumericCorrelations(withInternal));
+
+  // 2. Categorical group means
+  html.push(renderCategoricalEffects(withInternal));
+
+  // 3. Scatter explorer
+  html.push(renderScatterExplorer(withInternal));
+
+  // 4. Compound finder
+  html.push(renderCompoundFinder(withInternal));
+
+  $('analysis').innerHTML = html.join('');
+
+  // Wire interactive bits
+  wireScatter(withInternal);
+  wireCompound(withInternal);
+}
+
+function renderSummary() {
+  const n = STATE.entries.length;
+  if (n === 0) {
+    return `
+      <div class="section">
+        <div class="section-head">Summary <span class="sources">awaiting data</span></div>
+        <div class="section-body">
+          <div class="callout empty"><b>No entries loaded.</b></div>
+        </div>
+      </div>`;
+  }
+  const moodVals   = STATE.entries.map((e) => e.mood  ).filter((v) => v != null);
+  const energyVals = STATE.entries.map((e) => e.energy).filter((v) => v != null);
+  const focusVals  = STATE.entries.map((e) => e.focus ).filter((v) => v != null);
+  const moodMean   = moodVals.length   ? mean(moodVals).toFixed(1)   : '--';
+  const energyMean = energyVals.length ? mean(energyVals).toFixed(1) : '--';
+  const focusMean  = focusVals.length  ? mean(focusVals).toFixed(1)  : '--';
+  // Date range in days
+  const first = STATE.entries[0].capturedAt;
+  const last = STATE.entries[STATE.entries.length - 1].capturedAt;
+  const spanDays = Math.max(1, Math.round((last - first) / 86400000));
+  return `
+    <div class="section">
+      <div class="section-head">Summary <span class="sources">${n} captures across ${spanDays} day${spanDays === 1 ? '' : 's'}</span></div>
+      <div class="section-body">
+        <div class="summary-grid">
+          <div class="card"><div class="lab">Entries</div><div class="val">${n}</div><div class="hint">total loaded</div></div>
+          <div class="card"><div class="lab">Span</div><div class="val">${spanDays}d</div><div class="hint">first to last</div></div>
+          <div class="card"><div class="lab">Avg Mood</div><div class="val">${moodMean}</div><div class="hint">${moodVals.length}/${n} set</div></div>
+          <div class="card"><div class="lab">Avg Energy</div><div class="val">${energyMean}</div><div class="hint">${energyVals.length}/${n} set</div></div>
+          <div class="card"><div class="lab">Avg Focus</div><div class="val">${focusMean}</div><div class="hint">${focusVals.length}/${n} set</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderNumericCorrelations(entries) {
+  // Compute Pearson r for each numeric signal vs each dimension
+  const results = [];
+  const numericSignals = SIGNALS.filter((s) => s.kind === 'numeric');
+  for (const sig of numericSignals) {
+    for (const dim of DIMENSIONS) {
+      const xs = [], ys = [];
+      for (const e of entries) {
+        const x = e.signals[sig.id];
+        const y = e[dim.id];
+        if (x != null && y != null && Number.isFinite(x) && Number.isFinite(y)) {
+          xs.push(x); ys.push(y);
+        }
+      }
+      if (xs.length < 5) continue; // not enough data to bother
+      const { r, n } = pearson(xs, ys);
+      if (r == null) continue;
+      results.push({ sig, dim, r, n });
+    }
+  }
+  // Rank by weighted score
+  results.sort((a, b) => weightedScore(b.r, b.n) - weightedScore(a.r, a.n));
+  const top = results.slice(0, 12);
+  if (top.length === 0) {
+    return `
+      <div class="section">
+        <div class="section-head">Numeric Correlations <span class="sources">Pearson r</span></div>
+        <div class="section-body">
+          <div class="callout empty"><b>No numeric signals had enough data for analysis.</b> Need at least 5 entries with both the signal and the dimension recorded.</div>
+        </div>
+      </div>`;
+  }
+  const findings = top.map((f) => renderFinding(f)).join('');
+  return `
+    <div class="section">
+      <div class="section-head">Top Numeric Correlations <span class="sources">Pearson r, ranked by |r|·√(n-2)</span></div>
+      <div class="section-body">
+        <ul class="findings">${findings}</ul>
+      </div>
+    </div>`;
+}
+
+function renderFinding(f) {
+  const { sig, dim, r, n } = f;
+  const absR = Math.abs(r);
+  let strength, label;
+  if (absR >= 0.7) { strength = 'strong'; label = 'STRONG'; }
+  else if (absR >= 0.4) { strength = 'medium'; label = 'MEDIUM'; }
+  else if (absR >= 0.2) { strength = 'weak'; label = 'WEAK'; }
+  else { strength = 'veryweak'; label = 'V WEAK'; }
+  const dir = r > 0 ? 'higher' : 'lower';
+  const dimText = dim.label.toLowerCase();
+  // Construct a readable sentence
+  const direction = r > 0 ? 'higher' : 'lower';
+  const oppositeDirection = r > 0 ? 'lower' : 'higher';
+  const sentence = `When <b>${sig.label}</b> is higher, your <b>${dim.label.toLowerCase()}</b> tends to be ${direction}.`;
+  return `
+    <li class="finding">
+      <span class="strength ${strength}">${label}</span>
+      <span class="text">${sentence}</span>
+      <span class="stat">r = ${r >= 0 ? '+' : ''}${r.toFixed(2)}<br>n = ${n}</span>
+    </li>`;
+}
+
+function renderCategoricalEffects(entries) {
+  const catSignals = SIGNALS.filter((s) => s.kind === 'categorical');
+  const groups = [];
+  for (const sig of catSignals) {
+    // Bucket entries by category value
+    const buckets = new Map();
+    for (const e of entries) {
+      const cat = e.signals[sig.id];
+      if (cat == null || cat === '') continue;
+      if (!buckets.has(cat)) buckets.set(cat, { mood: [], energy: [], focus: [] });
+      const b = buckets.get(cat);
+      if (e.mood   != null) b.mood.push(e.mood);
+      if (e.energy != null) b.energy.push(e.energy);
+      if (e.focus  != null) b.focus.push(e.focus);
+    }
+    // Only show categories with >= 2 entries each, and only show signals with >= 2 distinct categories
+    const rows = [];
+    for (const [cat, b] of buckets) {
+      const totalN = Math.max(b.mood.length, b.energy.length, b.focus.length);
+      if (totalN < 2) continue;
+      rows.push({
+        category: cat,
+        n: totalN,
+        moodMean:   b.mood.length   ? mean(b.mood)   : null,
+        energyMean: b.energy.length ? mean(b.energy) : null,
+        focusMean:  b.focus.length  ? mean(b.focus)  : null,
+      });
+    }
+    if (rows.length < 2) continue;
+    // Sort by mood mean descending where available
+    rows.sort((a, b) => {
+      if (a.moodMean != null && b.moodMean != null) return b.moodMean - a.moodMean;
+      if (b.n !== a.n) return b.n - a.n;
+      return 0;
+    });
+    groups.push({ sig, rows });
+  }
+  if (groups.length === 0) {
+    return `
+      <div class="section">
+        <div class="section-head">Categorical Effects <span class="sources">group means</span></div>
+        <div class="section-body">
+          <div class="callout empty"><b>No categorical signals had enough data for analysis.</b> Need at least 2 distinct categories with 2+ entries each.</div>
+        </div>
+      </div>`;
+  }
+  const groupsHtml = groups.map((g) => {
+    const tableRows = g.rows.map((r) => {
+      const mood = r.moodMean != null ? r.moodMean.toFixed(1) : '–';
+      const energy = r.energyMean != null ? r.energyMean.toFixed(1) : '–';
+      const focus = r.focusMean != null ? r.focusMean.toFixed(1) : '–';
+      const bar = (v) => v == null ? '' : `<span class="bar" style="width:${Math.min(60, v * 6)}px"></span>`;
+      return `<tr>
+        <td>${escapeHtml(r.category)}</td>
+        <td>${mood}${bar(r.moodMean)}</td>
+        <td>${energy}${bar(r.energyMean)}</td>
+        <td>${focus}${bar(r.focusMean)}</td>
+        <td class="n">n=${r.n}</td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="cat-group">
+        <h4>${escapeHtml(g.sig.label)}</h4>
+        <table class="cat-table">
+          <thead><tr><th>Category</th><th>Mood</th><th>Energy</th><th>Focus</th><th>N</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+  return `
+    <div class="section">
+      <div class="section-head">Categorical Effects <span class="sources">group means, sorted by mood</span></div>
+      <div class="section-body">${groupsHtml}</div>
+    </div>`;
+}
+
+function renderScatterExplorer(entries) {
+  const numericOpts = SIGNALS.filter((s) => s.kind === 'numeric').map((s) =>
+    `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  return `
+    <div class="section">
+      <div class="section-head">Scatter Explorer <span class="sources">pick X, see correlation with mood/energy/focus</span></div>
+      <div class="section-body">
+        <div class="explorer-controls">
+          <label>X axis:
+            <select id="scatX">${numericOpts}</select>
+          </label>
+          <label>Y axis:
+            <select id="scatY">
+              <option value="mood">Mood</option>
+              <option value="energy">Energy</option>
+              <option value="focus">Focus</option>
+            </select>
+          </label>
+        </div>
+        <div class="scatter" id="scatterContainer"></div>
+        <div class="scatter-info" id="scatterInfo"></div>
+      </div>
+    </div>`;
+}
+
+function drawScatter(entries, xSigId, dimId) {
+  const sig = SIGNALS.find((s) => s.id === xSigId);
+  const dim = DIMENSIONS.find((d) => d.id === dimId);
+  if (!sig || !dim) return;
+  const points = [];
+  for (const e of entries) {
+    const x = e.signals[sig.id];
+    const y = e[dim.id];
+    if (x != null && y != null && Number.isFinite(x) && Number.isFinite(y)) {
+      points.push({ x, y });
+    }
+  }
+  const container = $('scatterContainer');
+  if (points.length < 3) {
+    container.innerHTML = `<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg"><text x="300" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#6e5e44">Not enough data for ${sig.label} vs ${dim.label} (${points.length} usable points).</text></svg>`;
+    $('scatterInfo').textContent = '';
+    return;
+  }
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = 0, yMax = 10; // mood/energy/focus are 1-10
+  const W = 700, H = 320, PX = 60, PY = 30;
+  const sx = (v) => PX + ((v - xMin) / Math.max(1e-9, xMax - xMin)) * (W - PX - 20);
+  const sy = (v) => H - PY - ((v - yMin) / (yMax - yMin)) * (H - PY - 20);
+  // Best-fit line via simple linear regression
+  const meanX = mean(xs), meanY = mean(ys);
+  let num = 0, den = 0;
+  for (let i = 0; i < xs.length; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    den += (xs[i] - meanX) ** 2;
+  }
+  const slope = den !== 0 ? num / den : 0;
+  const intercept = meanY - slope * meanX;
+  const { r, n } = pearson(xs, ys);
+  // Axes
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:transparent">`;
+  // y gridlines and labels
+  for (let y = 0; y <= 10; y += 2) {
+    const py = sy(y);
+    svg += `<line x1="${PX}" y1="${py}" x2="${W - 20}" y2="${py}" stroke="#d4c8aa" stroke-width="0.5" stroke-dasharray="2,3"/>`;
+    svg += `<text x="${PX - 8}" y="${py + 4}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#6e5e44">${y}</text>`;
+  }
+  // x axis
+  svg += `<line x1="${PX}" y1="${H - PY}" x2="${W - 20}" y2="${H - PY}" stroke="#8a7a5c" stroke-width="1"/>`;
+  svg += `<line x1="${PX}" y1="${sy(yMax)}" x2="${PX}" y2="${H - PY}" stroke="#8a7a5c" stroke-width="1"/>`;
+  // x labels (5 ticks)
+  for (let i = 0; i <= 4; i++) {
+    const t = xMin + (xMax - xMin) * i / 4;
+    const px = sx(t);
+    svg += `<line x1="${px}" y1="${H - PY}" x2="${px}" y2="${H - PY + 4}" stroke="#8a7a5c"/>`;
+    svg += `<text x="${px}" y="${H - PY + 18}" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6e5e44">${formatNum(t)}</text>`;
+  }
+  // Axis titles
+  svg += `<text x="${W/2}" y="${H - 5}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#3a2f22" letter-spacing="0.06em">${escapeHtml(sig.label.toUpperCase())}</text>`;
+  svg += `<text x="14" y="${H/2}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#3a2f22" letter-spacing="0.06em" transform="rotate(-90 14 ${H/2})">${escapeHtml(dim.label.toUpperCase())}</text>`;
+  // Regression line
+  if (xMax > xMin) {
+    const y1 = slope * xMin + intercept;
+    const y2 = slope * xMax + intercept;
+    svg += `<line x1="${sx(xMin)}" y1="${sy(Math.max(0, Math.min(10, y1)))}" x2="${sx(xMax)}" y2="${sy(Math.max(0, Math.min(10, y2)))}" stroke="#c0431a" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>`;
+  }
+  // Points
+  for (const p of points) {
+    svg += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="4" fill="#1f3a52" fill-opacity="0.55" stroke="#1a1611" stroke-width="0.5"/>`;
+  }
+  svg += '</svg>';
+  container.innerHTML = svg;
+  $('scatterInfo').textContent = `r = ${r >= 0 ? '+' : ''}${r.toFixed(3)}  /  n = ${n}  /  range: ${formatNum(xMin)} to ${formatNum(xMax)}`;
+}
+
+function wireScatter(entries) {
+  const xSel = $('scatX'), ySel = $('scatY');
+  if (!xSel || !ySel) return;
+  // Pick a sensible default: the strongest finding's signal
+  // (this is computed implicitly because top-correlation findings are visible above)
+  const draw = () => drawScatter(entries, xSel.value, ySel.value);
+  xSel.addEventListener('change', draw);
+  ySel.addEventListener('change', draw);
+  // Default to temp_c vs mood for a sensible starting view
+  xSel.value = 'temp_c';
+  draw();
+}
+
+function renderCompoundFinder(entries) {
+  const numericOpts = SIGNALS.filter((s) => s.kind === 'numeric').map((s) =>
+    `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  const catOpts = SIGNALS.filter((s) => s.kind === 'categorical').map((s) =>
+    `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('');
+  return `
+    <div class="section">
+      <div class="section-head">Compound Finder <span class="sources">"X and Y" patterns vs mood/energy/focus</span></div>
+      <div class="section-body">
+        <p style="font-family:var(--serif);font-size:14px;font-style:italic;color:var(--ink-soft);margin-bottom:12px">
+          Build a condition like "rainy days AND DJIA below 30,000" to see how your mood, energy, and focus look on entries matching both filters.
+        </p>
+
+        <h4 style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px">Filter 1</h4>
+        <div class="compound-row">
+          <select id="cf1Type">
+            <option value="">-- none --</option>
+            <optgroup label="Numeric">${numericOpts}</optgroup>
+            <optgroup label="Categorical">${catOpts}</optgroup>
+          </select>
+          <select id="cf1Op">
+            <option value="<">below</option>
+            <option value=">">above</option>
+            <option value="=">equals</option>
+            <option value="≠">not equals</option>
+          </select>
+          <input id="cf1Val" type="text" placeholder="value" style="font-family:var(--mono);padding:4px 8px;border:1px solid var(--rule);background:var(--paper)">
+        </div>
+
+        <h4 style="font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin:14px 0 6px">Filter 2 (optional)</h4>
+        <div class="compound-row">
+          <select id="cf2Type">
+            <option value="">-- none --</option>
+            <optgroup label="Numeric">${numericOpts}</optgroup>
+            <optgroup label="Categorical">${catOpts}</optgroup>
+          </select>
+          <select id="cf2Op">
+            <option value="<">below</option>
+            <option value=">">above</option>
+            <option value="=">equals</option>
+            <option value="≠">not equals</option>
+          </select>
+          <input id="cf2Val" type="text" placeholder="value" style="font-family:var(--mono);padding:4px 8px;border:1px solid var(--rule);background:var(--paper)">
+        </div>
+
+        <div style="margin-top:12px"><button class="btn" id="runCompound">Find Matches</button></div>
+        <div id="compoundResult"></div>
+      </div>
+    </div>`;
+}
+
+function wireCompound(entries) {
+  const btn = $('runCompound');
+  if (!btn) return;
+  btn.addEventListener('click', () => evaluateCompound(entries));
+}
+
+function evaluateCompound(entries) {
+  const f1 = readFilter('cf1');
+  const f2 = readFilter('cf2');
+  if (!f1 && !f2) {
+    $('compoundResult').innerHTML = `<div class="compound-empty">Pick at least one filter to find matching entries.</div>`;
+    return;
+  }
+  const match = entries.filter((e) => {
+    if (f1 && !filterMatch(e, f1)) return false;
+    if (f2 && !filterMatch(e, f2)) return false;
+    return true;
+  });
+  const conditions = [f1, f2].filter(Boolean).map((f) => f.label).join(' AND ');
+  if (match.length === 0) {
+    $('compoundResult').innerHTML = `<div class="compound-empty">No entries match: <b>${escapeHtml(conditions)}</b>. Try loosening the filter.</div>`;
+    return;
+  }
+  // Compute mood/energy/focus means for matching entries vs baseline
+  const moodMatch = match.map((e) => e.mood).filter((v) => v != null);
+  const energyMatch = match.map((e) => e.energy).filter((v) => v != null);
+  const focusMatch = match.map((e) => e.focus).filter((v) => v != null);
+  const moodAll = entries.map((e) => e.mood).filter((v) => v != null);
+  const energyAll = entries.map((e) => e.energy).filter((v) => v != null);
+  const focusAll = entries.map((e) => e.focus).filter((v) => v != null);
+  const moodMM = moodMatch.length ? mean(moodMatch).toFixed(1) : '--';
+  const moodMA = moodAll.length ? mean(moodAll).toFixed(1) : '--';
+  const energyMM = energyMatch.length ? mean(energyMatch).toFixed(1) : '--';
+  const energyMA = energyAll.length ? mean(energyAll).toFixed(1) : '--';
+  const focusMM = focusMatch.length ? mean(focusMatch).toFixed(1) : '--';
+  const focusMA = focusAll.length ? mean(focusAll).toFixed(1) : '--';
+  // Construct sentence comparison
+  const delta = (mm, ma) => {
+    if (mm === '--' || ma === '--') return '';
+    const d = parseFloat(mm) - parseFloat(ma);
+    if (Math.abs(d) < 0.3) return ' (about the same as baseline)';
+    if (d > 0) return ` (<b>+${d.toFixed(1)} vs baseline</b>)`;
+    return ` (<b>${d.toFixed(1)} vs baseline</b>)`;
+  };
+  $('compoundResult').innerHTML = `
+    <div class="compound-result">
+      On <b>${match.length}</b> of <b>${entries.length}</b> entries matching <b>${escapeHtml(conditions)}</b>:
+      <ul style="margin:8px 0 0 24px;font-family:var(--serif);font-size:14px;line-height:1.6">
+        <li>Mood averages <b>${moodMM}</b>${delta(moodMM, moodMA)} (baseline ${moodMA}, n=${moodMatch.length}/${moodAll.length})</li>
+        <li>Energy averages <b>${energyMM}</b>${delta(energyMM, energyMA)} (baseline ${energyMA}, n=${energyMatch.length}/${energyAll.length})</li>
+        <li>Focus averages <b>${focusMM}</b>${delta(focusMM, focusMA)} (baseline ${focusMA}, n=${focusMatch.length}/${focusAll.length})</li>
+      </ul>
+    </div>`;
+}
+
+function readFilter(prefix) {
+  const t = $(prefix + 'Type').value;
+  if (!t) return null;
+  const op = $(prefix + 'Op').value;
+  const val = $(prefix + 'Val').value.trim();
+  if (!val) return null;
+  const sig = SIGNALS.find((s) => s.id === t);
+  if (!sig) return null;
+  // For categorical, op is restricted to = or ≠; values are strings
+  // For numeric, op is < > = ≠; values are numbers
+  if (sig.kind === 'numeric') {
+    const v = parseFloat(val);
+    if (!Number.isFinite(v)) return null;
+    return {
+      sig, op, value: v,
+      label: `${sig.label} ${op} ${val}`,
+    };
+  } else {
+    return {
+      sig, op: (op === '<' || op === '>' ? '=' : op), value: val,
+      label: `${sig.label} ${op === '<' || op === '>' || op === '=' ? '=' : op} ${val}`,
+    };
+  }
+}
+
+function filterMatch(entry, f) {
+  const v = entry.signals[f.sig.id];
+  if (v == null) return false;
+  if (f.sig.kind === 'numeric') {
+    if (!Number.isFinite(v)) return false;
+    if (f.op === '<') return v < f.value;
+    if (f.op === '>') return v > f.value;
+    if (f.op === '=') return Math.abs(v - f.value) < 1e-9;
+    if (f.op === '≠') return Math.abs(v - f.value) >= 1e-9;
+  } else {
+    const target = String(f.value).toLowerCase();
+    const cv = String(v).toLowerCase();
+    if (f.op === '=') return cv === target || cv.includes(target);
+    if (f.op === '≠') return cv !== target && !cv.includes(target);
+  }
+  return false;
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+function formatNum(v) {
+  if (v == null || !Number.isFinite(v)) return '--';
+  const abs = Math.abs(v);
+  if (abs >= 10000) return v.toFixed(0);
+  if (abs >= 100) return v.toFixed(1);
+  if (abs >= 1) return v.toFixed(2);
+  return v.toFixed(3);
+}
+
+/* ============================================================
+   WIRE FILE PICKERS
+   ============================================================ */
+$('pickFiles').addEventListener('click', () => $('filePicker').click());
+$('pickFolder').addEventListener('click', () => $('folderPicker').click());
+$('filePicker').addEventListener('change', (e) => loadFiles(Array.from(e.target.files || [])));
+$('folderPicker').addEventListener('change', (e) => loadFiles(Array.from(e.target.files || [])));
+const dz = $('dropzone');
+dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  dz.classList.remove('over');
+  const items = Array.from(e.dataTransfer.items || []);
+  const files = [];
+  // Handle folder drops via webkitGetAsEntry
+  async function walk(entry) {
+    if (entry.isFile) {
+      await new Promise((res) => entry.file((f) => { files.push(f); res(); }));
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const ents = await new Promise((res) => reader.readEntries(res));
+      for (const e of ents) await walk(e);
+    }
+  }
+  if (items.length && items[0].webkitGetAsEntry) {
+    for (const it of items) {
+      const ent = it.webkitGetAsEntry();
+      if (ent) await walk(ent);
+    }
+  } else {
+    Array.from(e.dataTransfer.files || []).forEach((f) => files.push(f));
+  }
+  loadFiles(files);
+});
+
+// Render initial empty state
+runAnalysis();
+
+</script>
+</body>
+</html>
