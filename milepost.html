@@ -1073,6 +1073,11 @@ body {
           <input type="text" id="key-nasa" autocomplete="off" spellcheck="false" placeholder="optional, for APOD without rate limits" />
           <a href="https://api.nasa.gov/" target="_blank" rel="noopener">Generate key</a>
         </div>
+        <div class="key-row">
+          <label for="key-tomorrow">Tomorrow.io API Key</label>
+          <input type="text" id="key-tomorrow" autocomplete="off" spellcheck="false" placeholder="for US/global pollen index (tree, grass, weed)" />
+          <a href="https://app.tomorrow.io/signup" target="_blank" rel="noopener">Sign up</a>
+        </div>
         <div class="key-row sound-row">
           <label for="soundToggle">Capture Sound</label>
           <label class="toggle-inline"><input type="checkbox" id="soundToggle" /> play locomotive whistle on capture completion</label>
@@ -1245,7 +1250,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.29</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.30</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1316,6 +1321,7 @@ function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
   const nasa  = Settings.get('nasa');
+  const tomorrow = Settings.get('tomorrow');
   const sound = Settings.get('sound');
   const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   // Restore serial counter from Settings. The counter persists across page
@@ -1326,6 +1332,7 @@ function initSettings() {
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
   if (nasa)  $('key-nasa').value = nasa;
+  if (tomorrow) $('key-tomorrow').value = tomorrow;
   if (sound === 'on') $('soundToggle').checked = true;
   $('cors-proxy').value = proxy;
   $('nextSerial').value = STATE.serial;
@@ -1335,11 +1342,13 @@ function initSettings() {
     const f = $('key-firms').value.trim();
     const e = $('key-ebird').value.trim();
     const n = $('key-nasa').value.trim();
+    const tm = $('key-tomorrow').value.trim();
     const s = $('soundToggle').checked ? 'on' : 'off';
     const p = $('cors-proxy').value.trim();
     Settings.set('firms', f);
     Settings.set('ebird', e);
     Settings.set('nasa', n);
+    Settings.set('tomorrow', tm);
     Settings.set('sound', s);
     Settings.set('cors_proxy', p);
     // Apply serial override if user changed it. Only accept positive integers;
@@ -1364,13 +1373,14 @@ function initSettings() {
   $('exportSettings').addEventListener('click', () => {
     const payload = {
       format: 'milepost-settings',
-      version: '0.0.29',
+      version: '0.0.30',
       exported_at: new Date().toISOString(),
       note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
       settings: {
         firms: Settings.get('firms') || '',
         ebird: Settings.get('ebird') || '',
         nasa: Settings.get('nasa') || '',
+        tomorrow: Settings.get('tomorrow') || '',
         cors_proxy: Settings.get('cors_proxy') || '',
         sound: Settings.get('sound') === 'on' ? 'on' : 'off',
         next_serial: STATE.serial,
@@ -1411,6 +1421,7 @@ function initSettings() {
       if ('firms' in s) { Settings.set('firms', String(s.firms || '').trim()); applied.push('FIRMS'); }
       if ('ebird' in s) { Settings.set('ebird', String(s.ebird || '').trim()); applied.push('eBird'); }
       if ('nasa' in s)  { Settings.set('nasa',  String(s.nasa  || '').trim()); applied.push('NASA'); }
+      if ('tomorrow' in s) { Settings.set('tomorrow', String(s.tomorrow || '').trim()); applied.push('Tomorrow.io'); }
       if ('cors_proxy' in s) { Settings.set('cors_proxy', String(s.cors_proxy || '').trim()); applied.push('Proxy'); }
       if ('sound' in s) { Settings.set('sound', s.sound === 'on' ? 'on' : 'off'); applied.push('Sound'); }
       if ('next_serial' in s) {
@@ -1425,6 +1436,7 @@ function initSettings() {
       $('key-firms').value = Settings.get('firms') || '';
       $('key-ebird').value = Settings.get('ebird') || '';
       $('key-nasa').value  = Settings.get('nasa')  || '';
+      $('key-tomorrow').value = Settings.get('tomorrow') || '';
       $('cors-proxy').value = Settings.get('cors_proxy') || '';
       $('soundToggle').checked = Settings.get('sound') === 'on';
       $('nextSerial').value = STATE.serial;
@@ -1443,6 +1455,7 @@ function updateKeysStatus() {
   const f = Settings.get('firms');
   const e = Settings.get('ebird');
   const n = Settings.get('nasa');
+  const tm = Settings.get('tomorrow');
   const s = Settings.get('sound') === 'on';
   const p = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   const status = $('keysStatus');
@@ -1450,6 +1463,7 @@ function updateKeysStatus() {
   parts.push(`FIRMS ${f ? '✓' : '–'}`);
   parts.push(`eBird ${e ? '✓' : '–'}`);
   parts.push(`NASA ${n ? '✓' : '–'}`);
+  parts.push(`Tomorrow ${tm ? '✓' : '–'}`);
   parts.push(`Sound ${s ? '✓' : '–'}`);
   parts.push(`Proxy ${p ? '✓' : '–'}`);
   parts.push(`Next №${pad(STATE.serial, 3)}`);
@@ -1792,6 +1806,51 @@ async function getAirQuality(lat, lon) {
     `&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto`;
   const r = await fetch(url);
   return await r.json();
+}
+
+// US (and global) pollen index via Tomorrow.io. Open-Meteo's pollen fields
+// above are sourced from CAMS European regional models and return null for
+// North America, so users in the US have been getting empty pollen rows on
+// every capture. Tomorrow.io is a generalist weather API with a free tier
+// (500 req/day) that returns tree/grass/weed pollen indexes on the standard
+// 0-5 UPI scale. The endpoint supports CORS so no proxy is required.
+//
+// Requires a free API key configured in Settings (Tomorrow.io). Returns null
+// when no key is set or on any error so capture continues normally.
+async function getPollen(lat, lon) {
+  if (lat == null || lon == null) return null;
+  const key = Settings.get('tomorrow');
+  if (!key) return { needsKey: true };
+  try {
+    const url = `https://api.tomorrow.io/v4/weather/realtime` +
+      `?location=${lat},${lon}` +
+      `&fields=treeIndex,grassIndex,weedIndex` +
+      `&apikey=${encodeURIComponent(key)}`;
+    const r = await fetch(url);
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403) return { error: 'API key rejected' };
+      if (r.status === 429) return { error: 'rate limited (Tomorrow.io free tier is 500/day, 25/sec)' };
+      throw new Error(`HTTP ${r.status}`);
+    }
+    const j = await r.json();
+    const v = j.data && j.data.values;
+    if (!v) return { error: 'no values in response' };
+    // UPI 0-5 scale labels per Tomorrow.io documentation
+    const cat = (n) => {
+      if (n == null) return null;
+      const i = Math.max(0, Math.min(5, Math.round(n)));
+      return ['None', 'Very Low', 'Low', 'Medium', 'High', 'Very High'][i];
+    };
+    return {
+      source: 'tomorrow.io',
+      observedAt: j.data.time || null,
+      tree:  { upi: v.treeIndex,  category: cat(v.treeIndex) },
+      grass: { upi: v.grassIndex, category: cat(v.grassIndex) },
+      weed:  { upi: v.weedIndex,  category: cat(v.weedIndex) },
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
 }
 
 async function getISS() {
@@ -2184,7 +2243,7 @@ async function getStocks() {
 }
 
 /* ============================================================
-   v0.0.29 additions: extended environmental and discourse signals
+   v0.0.30 additions: extended environmental and discourse signals
    ============================================================ */
 
 // Drought Monitor classification for the user's county.
@@ -2213,7 +2272,7 @@ async function getDroughtMonitor(lat, lon) {
   if (!fips) return { classification: 'Not in US', county: null, state: null };
 
   // Step 2: ask USDM for this week's categories for the county
-  // v0.0.29: parse CSV directly. USDM ignores Accept: application/json (returns
+  // v0.0.30: parse CSV directly. USDM ignores Accept: application/json (returns
   // CSV regardless) so we parse the columns: MapDate, FIPS, County, State,
   // None, D0, D1, D2, D3, D4, ValidStart, ValidEnd, StatisticFormatID.
   try {
@@ -2472,7 +2531,7 @@ async function getNearestMETAR(lat, lon) {
   };
 }
 
-// Nearest active wildfire from FIRMS data. v0.0.29 reduces the global thermal
+// Nearest active wildfire from FIRMS data. v0.0.30 reduces the global thermal
 // anomaly count (already pulled by getWildfires) to a personal signal by
 // computing the distance to the nearest detection. Mike's existing wildfires
 // fetcher returns aggregate counts; this function refetches a tighter
@@ -2543,7 +2602,7 @@ async function getQuoteOfDay() {
   const j = await r.json();
   if (j.error || !j.parse) return null;
   const wt = j.parse.wikitext['*'] || '';
-  // v0.0.29: smarter parser. The Wikiquote QOTD template has many named
+  // v0.0.30: smarter parser. The Wikiquote QOTD template has many named
   // parameters (image1, caption, quote, author, source, date, etc.) and
   // prior code was grabbing the first piped parameter, which often turned
   // out to be the image filename. Now we:
@@ -3744,6 +3803,7 @@ const SOURCES = [
   { id: 'wx',      label: 'Atmospheric' },
   { id: 'ptrend',  label: 'Pressure Trend' },
   { id: 'air',     label: 'Air Quality' },
+  { id: 'pollen',  label: 'Pollen Index' },
   { id: 'co2',     label: 'Climate / CO\u2082' },
   { id: 'metar',   label: 'Aviation METAR' },
   { id: 'cel',     label: 'Celestial' },
@@ -3845,12 +3905,21 @@ async function captureAll() {
       if (lat == null) return null;
       data.airQuality = await getAirQuality(lat, lon);
     }],
+    ['pollen', async () => {
+      if (lat == null) return;
+      try {
+        data.pollen = await getPollen(lat, lon);
+      } catch (e) {
+        console.warn(`[Milepost] pollen: ${e.message}`);
+        data.pollen = null;
+      }
+    }],
     ['cel', async () => {
       const now = new Date();
       const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
         console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
       }) : null;
-      // v0.0.29: enrich moon with rise/set times; add visible planets list.
+      // v0.0.30: enrich moon with rise/set times; add visible planets list.
       const moonBase = moonPhase(now);
       const moonRS = lat != null ? getMoonRiseSet(now, lat, lon) : null;
       const moon = moonRS ? Object.assign({}, moonBase, moonRS) : moonBase;
@@ -3894,7 +3963,7 @@ async function captureAll() {
     ['fire', async () => {
       data.wildfires = await getWildfires(lat, lon, firmsKey);
       if (data.wildfires?.needsKey) throw new Error('needsKey');
-      // v0.0.29: add nearest-fire signal if we have FIRMS key
+      // v0.0.30: add nearest-fire signal if we have FIRMS key
       if (firmsKey && lat != null) {
         try {
           data.wildfires.nearest = await getNearestWildfire(lat, lon, firmsKey);
@@ -4156,7 +4225,20 @@ function sectionAtmospheric(d) {
       });
     }
   }
-  const sources = ['Open-Meteo', co2 && 'NOAA GML'].filter(Boolean).join(', ');
+  // Pollen Index from Tomorrow.io (US and global coverage, 0-5 UPI scale).
+  // Open-Meteo's pollen above only covers Europe so this is the primary
+  // source for North American users. Requires the Tomorrow.io key in Settings.
+  const pollenData = d.pollen;
+  if (pollenData && !pollenData.needsKey && !pollenData.error) {
+    const renderUpi = (label, p) => {
+      if (!p || p.upi == null) return;
+      rows.push(kvRow(label, `${p.upi} / 5`, (p.category || '').toLowerCase()));
+    };
+    renderUpi('Tree Pollen (UPI)',  pollenData.tree);
+    renderUpi('Grass Pollen (UPI)', pollenData.grass);
+    renderUpi('Weed Pollen (UPI)',  pollenData.weed);
+  }
+  const sources = ['Open-Meteo', co2 && 'NOAA GML', pollenData && !pollenData.needsKey && !pollenData.error && 'Tomorrow.io'].filter(Boolean).join(', ');
   return sec('Atmospheric', sources, rows.join(''));
 }
 
@@ -4554,6 +4636,17 @@ function buildTextExport(entry) {
       polEntries.forEach(([k, v]) => {
         if (v != null && !isNaN(v)) out += line(k, `${fmtNum(v, 1)} g/m3 (${pollenCategory(v)})`);
       });
+    }
+    // Tomorrow.io pollen index (US and global coverage on 0-5 UPI scale)
+    const pollenData = d.pollen;
+    if (pollenData && !pollenData.needsKey && !pollenData.error) {
+      const upiLine = (label, p) => {
+        if (!p || p.upi == null) return '';
+        return line(label, `${p.upi} / 5 (${(p.category || '').toLowerCase()})`);
+      };
+      out += upiLine('Tree Pollen (UPI)',  pollenData.tree);
+      out += upiLine('Grass Pollen (UPI)', pollenData.grass);
+      out += upiLine('Weed Pollen (UPI)',  pollenData.weed);
     }
     out += '\n';
   }
@@ -5057,10 +5150,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.29 this was only set on the 'input' event, which requires a value
+   v0.0.30 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.29 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.30 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -5380,7 +5473,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.29',
+    version: '0.0.30',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

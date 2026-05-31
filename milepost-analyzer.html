@@ -344,7 +344,7 @@ html, body {
     </div>
     <div></div>
     <div class="meta">
-      <div class="kv"><b>v0.0.29</b></div>
+      <div class="kv"><b>v0.0.30</b></div>
       <div class="kv" id="entryCount">no entries</div>
       <div class="kv" id="dateRange">--</div>
     </div>
@@ -384,7 +384,7 @@ html, body {
     </div>
   </div>
 
-  <div class="stamp">FI&nbsp;003 / <b>ANALYZER</b> / V0.0.25</div>
+  <div class="stamp">FI&nbsp;003 / <b>ANALYZER</b> / V0.0.30</div>
 </div>
 
 <script>
@@ -418,7 +418,10 @@ const SIGNALS = [
   { id: 'pm25',           label: 'PM2.5 (µg/m³)',         kind: 'numeric', path: 'airQuality.current.pm2_5' },
   { id: 'pm10',           label: 'PM10 (µg/m³)',          kind: 'numeric', path: 'airQuality.current.pm10' },
   { id: 'ozone',          label: 'Ozone (µg/m³)',         kind: 'numeric', path: 'airQuality.current.ozone' },
-  { id: 'pollen_grass',   label: 'Grass Pollen',          kind: 'numeric', path: 'airQuality.current.grass_pollen' },
+  { id: 'pollen_grass',   label: 'Grass Pollen (g/m³, EU)', kind: 'numeric', path: 'airQuality.current.grass_pollen' },
+  { id: 'pollen_tree_idx',  label: 'Tree Pollen (UPI)',    kind: 'numeric', path: 'pollen.tree.upi' },
+  { id: 'pollen_grass_idx', label: 'Grass Pollen (UPI)',   kind: 'numeric', path: 'pollen.grass.upi' },
+  { id: 'pollen_weed_idx',  label: 'Weed Pollen (UPI)',    kind: 'numeric', path: 'pollen.weed.upi' },
   // Climate
   { id: 'co2',            label: 'CO\u2082 (ppm)',         kind: 'numeric', path: 'climate.co2.ppm' },
   // Space weather
