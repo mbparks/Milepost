@@ -1073,11 +1073,6 @@ body {
           <input type="text" id="key-nasa" autocomplete="off" spellcheck="false" placeholder="optional, for APOD without rate limits" />
           <a href="https://api.nasa.gov/" target="_blank" rel="noopener">Generate key</a>
         </div>
-        <div class="key-row">
-          <label for="key-google-pollen">Google Pollen API Key</label>
-          <input type="text" id="key-google-pollen" autocomplete="off" spellcheck="false" placeholder="for US/global pollen index (tree, grass, weed)" />
-          <a href="https://console.cloud.google.com/google/maps-apis/api-list" target="_blank" rel="noopener">Enable & get key</a>
-        </div>
         <div class="key-row sound-row">
           <label for="soundToggle">Capture Sound</label>
           <label class="toggle-inline"><input type="checkbox" id="soundToggle" /> play locomotive whistle on capture completion</label>
@@ -1250,7 +1245,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.32</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.34</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1321,17 +1316,9 @@ function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
   const nasa  = Settings.get('nasa');
-  // v0.0.32: pollen key migrated from 'tomorrow' to 'google_pollen' since the
-  // implementation switched providers. Read both for transparent migration.
-  let googlePollen = Settings.get('google_pollen');
-  if (!googlePollen) {
-    const legacyTomorrow = Settings.get('tomorrow');
-    if (legacyTomorrow) {
-      // Old Tomorrow.io keys won't work against Google, so we don't auto-promote
-      // them; we just leave the legacy key alone and let the user paste a new
-      // Google key into the freshly-labeled field.
-    }
-  }
+  // v0.0.34: pollen source switched to pollen.com (scraping, no key needed).
+  // Legacy 'google_pollen' and 'tomorrow' Settings keys remain in localStorage
+  // for users who had set them, but they're no longer read or surfaced in UI.
   const sound = Settings.get('sound');
   const proxy = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   // Restore serial counter from Settings. The counter persists across page
@@ -1342,7 +1329,6 @@ function initSettings() {
   if (firms) $('key-firms').value = firms;
   if (ebird) $('key-ebird').value = ebird;
   if (nasa)  $('key-nasa').value = nasa;
-  if (googlePollen) $('key-google-pollen').value = googlePollen;
   if (sound === 'on') $('soundToggle').checked = true;
   $('cors-proxy').value = proxy;
   $('nextSerial').value = STATE.serial;
@@ -1352,13 +1338,11 @@ function initSettings() {
     const f = $('key-firms').value.trim();
     const e = $('key-ebird').value.trim();
     const n = $('key-nasa').value.trim();
-    const gp = $('key-google-pollen').value.trim();
     const s = $('soundToggle').checked ? 'on' : 'off';
     const p = $('cors-proxy').value.trim();
     Settings.set('firms', f);
     Settings.set('ebird', e);
     Settings.set('nasa', n);
-    Settings.set('google_pollen', gp);
     Settings.set('sound', s);
     Settings.set('cors_proxy', p);
     // Apply serial override if user changed it. Only accept positive integers;
@@ -1383,14 +1367,13 @@ function initSettings() {
   $('exportSettings').addEventListener('click', () => {
     const payload = {
       format: 'milepost-settings',
-      version: '0.0.32',
+      version: '0.0.34',
       exported_at: new Date().toISOString(),
       note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
       settings: {
         firms: Settings.get('firms') || '',
         ebird: Settings.get('ebird') || '',
         nasa: Settings.get('nasa') || '',
-        google_pollen: Settings.get('google_pollen') || '',
         cors_proxy: Settings.get('cors_proxy') || '',
         sound: Settings.get('sound') === 'on' ? 'on' : 'off',
         next_serial: STATE.serial,
@@ -1431,11 +1414,11 @@ function initSettings() {
       if ('firms' in s) { Settings.set('firms', String(s.firms || '').trim()); applied.push('FIRMS'); }
       if ('ebird' in s) { Settings.set('ebird', String(s.ebird || '').trim()); applied.push('eBird'); }
       if ('nasa' in s)  { Settings.set('nasa',  String(s.nasa  || '').trim()); applied.push('NASA'); }
-      if ('google_pollen' in s) { Settings.set('google_pollen', String(s.google_pollen || '').trim()); applied.push('Google Pollen'); }
-      else if ('tomorrow' in s && s.tomorrow) {
-        // v0.0.32: surface that an old Tomorrow.io key is in the import but
-        // can't be reused for the new Google Pollen API. Don't store it.
-        applied.push('(skipped legacy Tomorrow.io key, get a Google Pollen key)');
+      // v0.0.34: pollen is no longer key-based (pollen.com scraping).
+      // Note in the import status if a legacy pollen key was present so the
+      // user knows it was seen but not used.
+      if (('google_pollen' in s && s.google_pollen) || ('tomorrow' in s && s.tomorrow)) {
+        applied.push('(skipped legacy pollen key, pollen.com needs no key)');
       }
       if ('cors_proxy' in s) { Settings.set('cors_proxy', String(s.cors_proxy || '').trim()); applied.push('Proxy'); }
       if ('sound' in s) { Settings.set('sound', s.sound === 'on' ? 'on' : 'off'); applied.push('Sound'); }
@@ -1451,7 +1434,6 @@ function initSettings() {
       $('key-firms').value = Settings.get('firms') || '';
       $('key-ebird').value = Settings.get('ebird') || '';
       $('key-nasa').value  = Settings.get('nasa')  || '';
-      $('key-google-pollen').value = Settings.get('google_pollen') || '';
       $('cors-proxy').value = Settings.get('cors_proxy') || '';
       $('soundToggle').checked = Settings.get('sound') === 'on';
       $('nextSerial').value = STATE.serial;
@@ -1470,7 +1452,6 @@ function updateKeysStatus() {
   const f = Settings.get('firms');
   const e = Settings.get('ebird');
   const n = Settings.get('nasa');
-  const gp = Settings.get('google_pollen');
   const s = Settings.get('sound') === 'on';
   const p = Settings.get('cors_proxy', DEFAULT_CORS_PROXY);
   const status = $('keysStatus');
@@ -1478,7 +1459,6 @@ function updateKeysStatus() {
   parts.push(`FIRMS ${f ? '✓' : '–'}`);
   parts.push(`eBird ${e ? '✓' : '–'}`);
   parts.push(`NASA ${n ? '✓' : '–'}`);
-  parts.push(`Pollen ${gp ? '✓' : '–'}`);
   parts.push(`Sound ${s ? '✓' : '–'}`);
   parts.push(`Proxy ${p ? '✓' : '–'}`);
   parts.push(`Next №${pad(STATE.serial, 3)}`);
@@ -1758,7 +1738,14 @@ async function getLocation() {
           // doesn't exist and silently 404'd, leaving place=null on every
           // capture (which is why the Reader was counting 0 locations).
           // Open-Meteo themselves point users at Nominatim for reverse work.
+          //
+          // v0.0.34: also capture postcode (US ZIP) and the address object
+          // itself. Pollen.com keys its API by ZIP, so we extract it here from
+          // the same call rather than making a second reverse lookup.
           let place = null;
+          let postcode = null;
+          let city = null;
+          let stateRegion = null;
           try {
             const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&zoom=10`;
             const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -1769,9 +1756,14 @@ async function getLocation() {
               const region = a.state || a.region || a.county;
               const country = (a.country_code || '').toUpperCase();
               place = [town, region, country].filter(Boolean).join(', ') || j.display_name || null;
+              // US postal codes are 5 digits (or 5+4); pollen.com only accepts
+              // the 5-digit form. Trim defensively in case Nominatim returns "12345-6789".
+              if (a.postcode) postcode = String(a.postcode).split('-')[0].trim();
+              city = town || null;
+              stateRegion = region || null;
             }
           } catch (e) {}
-          resolve({ latitude: lat, longitude: lon, place, source: 'gps', elevation: pos.coords.altitude });
+          resolve({ latitude: lat, longitude: lon, place, postcode, city, stateRegion, source: 'gps', elevation: pos.coords.altitude });
         },
         async () => {
           if (resolved) return;
@@ -1799,11 +1791,14 @@ async function ipFallback() {
       latitude: j.latitude,
       longitude: j.longitude,
       place: [j.city, j.region, j.country_code].filter(Boolean).join(', '),
+      postcode: j.postal ? String(j.postal).split('-')[0].trim() : null,
+      city: j.city || null,
+      stateRegion: j.region || null,
       timezone: j.timezone,
       source: 'ip',
     };
   } catch (e) {
-    return { latitude: null, longitude: null, place: 'Unknown', source: 'unknown', error: String(e) };
+    return { latitude: null, longitude: null, place: 'Unknown', postcode: null, source: 'unknown', error: String(e) };
   }
 }
 
@@ -1823,63 +1818,83 @@ async function getAirQuality(lat, lon) {
   return await r.json();
 }
 
-// Pollen index. Google Maps Platform Pollen API. Returns daily UPI 0-5
-// indexes for grass, tree, and weed with category labels ("Very Low" through
-// "Very High"). 1km grid resolution, 65+ countries including the US.
+// Pollen index from pollen.com's undocumented JSON API. This is what their
+// own consumer site uses to render the pollen forecast. ZIP-keyed, US-only,
+// returns yesterday/today/tomorrow as a 0-12 composite NAB scale index plus
+// a list of triggering plant types (Tree, Grass, Weed, Mold).
 //
-// History: v0.0.30 used Tomorrow.io but that ended up being a wrong choice;
-// Tomorrow.io's free tier doesn't include pollen at all (it's their "Premium
-// Layer"). Any pollen field request returns null on free accounts, regardless
-// of endpoint). v0.0.32 switches to Google's Pollen API which has a real
-// free tier (10K requests/month on Google Maps Platform's standard free
-// allotment) and authenticated requests via simple API key, no OAuth.
+// History: v0.0.30 used Tomorrow.io (whose free tier doesn't include pollen),
+// v0.0.32 switched to Google Pollen API (works, but requires Cloud Console
+// signup and a billing account on file even for free-tier use). v0.0.34
+// switches to pollen.com scraping. Pros: free, no key, no signup, no expiry.
+// Cons: undocumented endpoint, US-only, requires CORS proxy with Referer
+// header injection (since pollen.com checks for a pollen.com-domain referer),
+// single composite index per day rather than per-category UPI values.
 //
-// Setup: Google Cloud Console -> create project -> enable "Pollen API" -> 
-// Credentials -> create API key. Paste key into Milepost Settings. The key
-// can be restricted to your domain or HTTP referrers for security.
-//
-// Returns null when no key is set or on any error so capture continues.
-async function getPollen(lat, lon) {
+// Requires the Cloudflare Worker proxy to be updated to inject the
+// Referer: https://www.pollen.com/ header on requests to pollen.com.
+// The capture gracefully skips with a clear message if the ZIP is missing or
+// the request fails so a non-US user (no ZIP) doesn't see a hard failure.
+async function getPollen(lat, lon, zip) {
   if (lat == null || lon == null) return null;
-  const key = Settings.get('google_pollen');
-  if (!key) return { needsKey: true };
+  if (!zip) return { error: 'no US ZIP available for location (pollen.com is US-only)' };
+  const cleanZip = String(zip).split('-')[0].trim();
+  if (!/^\d{5}$/.test(cleanZip)) return { error: `ZIP ${zip} is not a US 5-digit postal code` };
   try {
-    // Forecast endpoint, 1 day = today, no plant details to keep payload tiny
-    const url = `https://pollen.googleapis.com/v1/forecast:lookup` +
-      `?key=${encodeURIComponent(key)}` +
-      `&location.longitude=${lon}&location.latitude=${lat}` +
-      `&days=1&plantsDescription=false`;
-    const r = await fetch(url);
+    // Route through the configured CORS proxy. fetchScrape tries direct
+    // first, then the proxy, then the public fallback. Direct will fail
+    // (pollen.com rejects browser-origin fetches without proper Referer)
+    // so the proxy path is the one that actually returns data.
+    const r = await fetchScrape(`https://www.pollen.com/api/forecast/current/pollen/${cleanZip}`);
     if (!r.ok) {
-      if (r.status === 401 || r.status === 403) return { error: 'API key rejected (check Pollen API is enabled in your Google Cloud project)' };
-      if (r.status === 429) return { error: 'rate limited (free tier is 10K/month)' };
+      if (r.status === 404) return { error: `pollen.com has no data for ZIP ${cleanZip}` };
       throw new Error(`HTTP ${r.status}`);
     }
     const j = await r.json();
-    const daily = j.dailyInfo && j.dailyInfo[0];
-    if (!daily) return { error: 'no dailyInfo in response' };
-    // Google returns one entry per pollen type per day. Find tree/grass/weed.
-    const byCode = {};
-    for (const t of (daily.pollenTypeInfo || [])) {
-      if (t && t.code) byCode[t.code] = t;
+    const periods = j.Location?.periods || [];
+    if (!periods.length) return { error: 'no periods in response (proxy may not be injecting Referer header)' };
+    // pollen.com returns periods in fixed order: Yesterday, Today, Tomorrow.
+    // Each has an Index (float 0-12 NAB scale) and Triggers (array of plant
+    // objects, each with PlantType in {Tree, Grass, Weed, Mold}).
+    const byType = {};
+    for (const p of periods) {
+      if (p.Type) byType[p.Type] = p;
     }
-    const wrap = (entry) => {
-      if (!entry) return null;
-      const v = entry.indexInfo && entry.indexInfo.value;
-      const cat = entry.indexInfo && entry.indexInfo.category;
-      if (v == null) return null;
+    const wrap = (p) => {
+      if (!p || p.Index == null) return null;
+      const idx = Number(p.Index);
+      if (!Number.isFinite(idx)) return null;
+      // NAB scale categories per pollen.com's own legend
+      const cat = idx <= 2.4 ? 'Low'
+                : idx <= 4.8 ? 'Low-Medium'
+                : idx <= 7.2 ? 'Medium'
+                : idx <= 9.6 ? 'Medium-High'
+                : 'High';
+      const triggerTypes = new Set();
+      const triggerNames = [];
+      for (const t of (p.Triggers || [])) {
+        if (t.PlantType) triggerTypes.add(t.PlantType);
+        if (t.Name) triggerNames.push(t.Name);
+      }
       return {
-        upi: v,
-        category: cat || null,
-        inSeason: entry.inSeason || false,
+        index: idx,
+        category: cat,
+        triggerTypes: Array.from(triggerTypes),
+        triggerNames,
       };
     };
     return {
-      source: 'google-pollen',
-      observedAt: daily.date ? `${daily.date.year}-${String(daily.date.month).padStart(2,'0')}-${String(daily.date.day).padStart(2,'0')}` : null,
-      tree:  wrap(byCode.TREE),
-      grass: wrap(byCode.GRASS),
-      weed:  wrap(byCode.WEED),
+      source: 'pollen.com',
+      date: j.ForecastDate || null,
+      location: {
+        zip: j.Location?.ZIP || cleanZip,
+        city: j.Location?.City || null,
+        state: j.Location?.State || null,
+        display: j.Location?.DisplayLocation || null,
+      },
+      yesterday: wrap(byType.Yesterday),
+      today:     wrap(byType.Today),
+      tomorrow:  wrap(byType.Tomorrow),
     };
   } catch (e) {
     return { error: e.message };
@@ -2149,10 +2164,47 @@ async function getCrypto() {
 }
 
 async function getFx() {
-  // Frankfurter has historically been CORS-friendly but some networks/browsers see it
-  // blocked. fetchScrape tries direct then falls back to the configured proxy.
-  const r = await fetchScrape('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD');
-  return await r.json();
+  // v0.0.34: switched from Frankfurter to Yahoo Finance. Frankfurter is a
+  // one-person hobby project on free hosting that goes down regularly
+  // (today's diagnostic showed HTTP 521 "origin unreachable" from Cloudflare).
+  // Yahoo Finance already powers our stock indices and supports FX pairs
+  // natively via the =X suffix (EURUSD=X, GBPUSD=X, etc), so we can reuse
+  // the same fetch path and proxy infrastructure without a separate vendor.
+  //
+  // Yahoo returns the rate as "1 EUR = X USD" with EURUSD=X, so we invert to
+  // get the "USD / EUR" perspective the rest of the codebase expects (EUR is
+  // 0.86 to the dollar, not 1.16, in the rendered output).
+  const pairs = [
+    { code: 'EUR', symbol: 'EURUSD=X' },
+    { code: 'GBP', symbol: 'GBPUSD=X' },
+    { code: 'JPY', symbol: 'JPYUSD=X' },
+    { code: 'CAD', symbol: 'CADUSD=X' },
+  ];
+  const rates = {};
+  for (const p of pairs) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(p.symbol)}?interval=1d&range=2d`;
+      const r = await fetchScrape(url);
+      const j = await r.json();
+      const price = j.chart?.result?.[0]?.meta?.regularMarketPrice;
+      // EURUSD=X price means "1 EUR = X USD"; invert for "1 USD = Y EUR"
+      // which matches the schema Frankfurter previously returned.
+      if (price != null && price > 0) {
+        rates[p.code] = 1 / price;
+      }
+    } catch (e) {
+      console.warn(`[Milepost] fx ${p.code}: ${e.message}`);
+    }
+  }
+  // Schema-compatible with the prior Frankfurter response so the renderer
+  // doesn't need to change.
+  return {
+    amount: 1,
+    base: 'USD',
+    date: new Date().toISOString().slice(0, 10),
+    rates,
+    source: 'yahoo',
+  };
 }
 
 /* ---------- stock indices (Yahoo Finance unofficial chart endpoint) ---------- */
@@ -2276,7 +2328,7 @@ async function getStocks() {
 }
 
 /* ============================================================
-   v0.0.32 additions: extended environmental and discourse signals
+   v0.0.34 additions: extended environmental and discourse signals
    ============================================================ */
 
 // Drought Monitor classification for the user's county.
@@ -2305,7 +2357,7 @@ async function getDroughtMonitor(lat, lon) {
   if (!fips) return { classification: 'Not in US', county: null, state: null };
 
   // Step 2: ask USDM for this week's categories for the county
-  // v0.0.32: parse CSV directly. USDM ignores Accept: application/json (returns
+  // v0.0.34: parse CSV directly. USDM ignores Accept: application/json (returns
   // CSV regardless) so we parse the columns: MapDate, FIPS, County, State,
   // None, D0, D1, D2, D3, D4, ValidStart, ValidEnd, StatisticFormatID.
   try {
@@ -2564,7 +2616,7 @@ async function getNearestMETAR(lat, lon) {
   };
 }
 
-// Nearest active wildfire from FIRMS data. v0.0.32 reduces the global thermal
+// Nearest active wildfire from FIRMS data. v0.0.34 reduces the global thermal
 // anomaly count (already pulled by getWildfires) to a personal signal by
 // computing the distance to the nearest detection. Mike's existing wildfires
 // fetcher returns aggregate counts; this function refetches a tighter
@@ -2635,7 +2687,7 @@ async function getQuoteOfDay() {
   const j = await r.json();
   if (j.error || !j.parse) return null;
   const wt = j.parse.wikitext['*'] || '';
-  // v0.0.32: smarter parser. The Wikiquote QOTD template has many named
+  // v0.0.34: smarter parser. The Wikiquote QOTD template has many named
   // parameters (image1, caption, quote, author, source, date, etc.) and
   // prior code was grabbing the first piped parameter, which often turned
   // out to be the image filename. Now we:
@@ -2647,7 +2699,7 @@ async function getQuoteOfDay() {
   //      short part that isn't metadata
   function stripMarkup(s) {
     return s
-      // v0.0.32: HTML comments first (multi-line). Today's QOTD wikitext
+      // v0.0.34: HTML comments first (multi-line). Today's QOTD wikitext
       // contained "<!-- editorial note --> The moral elements..." where the
       // generic <[^>]+> regex below matched <!-- but stopped at the first >,
       // leaving "-->The moral..." in the output. Strip comments wholesale
@@ -3951,7 +4003,11 @@ async function captureAll() {
     ['pollen', async () => {
       if (lat == null) return;
       try {
-        data.pollen = await getPollen(lat, lon);
+        // pollen.com is keyed by US ZIP. Pull it from the location object
+        // populated by getLocation (Nominatim postcode field, or ipapi
+        // postal field on IP fallback).
+        const zip = data.location?.postcode;
+        data.pollen = await getPollen(lat, lon, zip);
       } catch (e) {
         console.warn(`[Milepost] pollen: ${e.message}`);
         data.pollen = null;
@@ -3962,7 +4018,7 @@ async function captureAll() {
       const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
         console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
       }) : null;
-      // v0.0.32: enrich moon with rise/set times; add visible planets list.
+      // v0.0.34: enrich moon with rise/set times; add visible planets list.
       const moonBase = moonPhase(now);
       const moonRS = lat != null ? getMoonRiseSet(now, lat, lon) : null;
       const moon = moonRS ? Object.assign({}, moonBase, moonRS) : moonBase;
@@ -4006,7 +4062,7 @@ async function captureAll() {
     ['fire', async () => {
       data.wildfires = await getWildfires(lat, lon, firmsKey);
       if (data.wildfires?.needsKey) throw new Error('needsKey');
-      // v0.0.32: add nearest-fire signal if we have FIRMS key
+      // v0.0.34: add nearest-fire signal if we have FIRMS key
       if (firmsKey && lat != null) {
         try {
           data.wildfires.nearest = await getNearestWildfire(lat, lon, firmsKey);
@@ -4268,20 +4324,30 @@ function sectionAtmospheric(d) {
       });
     }
   }
-  // Pollen Index from Tomorrow.io (US and global coverage, 0-5 UPI scale).
-  // Open-Meteo's pollen above only covers Europe so this is the primary
-  // source for North American users. Requires the Tomorrow.io key in Settings.
+  // Pollen index from pollen.com (US, 0-12 NAB scale, single composite
+  // index per day with triggering plant types listed). v0.0.34 replaced
+  // the prior Google Pollen integration; new schema is yesterday/today/
+  // tomorrow each with index, category, triggerTypes, triggerNames.
   const pollenData = d.pollen;
-  if (pollenData && !pollenData.needsKey && !pollenData.error) {
-    const renderUpi = (label, p) => {
-      if (!p || p.upi == null) return;
-      rows.push(kvRow(label, `${p.upi} / 5`, (p.category || '').toLowerCase()));
-    };
-    renderUpi('Tree Pollen (UPI)',  pollenData.tree);
-    renderUpi('Grass Pollen (UPI)', pollenData.grass);
-    renderUpi('Weed Pollen (UPI)',  pollenData.weed);
+  if (pollenData && !pollenData.error && pollenData.today) {
+    const t = pollenData.today;
+    rows.push(kvRow('Pollen Index', `${t.index.toFixed(1)} / 12`, (t.category || '').toLowerCase()));
+    if (t.triggerTypes && t.triggerTypes.length) {
+      rows.push(kvRow('Active Triggers', t.triggerTypes.join(', ')));
+    }
+    if (t.triggerNames && t.triggerNames.length) {
+      // Cap at 6 names to keep the row readable; Genus/Name pairs can be long
+      const shown = t.triggerNames.slice(0, 6).join(', ');
+      const more = t.triggerNames.length > 6 ? ` (+${t.triggerNames.length - 6} more)` : '';
+      rows.push(kvRow('Triggering Plants', shown + more));
+    }
+    // Yesterday/Tomorrow as smaller context lines if available
+    const y = pollenData.yesterday, tm = pollenData.tomorrow;
+    if (y && tm) {
+      rows.push(kvRow('Pollen Trend', `yesterday ${y.index.toFixed(1)}, today ${t.index.toFixed(1)}, tomorrow ${tm.index.toFixed(1)}`));
+    }
   }
-  const sources = ['Open-Meteo', co2 && 'NOAA GML', pollenData && !pollenData.needsKey && !pollenData.error && 'Google Pollen'].filter(Boolean).join(', ');
+  const sources = ['Open-Meteo', co2 && 'NOAA GML', pollenData && !pollenData.error && pollenData.today && 'pollen.com'].filter(Boolean).join(', ');
   return sec('Atmospheric', sources, rows.join(''));
 }
 
@@ -4680,16 +4746,22 @@ function buildTextExport(entry) {
         if (v != null && !isNaN(v)) out += line(k, `${fmtNum(v, 1)} g/m3 (${pollenCategory(v)})`);
       });
     }
-    // Tomorrow.io pollen index (US and global coverage on 0-5 UPI scale)
+    // Pollen index from pollen.com (US, 0-12 NAB scale, single composite
+    // index with triggering plant types listed)
     const pollenData = d.pollen;
-    if (pollenData && !pollenData.needsKey && !pollenData.error) {
-      const upiLine = (label, p) => {
-        if (!p || p.upi == null) return '';
-        return line(label, `${p.upi} / 5 (${(p.category || '').toLowerCase()})`);
-      };
-      out += upiLine('Tree Pollen (UPI)',  pollenData.tree);
-      out += upiLine('Grass Pollen (UPI)', pollenData.grass);
-      out += upiLine('Weed Pollen (UPI)',  pollenData.weed);
+    if (pollenData && !pollenData.error && pollenData.today) {
+      const t = pollenData.today;
+      out += line('Pollen Index', `${t.index.toFixed(1)} / 12 (${(t.category || '').toLowerCase()})`);
+      if (t.triggerTypes && t.triggerTypes.length) {
+        out += line('Active Triggers', t.triggerTypes.join(', '));
+      }
+      if (t.triggerNames && t.triggerNames.length) {
+        out += line('Triggering Plants', t.triggerNames.join(', '));
+      }
+      const y = pollenData.yesterday, tm = pollenData.tomorrow;
+      if (y && tm) {
+        out += line('Pollen Trend', `yesterday ${y.index.toFixed(1)}, today ${t.index.toFixed(1)}, tomorrow ${tm.index.toFixed(1)}`);
+      }
     }
     out += '\n';
   }
@@ -5193,10 +5265,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.32 this was only set on the 'input' event, which requires a value
+   v0.0.34 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.32 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.34 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -5516,7 +5588,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.32',
+    version: '0.0.34',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,

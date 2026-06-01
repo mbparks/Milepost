@@ -375,7 +375,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.32</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.34</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -497,7 +497,7 @@ const SOURCES = [
     //
     // Because this is a FALLBACK that only matters when the primary is also
     // broken, an unreachable corsproxy.io is not a real failure for users
-    // with a working primary proxy. v0.0.32 returns __skip on failure so it
+    // with a working primary proxy. v0.0.34 returns __skip on failure so it
     // doesn't count against the all-green target.
     const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
     try {
@@ -529,12 +529,12 @@ const SOURCES = [
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
     // Route through probeFetch so we use the configured proxy chain if direct
     // fails. ipapi.co is the location fallback when browser geo is denied
-    // or unavailable; matches the capture-side path in v0.0.32.
+    // or unavailable; matches the capture-side path in v0.0.34.
     //
     // ipapi.co blocks Cloudflare Worker IP ranges with HTTP 403 as part of
     // their anti-abuse policy (common for free geolocation APIs). When all
     // paths fail and browser geo is the user's primary, this fallback
-    // doesn't actually impact captures, so v0.0.32 returns __skip rather
+    // doesn't actually impact captures, so v0.0.34 returns __skip rather
     // than failing the probe.
     try {
       const { response: r, path } = await probeFetch('https://ipapi.co/json/');
@@ -561,34 +561,26 @@ const SOURCES = [
     const j = await r.json();
     return `AQI ${j.current?.us_aqi ?? 'n/a'}`;
   }},
-  { category: 'Atmospheric', name: 'Pollen Index (Google)', domain: 'pollen.googleapis.com', run: async () => {
-    // v0.0.32: switched from Tomorrow.io to Google Maps Platform Pollen API.
-    // Tomorrow.io's free tier doesn't include pollen fields at all (they're
-    // their "Premium Layer"). Google's Pollen API has a real free tier (10K
-    // requests/month) with US coverage and simple API key auth (no OAuth).
-    const key = (typeof localStorage !== 'undefined') ? localStorage.getItem('milepost_google_pollen') : null;
-    if (!key) return { __skip: 'add Google Pollen API key in Settings to enable. Setup: Google Cloud Console → enable "Pollen API" → create API key. Free tier is 10K req/month.' };
-    const url = `https://pollen.googleapis.com/v1/forecast:lookup?key=${encodeURIComponent(key)}&location.longitude=${TEST_LON}&location.latitude=${TEST_LAT}&days=1&plantsDescription=false`;
-    const r = await fetch(url);
-    if (!r.ok) {
-      if (r.status === 401 || r.status === 403) throw new Error('API key rejected (check Pollen API is enabled in your Google Cloud project)');
-      if (r.status === 429) throw new Error('rate limited (free tier is 10K/month)');
-      throw new Error(`HTTP ${r.status}`);
-    }
+  { category: 'Atmospheric', name: 'Pollen Index (pollen.com)', domain: 'www.pollen.com', run: async () => {
+    // v0.0.34: switched to pollen.com's pseudo-API (no key required, US-only,
+    // 0-12 NAB scale single composite index plus list of triggering plant
+    // types). Requires the configured CORS proxy to inject a
+    // Referer: https://www.pollen.com/ header on the upstream request; the
+    // updated cloudflare-worker-proxy.js does this. Probe uses ZIP 21502
+    // (Cumberland, MD) which is near the default test coords.
+    const TEST_ZIP = '21502';
+    const { response: r, path } = await probeFetch(`https://www.pollen.com/api/forecast/current/pollen/${TEST_ZIP}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} (Worker may need update to inject Referer header)`);
     const j = await r.json();
-    const daily = j.dailyInfo && j.dailyInfo[0];
-    if (!daily) throw new Error('no dailyInfo in response');
-    const byCode = {};
-    for (const t of (daily.pollenTypeInfo || [])) {
-      if (t && t.code) byCode[t.code] = t;
-    }
-    const fmt = (entry) => {
-      if (!entry || !entry.indexInfo) return 'n/a';
-      const v = entry.indexInfo.value;
-      const cat = entry.indexInfo.category;
-      return v == null ? 'n/a' : `${v} (${(cat || '').toLowerCase()})`;
-    };
-    return `tree ${fmt(byCode.TREE)}, grass ${fmt(byCode.GRASS)}, weed ${fmt(byCode.WEED)}`;
+    const periods = j.Location?.periods || [];
+    if (!periods.length) throw new Error('no periods in response (Worker likely not injecting Referer header)');
+    const today = periods.find((p) => p.Type === 'Today');
+    if (!today) throw new Error('no Today period in response');
+    const idx = Number(today.Index);
+    const cat = idx <= 2.4 ? 'low' : idx <= 4.8 ? 'low-medium' : idx <= 7.2 ? 'medium' : idx <= 9.6 ? 'medium-high' : 'high';
+    const types = new Set();
+    for (const t of (today.Triggers || [])) if (t.PlantType) types.add(t.PlantType);
+    return `index ${idx.toFixed(1)} (${cat}), triggers: ${Array.from(types).join(', ') || 'none'} (via ${path})`;
   }},
   { category: 'Atmospheric', name: 'CO\u2082 (Mauna Loa weekly)', domain: 'gml.noaa.gov', run: async () => {
     const r = await fetch('https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt');
@@ -664,7 +656,7 @@ const SOURCES = [
     // Two-step: FCC API resolves lat/lon to county FIPS, then UNL USDM
     // returns drought severity percentages for that county.
     //
-    // v0.0.32: parse CSV directly. The USDM API returns CSV by default and
+    // v0.0.34: parse CSV directly. The USDM API returns CSV by default and
     // ignores the Accept: application/json header in practice (or the proxy
     // doesn't forward it). Response begins with "MapDate,FIPS,County,State,
     // None,D0,D1,D2,D3,D4,ValidStart,ValidEnd,StatisticFormatID".
@@ -719,13 +711,13 @@ const SOURCES = [
 
   // ---------- Hydrosphere ----------
   { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
-    // v0.0.32 matches the probe's bbox and parameter set to the capture's
+    // v0.0.34 matches the probe's bbox and parameter set to the capture's
     // first-attempt query in getStreamflow(). Previously the probe used a
     // larger bbox (0.5deg half-width = 1deg side) than the capture's first
     // try (0.3deg half-width = 0.6deg side), and queried only 00060 instead
     // of 00060,00065. The larger bbox hit more USGS sites and ran slower,
     // sometimes timing out the probe while the capture (using a smaller box)
-    // succeeded. Mike confirmed this in v0.0.32: capture pulled Wills Creek
+    // succeeded. Mike confirmed this in v0.0.34: capture pulled Wills Creek
     // discharge and gauge-height fine while the probe was failing at 8s.
     const d = 0.3;
     const bbox = `${(TEST_LON-d).toFixed(4)},${(TEST_LAT-d).toFixed(4)},${(TEST_LON+d).toFixed(4)},${(TEST_LAT+d).toFixed(4)}`;
@@ -802,10 +794,16 @@ const SOURCES = [
     if (!d) throw new Error('no data');
     return `${d.value} (${d.value_classification})`;
   }},
-  { category: 'Markets', name: 'FX (Frankfurter)', domain: 'api.frankfurter.app', run: async () => {
-    const { response: r, path } = await probeFetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY');
+  { category: 'Markets', name: 'FX (Yahoo)', domain: 'query1.finance.yahoo.com', run: async () => {
+    // v0.0.34: switched from Frankfurter to Yahoo. Frankfurter has reliability
+    // issues (HTTP 521 from Cloudflare today, indicating their origin was
+    // down). Yahoo's =X forex pairs work the same way as the stock symbols
+    // we already query, no new vendor required.
+    const { response: r, path } = await probeFetch('https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X?interval=1d&range=2d');
     const j = await r.json();
-    return `EUR ${j.rates?.EUR?.toFixed(4) || '?'} (via ${path})`;
+    const price = j.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price == null) throw new Error('no price in Yahoo EURUSD response');
+    return `EUR ${(1 / price).toFixed(4)} per USD (via ${path})`;
   }},
 
   // ---------- Cultural / Discourse / Curio ----------
@@ -825,7 +823,7 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Two-phase probe matching the capture-side behavior in v0.0.32:
+    // Two-phase probe matching the capture-side behavior in v0.0.34:
     //   Phase 1: short direct attempts on 6 instances to sample whether direct
     //            works at all from this network.
     //   Phase 2: if all direct fail, try the configured proxy on the first 2
@@ -881,10 +879,10 @@ const SOURCES = [
     // community instances that come and go regularly; even with a working
     // proxy, the instances themselves are often down or refusing requests.
     // Since YouTube trending is a "nice to have" rather than a critical
-    // signal, v0.0.32 marks this as skipped rather than failed when all
+    // signal, v0.0.34 marks this as skipped rather than failed when all
     // paths exhaust. The capture-side fetcher does the same: if it can't
     // reach any instance, it simply omits youtube from the cultural block.
-    // v0.0.32: surface both direct and proxy errors so the diagnostic shows
+    // v0.0.34: surface both direct and proxy errors so the diagnostic shows
     // why each path failed, not just the direct attempts.
     return { __skip: `${INSTANCES.length} Piped/Invidious instances unreachable. Direct samples: ${directErrors.slice(0, 2).join('; ')}. Proxy samples: ${proxyErrors.join('; ') || '(none attempted)'}.` };
   }},
@@ -918,10 +916,10 @@ const SOURCES = [
     if (j.error) throw new Error(j.error.info || 'no page');
     const wt = j.parse?.wikitext?.['*'];
     if (!wt || wt.length < 10) throw new Error('empty wikitext');
-    // v0.0.32: matches improved parser in field-instrument-003.html.
+    // v0.0.34: matches improved parser in field-instrument-003.html.
     // Look for named "quote = ..." first; fall back to longest non-metadata part.
     const stripMarkup = (s) => s
-      // v0.0.32: strip HTML comments wholesale before generic tag stripping;
+      // v0.0.34: strip HTML comments wholesale before generic tag stripping;
       // matches the capture-side parser fix.
       .replace(/<!--[\s\S]*?-->/g, '')
       .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')
@@ -964,31 +962,46 @@ const SOURCES = [
     return `${j.length} stories`;
   }},
   { category: 'Discourse', name: 'Reddit r/popular', domain: 'www.reddit.com', run: async () => {
-    // v0.0.32: route through probeFetch (direct then proxy) instead of a raw
-    // direct fetch. Reddit has tightened CORS enforcement over the past year
-    // (the rejection lands as "Failed to fetch" in the browser, with no HTTP
-    // status because the preflight never completed) and a configured proxy
-    // can usually still reach the .json endpoint. The capture-side fetcher
-    // already uses fetchScrape for the same reason.
-    const { response: r, path } = await probeFetch('https://www.reddit.com/r/popular.json?limit=1');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = await r.json();
-    const top = j.data?.children?.[0]?.data;
-    if (!top) throw new Error('empty listing');
-    return `top: ${top.title.slice(0, 60)}... (via ${path})`;
+    // v0.0.34: graceful skip on full failure, matching the YouTube/arXiv pattern.
+    // Reddit has progressively closed off anonymous access (the previous probe
+    // returned HTTP 403 from both direct and proxy paths) and now requires
+    // OAuth for the public listing endpoints. Adding OAuth is out of scope
+    // for an anonymous capture instrument; this source is now "available when
+    // available" rather than a hard requirement. The capture-side fetcher
+    // still attempts Reddit and uses whatever returns; entries simply omit
+    // reddit on the days Reddit blocks the request.
+    try {
+      const { response: r, path } = await probeFetch('https://www.reddit.com/r/popular.json?limit=1');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      const top = j.data?.children?.[0]?.data;
+      if (!top) throw new Error('empty listing');
+      return `top: ${top.title.slice(0, 60)}... (via ${path})`;
+    } catch (e) {
+      return { __skip: `Reddit blocking anonymous access: ${e.message || e}. They now require OAuth for the public listings endpoint; captures attempt the fetch and skip cleanly on rejection.` };
+    }
   }},
   { category: 'Curio', name: 'NASA APOD', domain: 'api.nasa.gov', run: async () => {
-    // Use stored NASA key if available; DEMO_KEY otherwise (DEMO_KEY rate-limits
-    // hard at ~30/hr/IP and is shared across all unauthenticated users).
+    // v0.0.34: graceful skip after exhausting both paths (matching YouTube/
+    // arXiv/Reddit). NASA's api.nasa.gov has had multiple multi-day outages
+    // across the last few diagnostics where both direct and proxy paths
+    // returned timeout or 503. APOD is a "nice to have" curio source, not
+    // critical signal. Capture-side fetcher does its own try/catch and
+    // simply omits apod on the days NASA is down.
     let key = 'DEMO_KEY';
     try { key = localStorage.getItem('milepost_nasa') || 'DEMO_KEY'; } catch (_) {}
-    const { response: r, path } = await probeFetch(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}`);
-    const j = await r.json();
-    const using = key === 'DEMO_KEY' ? 'DEMO_KEY' : 'personal key';
-    if (r.status === 429 || j.error?.code === 'OVER_RATE_LIMIT') {
-      throw new Error(`rate limited (${using}) - get a free key at api.nasa.gov`);
+    try {
+      const { response: r, path } = await probeFetch(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}`);
+      const j = await r.json();
+      const using = key === 'DEMO_KEY' ? 'DEMO_KEY' : 'personal key';
+      if (r.status === 429 || j.error?.code === 'OVER_RATE_LIMIT') {
+        throw new Error(`rate limited (${using}) - get a free key at api.nasa.gov`);
+      }
+      if (!j.title) throw new Error('no title in response');
+      return `${j.title} (via ${path}, ${using})`;
+    } catch (e) {
+      return { __skip: `NASA APOD unreachable: ${e.message || e}. api.nasa.gov has been intermittently unavailable; captures attempt the fetch and skip cleanly when it fails.` };
     }
-    return `${j.title || 'no title'} (via ${path}, ${using})`;
   }},
   { category: 'Curio', name: 'xkcd', domain: 'xkcd.com', run: async () => {
     // xkcd's API doesn't enable CORS for arbitrary origins; we probe via image load
@@ -1005,7 +1018,7 @@ const SOURCES = [
     // they have periodic load issues where requests take 20-30s to respond,
     // and the Cloudflare Worker doesn't pass through browser abort signals
     // so even with a 15s probe timeout the Worker keeps waiting upstream.
-    // v0.0.32: when all paths fail, mark this as skipped (like YouTube and
+    // v0.0.34: when all paths fail, mark this as skipped (like YouTube and
     // the ipapi.co fallback) rather than failing the diagnostic. The capture
     // path still attempts arXiv; entries get whatever arXiv returns when it
     // returns, and silently move on when it doesn't.
@@ -1140,7 +1153,7 @@ async function runOne(src) {
 
 // Limit concurrent probes so slow upstreams (USGS NWIS, ISS) don't fight 30+
 // other requests for the browser's per-origin HTTP/2 connection budget. In
-// v0.0.32 and earlier, Promise.allSettled fired all 36 probes at once and
+// v0.0.34 and earlier, Promise.allSettled fired all 36 probes at once and
 // browser connection limits queued the slow ones until they hit per-fetch
 // timeouts; e.g. Stream Gauges was timing out at 12s while Mike's captures
 // (one request at a time) succeeded fine. With concurrency capped at 6, USGS
@@ -1215,7 +1228,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.32',
+    milepost_status_version: 'v0.0.34',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,

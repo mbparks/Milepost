@@ -71,12 +71,27 @@ export default {
     }
 
     try {
+      // Per-host header overrides. Some upstream APIs require specific request
+      // headers (most often Referer) to return data. The browser can't set
+      // those reliably (Referer reflects the calling page), so the proxy
+      // injects them here based on the target host.
+      const extraHeaders = {};
+      if (targetUrl.hostname === 'www.pollen.com' || targetUrl.hostname === 'pollen.com') {
+        // Pollen.com's pseudo-API checks the Referer header. Without a
+        // pollen.com-domain referer they return an empty body or error.
+        extraHeaders['Referer'] = 'https://www.pollen.com/';
+        // They also reject non-browser User-Agent strings, so use a
+        // realistic Chrome UA rather than our default Milepost UA.
+        extraHeaders['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      }
+
       const upstream = await fetch(target, {
         method: 'GET',
         headers: {
           'Accept': request.headers.get('Accept') || '*/*',
           'Accept-Language': request.headers.get('Accept-Language') || 'en',
-          'User-Agent': 'Mozilla/5.0 (compatible; Milepost/1.0; +https://github.com/)',
+          'User-Agent': extraHeaders['User-Agent'] || 'Mozilla/5.0 (compatible; Milepost/1.0; +https://github.com/)',
+          ...extraHeaders,
         },
         redirect: 'follow',
         cf: { cacheTtl: 30, cacheEverything: false },

@@ -344,7 +344,7 @@ html, body {
     </div>
     <div></div>
     <div class="meta">
-      <div class="kv"><b>v0.0.32</b></div>
+      <div class="kv"><b>v0.0.34</b></div>
       <div class="kv" id="entryCount">no entries</div>
       <div class="kv" id="dateRange">--</div>
     </div>
@@ -384,7 +384,7 @@ html, body {
     </div>
   </div>
 
-  <div class="stamp">FI&nbsp;003 / <b>ANALYZER</b> / V0.0.32</div>
+  <div class="stamp">FI&nbsp;003 / <b>ANALYZER</b> / V0.0.34</div>
 </div>
 
 <script>
@@ -419,9 +419,17 @@ const SIGNALS = [
   { id: 'pm10',           label: 'PM10 (µg/m³)',          kind: 'numeric', path: 'airQuality.current.pm10' },
   { id: 'ozone',          label: 'Ozone (µg/m³)',         kind: 'numeric', path: 'airQuality.current.ozone' },
   { id: 'pollen_grass',   label: 'Grass Pollen (g/m³, EU)', kind: 'numeric', path: 'airQuality.current.grass_pollen' },
-  { id: 'pollen_tree_idx',  label: 'Tree Pollen (UPI)',    kind: 'numeric', path: 'pollen.tree.upi' },
-  { id: 'pollen_grass_idx', label: 'Grass Pollen (UPI)',   kind: 'numeric', path: 'pollen.grass.upi' },
-  { id: 'pollen_weed_idx',  label: 'Weed Pollen (UPI)',    kind: 'numeric', path: 'pollen.weed.upi' },
+  // v0.0.34: pollen source switched to pollen.com which returns a single
+  // composite NAB index 0-12 plus a list of triggering plant types.
+  // pollen_index is the headline number; the three booleans expose which
+  // plant categories are currently driving it (useful for correlating with
+  // specific allergies). Old pollen_tree_idx/grass_idx/weed_idx signals from
+  // the prior Google integration are dropped; legacy captures will read null
+  // for the new signals (which is fine, the analyzer handles nulls).
+  { id: 'pollen_index',    label: 'Pollen Index (0-12)',   kind: 'numeric', path: 'pollen.today.index' },
+  { id: 'pollen_has_tree', label: 'Pollen: Tree Active',   kind: 'numeric', compute: (s) => (s.pollen?.today?.triggerTypes || []).includes('Tree') ? 1 : 0 },
+  { id: 'pollen_has_grass',label: 'Pollen: Grass Active',  kind: 'numeric', compute: (s) => (s.pollen?.today?.triggerTypes || []).includes('Grass') ? 1 : 0 },
+  { id: 'pollen_has_weed', label: 'Pollen: Weed Active',   kind: 'numeric', compute: (s) => (s.pollen?.today?.triggerTypes || []).includes('Weed') ? 1 : 0 },
   // Climate
   { id: 'co2',            label: 'CO\u2082 (ppm)',         kind: 'numeric', path: 'climate.co2.ppm' },
   // Space weather
@@ -542,7 +550,14 @@ function extractEntry(json) {
   // Extract all signals
   const signals = {};
   for (const sig of SIGNALS) {
-    let v = getPath(snap, sig.path);
+    let v;
+    if (typeof sig.compute === 'function') {
+      // v0.0.34: signals can be computed from the snapshot directly (used for
+      // boolean-from-array-membership style signals like pollen_has_tree).
+      try { v = sig.compute(snap); } catch (_) { v = null; }
+    } else {
+      v = getPath(snap, sig.path);
+    }
     if (sig.formatter === 'wmo' && v != null) {
       v = WMO[v] || `Code ${v}`;
     }
