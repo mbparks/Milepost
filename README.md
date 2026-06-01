@@ -4,7 +4,7 @@
 
 A single-file web instrument that takes an environmental fix of the world at the moment of an entry and binds that snapshot to a written observation. Each entry becomes a milepost: a fixed marker along the route you are walking through time.
 
-Version 0.0.34 / Green Shoe Garage / Mountain Maryland
+Version 0.0.35 / Green Shoe Garage / Mountain Maryland
 
 ---
 
@@ -210,6 +210,8 @@ This is why **Wikipedia** is the press wire of the instrument: encyclopedic, dai
 When a useful source rejects browser-origin requests (Yahoo Finance since Feb 2025, Apple Marketing Tools intermittently, others as conditions change), Milepost routes the request through a **CORS proxy**, a service that fetches the URL server-side and returns it with the right headers. The real-world analog is a clipping service: someone else grabs the newspaper and hands you the cutout. The default proxy is AllOrigins, which is free and unauthenticated; the URL is configurable in Settings, and clearing the field disables proxying. Every fetcher tries direct first; the proxy is only used when direct fails. This means CORS-friendly sources (Wikipedia, NOAA, Open-Meteo, CoinGecko, etc.) never touch the proxy.
 
 ## Changelog
+
+**v0.0.35** Apple Charts (RSS) probe now gracefully skips on timeout or failure, matching the YouTube/Reddit/NASA APOD pattern from prior versions. Apple's marketing-tools RSS service has been bouncing bad/good/bad across recent diagnostics with no clear pattern: returns in about a second on good days, times out past 15s on bad days, the Worker reaches Apple successfully but Apple itself takes too long. That's upstream-slowness, not a configuration problem we can fix. v0.0.35 stops failing the diagnostic when Apple is slow; captures continue to attempt the fetch and entries omit the cultural-charts signal on bad days. Net effect: the v0.0.34 diagnostic that reported 1 failed + 3 skipped should now report 0 failed + 4 skipped, where the four skips are corsproxy.io (intentional backup), YouTube (Piped/Invidious ecosystem dead), Reddit (anonymous access blocked), and Apple Charts (slow today). All four are honest "available when available" sources, not actionable bugs.
 
 **v0.0.34** Pollen source switched from Google Pollen API to pollen.com scraping. Google's free tier worked but required a Google Cloud project, billing account on file, and explicit Pollen API enablement (the friction was the signup, not the API). v0.0.34 drops all of that and instead calls pollen.com's undocumented JSON API directly: `https://www.pollen.com/api/forecast/current/pollen/{ZIP}`. This is the same endpoint pollen.com's consumer site uses to render its forecast, and the Home Assistant `pyiqvia` library has been calling it since 2018. **No API key, no signup, no expiry, no recurring cost.** Trade-offs: it's US-only (pollen.com only covers US ZIPs), it's an undocumented pseudo-API that IQVIA could change or block at any time, and the data shape is different from Google's. Where Google returned three separate UPI 0-5 indexes (tree, grass, weed), pollen.com returns a single composite NAB index 0-12 plus a list of triggering plant types (Tree, Grass, Weed, Mold) with named plant species (Maple, Juniper, Ragweed, etc).
 
