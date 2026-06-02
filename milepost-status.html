@@ -375,7 +375,7 @@ h1 {
   <div id="sections"></div>
 
   <footer class="foot">
-    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.36</span>
+    <span>Milepost Status &middot; Field Instrument 003 &middot; v0.0.37</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -497,7 +497,7 @@ const SOURCES = [
     //
     // Because this is a FALLBACK that only matters when the primary is also
     // broken, an unreachable corsproxy.io is not a real failure for users
-    // with a working primary proxy. v0.0.36 returns __skip on failure so it
+    // with a working primary proxy. v0.0.37 returns __skip on failure so it
     // doesn't count against the all-green target.
     const probeTarget = encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/summary/HTTP');
     try {
@@ -529,12 +529,12 @@ const SOURCES = [
   { category: 'Location', name: 'IP Geolocation Fallback', domain: 'ipapi.co', run: async () => {
     // Route through probeFetch so we use the configured proxy chain if direct
     // fails. ipapi.co is the location fallback when browser geo is denied
-    // or unavailable; matches the capture-side path in v0.0.36.
+    // or unavailable; matches the capture-side path in v0.0.37.
     //
     // ipapi.co blocks Cloudflare Worker IP ranges with HTTP 403 as part of
     // their anti-abuse policy (common for free geolocation APIs). When all
     // paths fail and browser geo is the user's primary, this fallback
-    // doesn't actually impact captures, so v0.0.36 returns __skip rather
+    // doesn't actually impact captures, so v0.0.37 returns __skip rather
     // than failing the probe.
     try {
       const { response: r, path } = await probeFetch('https://ipapi.co/json/');
@@ -562,7 +562,7 @@ const SOURCES = [
     return `AQI ${j.current?.us_aqi ?? 'n/a'}`;
   }},
   { category: 'Atmospheric', name: 'Pollen Index (pollen.com)', domain: 'www.pollen.com', run: async () => {
-    // v0.0.36: switched to pollen.com's pseudo-API (no key required, US-only,
+    // v0.0.37: switched to pollen.com's pseudo-API (no key required, US-only,
     // 0-12 NAB scale single composite index plus list of triggering plant
     // types). Requires the configured CORS proxy to inject a
     // Referer: https://www.pollen.com/ header on the upstream request; the
@@ -656,7 +656,7 @@ const SOURCES = [
     // Two-step: FCC API resolves lat/lon to county FIPS, then UNL USDM
     // returns drought severity percentages for that county.
     //
-    // v0.0.36: parse CSV directly. The USDM API returns CSV by default and
+    // v0.0.37: parse CSV directly. The USDM API returns CSV by default and
     // ignores the Accept: application/json header in practice (or the proxy
     // doesn't forward it). Response begins with "MapDate,FIPS,County,State,
     // None,D0,D1,D2,D3,D4,ValidStart,ValidEnd,StatisticFormatID".
@@ -711,13 +711,13 @@ const SOURCES = [
 
   // ---------- Hydrosphere ----------
   { category: 'Hydrosphere', name: 'Stream Gauges', domain: 'waterservices.usgs.gov', run: async () => {
-    // v0.0.36 matches the probe's bbox and parameter set to the capture's
+    // v0.0.37 matches the probe's bbox and parameter set to the capture's
     // first-attempt query in getStreamflow(). Previously the probe used a
     // larger bbox (0.5deg half-width = 1deg side) than the capture's first
     // try (0.3deg half-width = 0.6deg side), and queried only 00060 instead
     // of 00060,00065. The larger bbox hit more USGS sites and ran slower,
     // sometimes timing out the probe while the capture (using a smaller box)
-    // succeeded. Mike confirmed this in v0.0.36: capture pulled Wills Creek
+    // succeeded. Mike confirmed this in v0.0.37: capture pulled Wills Creek
     // discharge and gauge-height fine while the probe was failing at 8s.
     const d = 0.3;
     const bbox = `${(TEST_LON-d).toFixed(4)},${(TEST_LAT-d).toFixed(4)},${(TEST_LON+d).toFixed(4)},${(TEST_LAT+d).toFixed(4)}`;
@@ -754,16 +754,26 @@ const SOURCES = [
     return `S&P at ${meta.regularMarketPrice?.toFixed(2)} (via ${path})`;
   }},
   { category: 'Markets', name: 'Stocks fallback (Stooq)', domain: 'stooq.com', run: async () => {
-    const { response: r, path } = await probeFetch('https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv');
-    const text = (await r.text()).trim();
-    if (/exceeded the daily hits limit/i.test(text)) throw new Error('rate limit');
-    const lines = text.split(/\r?\n/);
-    if (lines.length < 2) throw new Error('empty response');
-    const cells = lines[1].split(',');
-    if (cells.length < 7) throw new Error('malformed CSV');
-    const close = parseFloat(cells[6]);
-    if (!isFinite(close) || close === 0) throw new Error('no price');
-    return `S&P at ${close.toFixed(2)} (via ${path})`;
+    // v0.0.37: graceful skip on failure, matching the YouTube/Reddit/NASA APOD/
+    // Apple Charts pattern. Stooq is a small Polish financial-data hobby site
+    // serving free CSV quotes; it has no SLA and occasionally times out for
+    // multi-minute windows. This is the BACKUP stock source (Yahoo Finance is
+    // primary) so a Stooq outage doesn't affect captures as long as Yahoo is
+    // healthy. The probe stops failing the diagnostic when Stooq is slow.
+    try {
+      const { response: r, path } = await probeFetch('https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv');
+      const text = (await r.text()).trim();
+      if (/exceeded the daily hits limit/i.test(text)) throw new Error('rate limit');
+      const lines = text.split(/\r?\n/);
+      if (lines.length < 2) throw new Error('empty response');
+      const cells = lines[1].split(',');
+      if (cells.length < 7) throw new Error('malformed CSV');
+      const close = parseFloat(cells[6]);
+      if (!isFinite(close) || close === 0) throw new Error('no price');
+      return `S&P at ${close.toFixed(2)} (via ${path})`;
+    } catch (e) {
+      return { __skip: `Stooq unreachable: ${e.message || e}. Stooq is a backup source for stock prices (Yahoo Finance is primary); captures continue normally as long as Yahoo is healthy.` };
+    }
   }},
   { category: 'Markets', name: 'DJIA Close (FRED)', domain: 'fred.stlouisfed.org', run: async () => {
     const cosd = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -795,7 +805,7 @@ const SOURCES = [
     return `${d.value} (${d.value_classification})`;
   }},
   { category: 'Markets', name: 'FX (Yahoo)', domain: 'query1.finance.yahoo.com', run: async () => {
-    // v0.0.36: switched from Frankfurter to Yahoo. Frankfurter has reliability
+    // v0.0.37: switched from Frankfurter to Yahoo. Frankfurter has reliability
     // issues (HTTP 521 from Cloudflare today, indicating their origin was
     // down). Yahoo's =X forex pairs work the same way as the stock symbols
     // we already query, no new vendor required.
@@ -808,7 +818,7 @@ const SOURCES = [
 
   // ---------- Cultural / Discourse / Curio ----------
   { category: 'Cultural', name: 'Apple Charts (RSS)', domain: 'rss.marketingtools.apple.com', run: async () => {
-    // v0.0.36: graceful skip on failure, matching the YouTube/Reddit/NASA APOD
+    // v0.0.37: graceful skip on failure, matching the YouTube/Reddit/NASA APOD
     // pattern. Apple's RSS service (rss.marketingtools.apple.com) is genuinely
     // flaky: returns in 1 second on good days, times out past 15s on bad days,
     // with no clear cause on Apple's side. Across recent diagnostics it has
@@ -836,7 +846,7 @@ const SOURCES = [
     return `article found (${(j.parse?.wikitext?.['*'] || '').length} chars)`;
   }},
   { category: 'Cultural', name: 'YouTube Trending (Piped/Invidious)', domain: 'multiple', run: async () => {
-    // Two-phase probe matching the capture-side behavior in v0.0.36:
+    // Two-phase probe matching the capture-side behavior in v0.0.37:
     //   Phase 1: short direct attempts on 6 instances to sample whether direct
     //            works at all from this network.
     //   Phase 2: if all direct fail, try the configured proxy on the first 2
@@ -892,10 +902,10 @@ const SOURCES = [
     // community instances that come and go regularly; even with a working
     // proxy, the instances themselves are often down or refusing requests.
     // Since YouTube trending is a "nice to have" rather than a critical
-    // signal, v0.0.36 marks this as skipped rather than failed when all
+    // signal, v0.0.37 marks this as skipped rather than failed when all
     // paths exhaust. The capture-side fetcher does the same: if it can't
     // reach any instance, it simply omits youtube from the cultural block.
-    // v0.0.36: surface both direct and proxy errors so the diagnostic shows
+    // v0.0.37: surface both direct and proxy errors so the diagnostic shows
     // why each path failed, not just the direct attempts.
     return { __skip: `${INSTANCES.length} Piped/Invidious instances unreachable. Direct samples: ${directErrors.slice(0, 2).join('; ')}. Proxy samples: ${proxyErrors.join('; ') || '(none attempted)'}.` };
   }},
@@ -929,10 +939,10 @@ const SOURCES = [
     if (j.error) throw new Error(j.error.info || 'no page');
     const wt = j.parse?.wikitext?.['*'];
     if (!wt || wt.length < 10) throw new Error('empty wikitext');
-    // v0.0.36: matches improved parser in field-instrument-003.html.
+    // v0.0.37: matches improved parser in field-instrument-003.html.
     // Look for named "quote = ..." first; fall back to longest non-metadata part.
     const stripMarkup = (s) => s
-      // v0.0.36: strip HTML comments wholesale before generic tag stripping;
+      // v0.0.37: strip HTML comments wholesale before generic tag stripping;
       // matches the capture-side parser fix.
       .replace(/<!--[\s\S]*?-->/g, '')
       .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')
@@ -975,7 +985,7 @@ const SOURCES = [
     return `${j.length} stories`;
   }},
   { category: 'Discourse', name: 'Reddit r/popular', domain: 'www.reddit.com', run: async () => {
-    // v0.0.36: graceful skip on full failure, matching the YouTube/arXiv pattern.
+    // v0.0.37: graceful skip on full failure, matching the YouTube/arXiv pattern.
     // Reddit has progressively closed off anonymous access (the previous probe
     // returned HTTP 403 from both direct and proxy paths) and now requires
     // OAuth for the public listing endpoints. Adding OAuth is out of scope
@@ -995,7 +1005,7 @@ const SOURCES = [
     }
   }},
   { category: 'Curio', name: 'NASA APOD', domain: 'api.nasa.gov', run: async () => {
-    // v0.0.36: graceful skip after exhausting both paths (matching YouTube/
+    // v0.0.37: graceful skip after exhausting both paths (matching YouTube/
     // arXiv/Reddit). NASA's api.nasa.gov has had multiple multi-day outages
     // across the last few diagnostics where both direct and proxy paths
     // returned timeout or 503. APOD is a "nice to have" curio source, not
@@ -1031,7 +1041,7 @@ const SOURCES = [
     // they have periodic load issues where requests take 20-30s to respond,
     // and the Cloudflare Worker doesn't pass through browser abort signals
     // so even with a 15s probe timeout the Worker keeps waiting upstream.
-    // v0.0.36: when all paths fail, mark this as skipped (like YouTube and
+    // v0.0.37: when all paths fail, mark this as skipped (like YouTube and
     // the ipapi.co fallback) rather than failing the diagnostic. The capture
     // path still attempts arXiv; entries get whatever arXiv returns when it
     // returns, and silently move on when it doesn't.
@@ -1166,7 +1176,7 @@ async function runOne(src) {
 
 // Limit concurrent probes so slow upstreams (USGS NWIS, ISS) don't fight 30+
 // other requests for the browser's per-origin HTTP/2 connection budget. In
-// v0.0.36 and earlier, Promise.allSettled fired all 36 probes at once and
+// v0.0.37 and earlier, Promise.allSettled fired all 36 probes at once and
 // browser connection limits queued the slow ones until they hit per-fetch
 // timeouts; e.g. Stream Gauges was timing out at 12s while Mike's captures
 // (one request at a time) succeeded fine. With concurrency capped at 6, USGS
@@ -1241,7 +1251,7 @@ function buildDiagnostic() {
     };
   } catch (_) {}
   return {
-    milepost_status_version: 'v0.0.36',
+    milepost_status_version: 'v0.0.37',
     generated_at: new Date().toISOString(),
     page_url: location.href,
     user_agent: navigator.userAgent,

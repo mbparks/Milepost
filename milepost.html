@@ -1245,7 +1245,7 @@ body {
   </section>
 
   <footer class="foot">
-    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.36</span>
+    <span>Milepost &middot; Field Instrument 003 &middot; v0.0.37</span>
     <span id="footRight">GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1316,7 +1316,7 @@ function initSettings() {
   const firms = Settings.get('firms');
   const ebird = Settings.get('ebird');
   const nasa  = Settings.get('nasa');
-  // v0.0.36: pollen source switched to pollen.com (scraping, no key needed).
+  // v0.0.37: pollen source switched to pollen.com (scraping, no key needed).
   // Legacy 'google_pollen' and 'tomorrow' Settings keys remain in localStorage
   // for users who had set them, but they're no longer read or surfaced in UI.
   const sound = Settings.get('sound');
@@ -1367,7 +1367,7 @@ function initSettings() {
   $('exportSettings').addEventListener('click', () => {
     const payload = {
       format: 'milepost-settings',
-      version: '0.0.36',
+      version: '0.0.37',
       exported_at: new Date().toISOString(),
       note: 'Contains API keys and proxy URL. Treat as sensitive; do not share publicly. Restore by uploading via the Import button in Milepost Settings.',
       settings: {
@@ -1414,7 +1414,7 @@ function initSettings() {
       if ('firms' in s) { Settings.set('firms', String(s.firms || '').trim()); applied.push('FIRMS'); }
       if ('ebird' in s) { Settings.set('ebird', String(s.ebird || '').trim()); applied.push('eBird'); }
       if ('nasa' in s)  { Settings.set('nasa',  String(s.nasa  || '').trim()); applied.push('NASA'); }
-      // v0.0.36: pollen is no longer key-based (pollen.com scraping).
+      // v0.0.37: pollen is no longer key-based (pollen.com scraping).
       // Note in the import status if a legacy pollen key was present so the
       // user knows it was seen but not used.
       if (('google_pollen' in s && s.google_pollen) || ('tomorrow' in s && s.tomorrow)) {
@@ -1739,7 +1739,7 @@ async function getLocation() {
           // capture (which is why the Reader was counting 0 locations).
           // Open-Meteo themselves point users at Nominatim for reverse work.
           //
-          // v0.0.36: also capture postcode (US ZIP) and the address object
+          // v0.0.37: also capture postcode (US ZIP) and the address object
           // itself. Pollen.com keys its API by ZIP, so we extract it here from
           // the same call rather than making a second reverse lookup.
           let place = null;
@@ -1747,7 +1747,7 @@ async function getLocation() {
           let city = null;
           let stateRegion = null;
           try {
-            // v0.0.36: zoom=18 (Nominatim's default, "building" level) returns
+            // v0.0.37: zoom=18 (Nominatim's default, "building" level) returns
             // the complete address including postcode. Previously zoom=10 ("city"
             // level) was used which returned only state+country for some rural
             // coordinates, so a.postcode was undefined and the pollen.com
@@ -1831,7 +1831,7 @@ async function getAirQuality(lat, lon) {
 //
 // History: v0.0.30 used Tomorrow.io (whose free tier doesn't include pollen),
 // v0.0.32 switched to Google Pollen API (works, but requires Cloud Console
-// signup and a billing account on file even for free-tier use). v0.0.36
+// signup and a billing account on file even for free-tier use). v0.0.37
 // switches to pollen.com scraping. Pros: free, no key, no signup, no expiry.
 // Cons: undocumented endpoint, US-only, requires CORS proxy with Referer
 // header injection (since pollen.com checks for a pollen.com-domain referer),
@@ -2170,7 +2170,7 @@ async function getCrypto() {
 }
 
 async function getFx() {
-  // v0.0.36: switched from Frankfurter to Yahoo Finance. Frankfurter is a
+  // v0.0.37: switched from Frankfurter to Yahoo Finance. Frankfurter is a
   // one-person hobby project on free hosting that goes down regularly
   // (today's diagnostic showed HTTP 521 "origin unreachable" from Cloudflare).
   // Yahoo Finance already powers our stock indices and supports FX pairs
@@ -2334,7 +2334,7 @@ async function getStocks() {
 }
 
 /* ============================================================
-   v0.0.36 additions: extended environmental and discourse signals
+   v0.0.37 additions: extended environmental and discourse signals
    ============================================================ */
 
 // Drought Monitor classification for the user's county.
@@ -2363,7 +2363,7 @@ async function getDroughtMonitor(lat, lon) {
   if (!fips) return { classification: 'Not in US', county: null, state: null };
 
   // Step 2: ask USDM for this week's categories for the county
-  // v0.0.36: parse CSV directly. USDM ignores Accept: application/json (returns
+  // v0.0.37: parse CSV directly. USDM ignores Accept: application/json (returns
   // CSV regardless) so we parse the columns: MapDate, FIPS, County, State,
   // None, D0, D1, D2, D3, D4, ValidStart, ValidEnd, StatisticFormatID.
   try {
@@ -2622,7 +2622,7 @@ async function getNearestMETAR(lat, lon) {
   };
 }
 
-// Nearest active wildfire from FIRMS data. v0.0.36 reduces the global thermal
+// Nearest active wildfire from FIRMS data. v0.0.37 reduces the global thermal
 // anomaly count (already pulled by getWildfires) to a personal signal by
 // computing the distance to the nearest detection. Mike's existing wildfires
 // fetcher returns aggregate counts; this function refetches a tighter
@@ -2693,7 +2693,7 @@ async function getQuoteOfDay() {
   const j = await r.json();
   if (j.error || !j.parse) return null;
   const wt = j.parse.wikitext['*'] || '';
-  // v0.0.36: smarter parser. The Wikiquote QOTD template has many named
+  // v0.0.37: smarter parser. The Wikiquote QOTD template has many named
   // parameters (image1, caption, quote, author, source, date, etc.) and
   // prior code was grabbing the first piped parameter, which often turned
   // out to be the image filename. Now we:
@@ -2705,7 +2705,7 @@ async function getQuoteOfDay() {
   //      short part that isn't metadata
   function stripMarkup(s) {
     return s
-      // v0.0.36: HTML comments first (multi-line). Today's QOTD wikitext
+      // v0.0.37: HTML comments first (multi-line). Today's QOTD wikitext
       // contained "<!-- editorial note --> The moral elements..." where the
       // generic <[^>]+> regex below matched <!-- but stopped at the first >,
       // leaving "-->The moral..." in the output. Strip comments wholesale
@@ -4024,7 +4024,7 @@ async function captureAll() {
       const sunTimes = lat != null ? await getSunTimes(lat, lon).catch((e) => {
         console.warn(`[Milepost] cel/sunTimes: ${e.message}`); return null;
       }) : null;
-      // v0.0.36: enrich moon with rise/set times; add visible planets list.
+      // v0.0.37: enrich moon with rise/set times; add visible planets list.
       const moonBase = moonPhase(now);
       const moonRS = lat != null ? getMoonRiseSet(now, lat, lon) : null;
       const moon = moonRS ? Object.assign({}, moonBase, moonRS) : moonBase;
@@ -4068,7 +4068,7 @@ async function captureAll() {
     ['fire', async () => {
       data.wildfires = await getWildfires(lat, lon, firmsKey);
       if (data.wildfires?.needsKey) throw new Error('needsKey');
-      // v0.0.36: add nearest-fire signal if we have FIRMS key
+      // v0.0.37: add nearest-fire signal if we have FIRMS key
       if (firmsKey && lat != null) {
         try {
           data.wildfires.nearest = await getNearestWildfire(lat, lon, firmsKey);
@@ -4331,7 +4331,7 @@ function sectionAtmospheric(d) {
     }
   }
   // Pollen index from pollen.com (US, 0-12 NAB scale, single composite
-  // index per day with triggering plant types listed). v0.0.36 replaced
+  // index per day with triggering plant types listed). v0.0.37 replaced
   // the prior Google Pollen integration; new schema is yesterday/today/
   // tomorrow each with index, category, triggerTypes, triggerNames.
   const pollenData = d.pollen;
@@ -5271,10 +5271,10 @@ function playWhistle() {
 /* ---------- internal state sliders ----------
    The "set" state is tracked via dataset.set so capture knows whether the user
    actually interacted with the slider (vs leaving it at the default 5). Before
-   v0.0.36 this was only set on the 'input' event, which requires a value
+   v0.0.37 this was only set on the 'input' event, which requires a value
    *change*. If you clicked the slider without dragging (e.g. the value you
    wanted was already 5, the midpoint), no input event fired and capture
-   recorded null. v0.0.36 also listens for 'pointerdown' so the first touch
+   recorded null. v0.0.37 also listens for 'pointerdown' so the first touch
    marks the slider as set even if the user doesn't move it. Keyboard users
    still trigger 'input' on arrow keys, which marks it set as well. */
 function setupInternalState() {
@@ -5594,7 +5594,7 @@ $('saveJson').addEventListener('click', () => {
   const payload = {
     instrument: 'MILEPOST',
     series: 'Field Instrument 003',
-    version: '0.0.36',
+    version: '0.0.37',
     entry: {
       id: STATE.current.id,
       serial: STATE.current.serialDisplay,
