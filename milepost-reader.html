@@ -1286,7 +1286,7 @@ body { padding: 24px 16px 48px; }
   </section>
 
   <footer class="foot">
-    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.37</span>
+    <span>Milepost Reader &middot; Field Instrument 003 &middot; v0.0.38</span>
     <span>GPL-3.0 &middot; Green Shoe Garage</span>
   </footer>
 </main>
@@ -1308,7 +1308,7 @@ body { padding: 24px 16px 48px; }
 
 <script>
 /* ============================================================
-   MILEPOST READER  /  v0.0.37
+   MILEPOST READER  /  v0.0.38
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
@@ -1336,6 +1336,14 @@ function compass(deg) {
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return dirs[Math.round(((deg % 360) / 22.5)) % 16];
 }
+
+// v0.0.38: imperial unit conversion helpers (matching capture page)
+function cToF(c) { return c == null ? null : c * 9/5 + 32; }
+function kmhToMph(kmh) { return kmh == null ? null : kmh * 0.6213711922; }
+function kmToMi(km) { return km == null ? null : km * 0.6213711922; }
+function mToMi(m) { return m == null ? null : m * 0.0006213711922; }
+function hPaToInHg(h) { return h == null ? null : h * 0.02952998751; }
+function mmToIn(mm) { return mm == null ? null : mm * 0.03937007874; }
 function aqiCategory(aqi) {
   if (aqi == null) return '--';
   if (aqi <= 50) return 'good';
@@ -1631,7 +1639,7 @@ function computeStats() {
     if (s.location?.place) {
       places.add(s.location.place);
     } else if (s.location?.latitude != null && s.location?.longitude != null) {
-      // Pre-v0.0.37 captures stored place: null because the reverse-geocoding
+      // Pre-v0.0.38 captures stored place: null because the reverse-geocoding
       // endpoint was broken. Fall back to rounded coordinates so these entries
       // still register as distinct locations in the stats banner.
       places.add(`${s.location.latitude.toFixed(2)},${s.location.longitude.toFixed(2)}`);
@@ -1669,7 +1677,7 @@ function renderStats() {
     <div class="stat"><div class="label">Span</div><div class="value">${s.spanDays} ${s.spanDays === 1 ? 'day' : 'days'}</div><div class="sub">${escapeHtml(range)}</div></div>
     <div class="stat"><div class="label">Locations</div><div class="value">${s.locationsCount}</div></div>
     <div class="stat"><div class="label">Words Written</div><div class="value">${fmtNum(s.wordCount)}</div></div>
-    ${s.avgTemp != null ? `<div class="stat"><div class="label">Avg Temp</div><div class="value small">${fmtNum(s.avgTemp, 1)}°C / ${fmtNum(s.avgTemp * 9/5 + 32, 0)}°F</div></div>` : ''}
+    ${s.avgTemp != null ? `<div class="stat"><div class="label">Avg Temp</div><div class="value small">${fmtNum(cToF(s.avgTemp), 0)}°F</div></div>` : ''}
     ${s.totalSpecies ? `<div class="stat"><div class="label">Species Seen</div><div class="value">${fmtNum(s.totalSpecies)}</div></div>` : ''}
   `;
 }
@@ -1759,7 +1767,7 @@ function renderDetail() {
     </div>
     <div class="right">
       <strong>${escapeHtml(WMO[wcode] || '--')}</strong>
-      <span>${t != null ? `${fmtNum(t, 1)}°C / ${fmtNum(t * 9/5 + 32, 0)}°F` : '--'}</span>
+      <span>${t != null ? `${fmtNum(cToF(t), 0)}°F` : '--'}</span>
     </div>
   </div>`;
 
@@ -1881,7 +1889,7 @@ function renderDetail() {
   $('actPrint').addEventListener('click', () => {
     // Browsers use document.title as the default filename when the user picks
     // "Save as PDF" from the print dialog. By default this is "MILEPOST Reader"
-    // for every entry. v0.0.37 swaps the title to the entry's filename stem
+    // for every entry. v0.0.38 swaps the title to the entry's filename stem
     // for the duration of the print, then restores it. Result: the suggested
     // PDF filename matches the TXT/JSON pattern (milepost_YYYYMMDD-HHMM_NNN.pdf)
     // rather than being a generic page name.
@@ -2012,7 +2020,7 @@ function renderSectionBody(s) {
   }
   if (b.bodyTemperatureF != null) {
     const c = (b.bodyTemperatureF - 32) * 5 / 9;
-    rows.push(kvRow('Body Temperature', `${fmtNum(b.bodyTemperatureF, 1)}°F / ${fmtNum(c, 1)}°C`, bodyCategory('tempF', b.bodyTemperatureF)));
+    rows.push(kvRow('Body Temperature', `${fmtNum(b.bodyTemperatureF, 1)}°F`, bodyCategory('tempF', b.bodyTemperatureF)));
   }
   if (b.weightLb != null) {
     const kg = b.weightLb * 0.453592;
@@ -2044,17 +2052,17 @@ function renderSectionAtmospheric(s) {
   if (!w) return sec('Atmospheric', '', '<div class="kv"><span class="v muted">unavailable</span></div>', { single: true });
   const rows = [
     kvRow('Conditions', WMO[w.weather_code] || '--'),
-    kvRow('Temperature', `${fmtNum(w.temperature_2m, 1)}°C / ${fmtNum(w.temperature_2m * 9/5 + 32, 1)}°F`),
-    kvRow('Feels Like', `${fmtNum(w.apparent_temperature, 1)}°C`),
+    kvRow('Temperature', `${fmtNum(cToF(w.temperature_2m), 1)}°F`),
+    kvRow('Feels Like', `${fmtNum(cToF(w.apparent_temperature), 1)}°F`),
     kvRow('Humidity', `${fmtNum(w.relative_humidity_2m)}%`),
-    w.dew_point_2m != null ? kvRow('Dewpoint', `${fmtNum(w.dew_point_2m, 1)}°C / ${fmtNum(w.dew_point_2m * 9/5 + 32, 1)}°F`) : '',
-    kvRow('Pressure', `${fmtNum(w.pressure_msl, 1)} hPa`),
-    pt ? kvRow('Pressure Trend (3h)', `${pt.delta3h_hPa >= 0 ? '+' : ''}${fmtNum(pt.delta3h_hPa, 2)} hPa, ${pt.label}`) : '',
-    kvRow('Wind', `${fmtNum(w.wind_speed_10m, 1)} km/h ${compass(w.wind_direction_10m)}`),
-    kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(w.wind_gusts_10m, 1)} km/h` : '--'),
+    w.dew_point_2m != null ? kvRow('Dewpoint', `${fmtNum(cToF(w.dew_point_2m), 1)}°F`) : '',
+    kvRow('Pressure', `${fmtNum(hPaToInHg(w.pressure_msl), 2)} inHg`),
+    pt ? kvRow('Pressure Trend (3h)', `${pt.delta3h_hPa >= 0 ? '+' : ''}${fmtNum(hPaToInHg(pt.delta3h_hPa), 3)} inHg, ${pt.label}`) : '',
+    kvRow('Wind', `${fmtNum(kmhToMph(w.wind_speed_10m), 1)} mph ${compass(w.wind_direction_10m)}`),
+    kvRow('Gusts', w.wind_gusts_10m ? `${fmtNum(kmhToMph(w.wind_gusts_10m), 1)} mph` : '--'),
     kvRow('Cloud Cover', `${fmtNum(w.cloud_cover)}%`),
-    kvRow('Precipitation', `${fmtNum(w.precipitation, 1)} mm`),
-    kvRow('Visibility', w.visibility ? `${fmtNum(w.visibility/1000, 1)} km` : '--'),
+    kvRow('Precipitation', `${fmtNum(mmToIn(w.precipitation), 2)} in`),
+    kvRow('Visibility', w.visibility ? `${fmtNum(mToMi(w.visibility), 1)} mi` : '--'),
     kvRow('UV Index (now)', w.uv_index != null ? fmtNum(w.uv_index, 1) : (daily ? `${fmtNum(daily.uv_index_max?.[0], 1)} peak` : '--'), w.uv_index != null ? uvCategory(w.uv_index) : (daily ? uvCategory(daily.uv_index_max?.[0]) : '')),
     kvRow('AQI (US)', aq ? fmtNum(aq.us_aqi) : '--', aq ? aqiCategory(aq.us_aqi) : ''),
     co2 ? kvRow('CO\u2082 (Mauna Loa)', `${fmtNum(co2.ppm, 2)} ppm`, co2.yearAgo ? `+${fmtNum(co2.ppm - co2.yearAgo, 2)} yr/yr` : '') : '',
@@ -2065,7 +2073,7 @@ function renderSectionAtmospheric(s) {
       if (v != null && !isNaN(v)) rows.push(kvRow(`${n} Pollen`, `${fmtNum(v, 1)} g/m³`, pollenCategory(v)));
     });
   }
-  // Pollen index. v0.0.37 switched to pollen.com (US, 0-12 NAB scale, single
+  // Pollen index. v0.0.38 switched to pollen.com (US, 0-12 NAB scale, single
   // composite index per day with triggering plant types). Backward-compat:
   // if a legacy entry has the old Google-shape (.tree/.grass/.weed with .upi),
   // render those instead so old captures still display correctly.
@@ -2087,7 +2095,7 @@ function renderSectionAtmospheric(s) {
       rows.push(kvRow('Pollen Trend', `yesterday ${y.index.toFixed(1)}, today ${t.index.toFixed(1)}, tomorrow ${tm.index.toFixed(1)}`));
     }
   } else if (pollenData && !pollenData.needsKey && !pollenData.error && (pollenData.tree || pollenData.grass || pollenData.weed)) {
-    // Legacy shape (Google Pollen) for old entries captured under v0.0.32-v0.0.37
+    // Legacy shape (Google Pollen) for old entries captured under v0.0.32-v0.0.38
     const renderUpi = (label, p) => {
       if (!p || p.upi == null) return;
       rows.push(kvRow(label, `${p.upi} / 5`, (p.category || '').toLowerCase()));
@@ -2097,7 +2105,7 @@ function renderSectionAtmospheric(s) {
     renderUpi('Weed Pollen (UPI)',  pollenData.weed);
   }
   if (metar) {
-    rows.push(kvRow('Nearest METAR', `${metar.icao} (${fmtNum(metar.distanceKm, 1)} km)`));
+    rows.push(kvRow('Nearest METAR', `${metar.icao} (${fmtNum(kmToMi(metar.distanceKm), 1)} mi)`));
     if (metar.flight_category) rows.push(kvRow('Flight Category', metar.flight_category));
     if (metar.raw) rows.push(kvRow('METAR Raw', metar.raw));
   }
@@ -2177,8 +2185,8 @@ function renderSectionSpaceWeather(s) {
     aurora ? kvRow('Aurora at Location', `${fmtNum(aurora.probability, 0)}%`, auroraLabel) : '',
     kvRow('ISS Latitude', iss ? `${fmtNum(iss.latitude, 2)}°` : '--'),
     kvRow('ISS Longitude', iss ? `${fmtNum(iss.longitude, 2)}°` : '--'),
-    kvRow('ISS Altitude', iss ? `${fmtNum(iss.altitude, 1)} km` : '--'),
-    kvRow('ISS Velocity', iss ? `${fmtNum(iss.velocity)} km/h` : '--'),
+    kvRow('ISS Altitude', iss ? `${fmtNum(kmToMi(iss.altitude), 1)} mi` : '--'),
+    kvRow('ISS Velocity', iss ? `${fmtNum(kmhToMph(iss.velocity))} mph` : '--'),
   ].filter(Boolean).join('');
   const sources = ['NOAA SWPC', aurora && 'OVATION', 'WhereTheISS.at'].filter(Boolean).join(', ');
   return sec('Space Weather / Orbital', sources, rows);
@@ -2193,8 +2201,8 @@ function renderSectionTelluric(s) {
       const n = eq.nearby[0];
       rows += kvRow('Nearest Quake', `M${fmtNum(n.mag, 1)} / ${n.place}`);
       rows += kvRow('Nearest Time', `${humanTime(n.time)} ago`);
-      rows += kvRow('Nearest Depth', `${fmtNum(n.depth, 1)} km`);
-      rows += kvRow('Nearby Count (500km)', `${eq.nearby.length}`);
+      rows += kvRow('Nearest Depth', `${fmtNum(kmToMi(n.depth), 1)} mi`);
+      rows += kvRow('Nearby Count (310mi)', `${eq.nearby.length}`);
     } else {
       rows += kvRow('Nearby Activity', 'none above M1.5');
     }
@@ -2205,16 +2213,16 @@ function renderSectionTelluric(s) {
   }
   if (fires && !fires.needsKey) {
     if (fires.count === 0) {
-      rows += kvRow('Wildfire (500km)', 'no detections in last 24h');
+      rows += kvRow('Wildfire (310mi)', 'no detections in last 24h');
     } else {
-      rows += kvRow('Wildfire (500km)', `${fires.count} thermal anomalies`);
+      rows += kvRow('Wildfire (310mi)', `${fires.count} thermal anomalies`);
       if (fires.closest) {
-        rows += kvRow('Nearest Fire', `${fmtNum(fires.closest.distance, 1)} km`);
+        rows += kvRow('Nearest Fire', `${fmtNum(kmToMi(fires.closest.distance), 1)} mi`);
         rows += kvRow('Fire Radiative Pwr', `${fmtNum(fires.closest.frp, 1)} MW`);
       }
-      // v0.0.37 detailed nearest-fire signal
+      // v0.0.38 detailed nearest-fire signal
       if (fires.nearest && fires.nearest.distanceKm != null) {
-        rows += kvRow('Nearest Fire (region)', `${fmtNum(fires.nearest.distanceKm, 1)} km ${fires.nearest.compass}`);
+        rows += kvRow('Nearest Fire (region)', `${fmtNum(kmToMi(fires.nearest.distanceKm), 1)} mi ${fires.nearest.compass}`);
         if (fires.nearest.frp != null) rows += kvRow('Nearest Fire Power', `${fmtNum(fires.nearest.frp, 1)} MW radiative`);
       }
     }
@@ -2243,18 +2251,18 @@ function renderSectionHydrosphere(s) {
   const rows = [];
   if (h.stream) {
     rows.push(kvRow('Nearest Gauge', h.stream.name));
-    rows.push(kvRow('Gauge Distance', `${fmtNum(h.stream.distance, 1)} km`));
+    rows.push(kvRow('Gauge Distance', `${fmtNum(kmToMi(h.stream.distance), 1)} mi`));
     rows.push(kvRow('Discharge', `${fmtNum(h.stream.discharge, 1)} ft³/s`));
     if (h.stream.gageHeight != null) rows.push(kvRow('Gauge Height', `${fmtNum(h.stream.gageHeight, 2)} ft`));
   }
   if (h.tide) {
     if (h.tide.inland) {
       rows.push(kvRow('Tide Status', 'inland (no nearby station)'));
-      if (h.tide.nearestStation) rows.push(kvRow('Nearest Tide Stn', `${h.tide.nearestStation} (${fmtNum(h.tide.distance, 0)}km)`));
+      if (h.tide.nearestStation) rows.push(kvRow('Nearest Tide Stn', `${h.tide.nearestStation} (${fmtNum(kmToMi(h.tide.distance), 0)} mi)`));
     } else {
       rows.push(kvRow('Tide Station', h.tide.station || '--'));
       if (h.tide.level != null) rows.push(kvRow('Water Level', `${fmtNum(h.tide.level, 2)} ft (MLLW)`));
-      rows.push(kvRow('Stn Distance', `${fmtNum(h.tide.distance, 1)} km`));
+      rows.push(kvRow('Stn Distance', `${fmtNum(kmToMi(h.tide.distance), 1)} mi`));
     }
   }
   return sec('Hydrosphere', 'USGS NWIS, NOAA CO-OPS', rows.join(''));
@@ -2266,7 +2274,7 @@ function renderSectionBiosphere(s) {
   if (b.error) return sec('Biosphere', 'eBird', `<div class="kv"><span class="v muted">${escapeHtml(b.error)}</span></div>`, { single: true });
   const items = [];
   if (b.speciesCount != null) {
-    items.push(`<div class="item"><span class="yr">DIVERSITY</span>${b.speciesCount} species observed within 50km in last 3 days  <span style="color:var(--ink-faint);font-size:11px">(${b.totalRecent || 0} observations)</span></div>`);
+    items.push(`<div class="item"><span class="yr">DIVERSITY</span>${b.speciesCount} species observed within 31 mi in last 3 days  <span style="color:var(--ink-faint);font-size:11px">(${b.totalRecent || 0} observations)</span></div>`);
   }
   if (b.notable?.length) {
     items.push(`<div class="item"><span class="yr">NOTABLE</span><b>${b.notable.length} rare/unusual ${b.notable.length === 1 ? 'sighting' : 'sightings'} (7 days)</b></div>`);
@@ -2607,7 +2615,7 @@ function renderContextMap(entry) {
     const [qLat, qLon] = q.coords;
     const m = L.marker([qLat, qLon], { icon: ctxMarkerIcon('quake') }).addTo(contextMap);
     const ago = q.time ? `${humanTime(q.time)} ago` : '';
-    m.bindPopup(`<b>M${q.mag?.toFixed(1) || '?'}</b> ${escapeHtml(q.place || '')}${ago ? `<br/>${ago}` : ''}${q.depth != null ? `<br/>${q.depth.toFixed(1)} km deep` : ''}`);
+    m.bindPopup(`<b>M${q.mag?.toFixed(1) || '?'}</b> ${escapeHtml(q.place || '')}${ago ? `<br/>${ago}` : ''}${q.depth != null ? `<br/>${kmToMi(q.depth).toFixed(1)} mi deep` : ''}`);
     all.push([qLat, qLon]);
   });
 
